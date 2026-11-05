@@ -1,0 +1,8 @@
+{
+  "name": "Remix KigaliFleet - Fleet Management \u0026 Dispatch SaaS",
+  "description": "Hyper-focused Fleet Management, Live Scheduling, Collision-Guarded Booking, and Driver Dispatch SaaS for Rwandan car rental operators and tour agencies.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

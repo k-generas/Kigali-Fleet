@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --color-primary: #f59e0b;
+  --color-primary-rgb: 245, 158, 11;
+}
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+  
+  .font-mono, .tabular-nums {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Dynamic theme helper classes powered by CSS custom properties */
+.accent-bg {
+  background-color: var(--color-primary) !important;
+}
+
+.accent-text {
+  color: var(--color-primary) !important;
+}
+
+.accent-border {
+  border-color: var(--color-primary) !important;
+}
+
+.accent-tint {
+  background-color: rgba(var(--color-primary-rgb), 0.12) !important;
+}
+
+.accent-ring:focus {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 2px;
+}
