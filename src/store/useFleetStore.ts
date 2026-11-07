@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Vehicle,
   Driver,
@@ -8,6 +8,10 @@ import {
   BookingStatus,
   VehicleStatus,
   DriverStatus,
+  User,
+  Company,
+  UserRole,
+  Customer,
 } from '../types';
 import {
   INITIAL_VEHICLES,
@@ -15,11 +19,41 @@ import {
   INITIAL_BOOKINGS,
   INITIAL_LOGS,
   SUBSCRIPTION_TIERS,
+  INITIAL_COMPANY,
+  INITIAL_USERS,
+  INITIAL_CUSTOMERS,
 } from '../data/seedData';
 import { checkBookingCollision, generateDriverSMS } from '../utils/collision';
 import { getThemeById, applyThemeCssVariables } from '../theme';
+import {
+  collection,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  getDocs,
+} from 'firebase/firestore';
+import {
+  signInWithPopup,
+  signOut as fbSignOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+} from 'firebase/auth';
+import { db, auth, googleProvider, handleFirestoreError, OperationType } from '../firebase';
 
-const STORAGE_KEY_FLEET = 'kigalifleet_state_v1';
+const STORAGE_KEY_FLEET = 'kigalifleet_state_v3';
+
+// Remove undefined fields to prevent Firestore serialization errors
+function cleanForFirestore<T extends Record<string, any>>(obj: T): Partial<T> {
+  const result: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) {
+      result[k] = v;
+    }
+  }
+  return result;
+}
 
 interface StoredState {
   vehicles: Vehicle[];
@@ -29,6 +63,12 @@ interface StoredState {
   activeTierId: 'starter' | 'growth' | 'enterprise';
   theme: 'dark' | 'light';
   accentColorId: string;
+  currentUser: User;
+  currentCompany: Company;
+  users: User[];
+  customers: Customer[];
+  isAuthenticated: boolean;
+  isFirebaseConnected: boolean;
 }
 
 function loadInitialState(): StoredState {
@@ -40,6 +80,12 @@ function loadInitialState(): StoredState {
         return {
           ...parsed,
           accentColorId: parsed.accentColorId || 'amber',
+          currentUser: parsed.currentUser || INITIAL_USERS[0],
+          currentCompany: parsed.currentCompany || INITIAL_COMPANY,
+          users: parsed.users || INITIAL_USERS,
+          customers: parsed.customers || INITIAL_CUSTOMERS,
+          isAuthenticated: parsed.isAuthenticated ?? true,
+          isFirebaseConnected: false,
         };
       }
     }
@@ -51,15 +97,23 @@ function loadInitialState(): StoredState {
     drivers: INITIAL_DRIVERS,
     bookings: INITIAL_BOOKINGS,
     logs: INITIAL_LOGS,
+    customers: INITIAL_CUSTOMERS,
     activeTierId: 'growth',
     theme: 'dark',
     accentColorId: 'amber',
+    currentUser: INITIAL_USERS[0],
+    currentCompany: INITIAL_COMPANY,
+    users: INITIAL_USERS,
+    isAuthenticated: true,
+    isFirebaseConnected: false,
   };
 }
 
 export function useFleetStore() {
   const [state, setState] = useState<StoredState>(() => loadInitialState());
+  const isInitialSeedingDone = useRef(false);
 
+  // Sync to localStorage as offline fallback
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_FLEET, JSON.stringify(state));
@@ -79,6 +133,170 @@ export function useFleetStore() {
     const themeObj = getThemeById(state.accentColorId || 'amber');
     applyThemeCssVariables(themeObj);
   }, [state.theme, state.accentColorId]);
+
+  // Real-time Firestore Listeners & Initial Seeding
+  useEffect(() => {
+    let unsubscribeVehicles: () => void = () => {};
+    let unsubscribeDrivers: () => void = () => {};
+    let unsubscribeBookings: () => void = () => {};
+    let unsubscribeLogs: () => void = () => {};
+    let unsubscribeCustomers: () => void = () => {};
+    let unsubscribeAuth: () => void = () => {};
+
+    const initFirestoreSync = async () => {
+      try {
+        // 1. Vehicles Real-Time Listener
+        const vehCol = collection(db, 'vehicles');
+        unsubscribeVehicles = onSnapshot(
+          vehCol,
+          async (snapshot) => {
+            if (snapshot.empty && !isInitialSeedingDone.current) {
+              isInitialSeedingDone.current = true;
+              console.log('Seeding initial vehicles to Firestore...');
+              for (const v of INITIAL_VEHICLES) {
+                await setDoc(doc(db, 'vehicles', v.id), cleanForFirestore(v));
+              }
+            } else if (!snapshot.empty) {
+              const liveVehicles: Vehicle[] = snapshot.docs.map((d) => d.data() as Vehicle);
+              setState((prev) => ({
+                ...prev,
+                vehicles: liveVehicles,
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (error) => {
+            console.warn('Firestore vehicles listener notice:', error.message);
+          }
+        );
+
+        // 2. Drivers Real-Time Listener
+        const drvCol = collection(db, 'drivers');
+        unsubscribeDrivers = onSnapshot(
+          drvCol,
+          async (snapshot) => {
+            if (snapshot.empty && !isInitialSeedingDone.current) {
+              console.log('Seeding initial drivers to Firestore...');
+              for (const d of INITIAL_DRIVERS) {
+                await setDoc(doc(db, 'drivers', d.id), cleanForFirestore(d));
+              }
+            } else if (!snapshot.empty) {
+              const liveDrivers: Driver[] = snapshot.docs.map((d) => d.data() as Driver);
+              setState((prev) => ({
+                ...prev,
+                drivers: liveDrivers,
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (error) => {
+            console.warn('Firestore drivers listener notice:', error.message);
+          }
+        );
+
+        // 3. Bookings Real-Time Listener
+        const bkCol = collection(db, 'bookings');
+        unsubscribeBookings = onSnapshot(
+          bkCol,
+          async (snapshot) => {
+            if (snapshot.empty && !isInitialSeedingDone.current) {
+              console.log('Seeding initial bookings to Firestore...');
+              for (const b of INITIAL_BOOKINGS) {
+                await setDoc(doc(db, 'bookings', b.id), cleanForFirestore(b));
+              }
+            } else if (!snapshot.empty) {
+              const liveBookings: Booking[] = snapshot.docs.map((d) => d.data() as Booking);
+              setState((prev) => ({
+                ...prev,
+                bookings: liveBookings,
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (error) => {
+            console.warn('Firestore bookings listener notice:', error.message);
+          }
+        );
+
+        // 4. Activity Logs Real-Time Listener
+        const logsCol = collection(db, 'activity_logs');
+        unsubscribeLogs = onSnapshot(
+          logsCol,
+          async (snapshot) => {
+            if (snapshot.empty && !isInitialSeedingDone.current) {
+              console.log('Seeding initial activity logs to Firestore...');
+              for (const l of INITIAL_LOGS) {
+                await setDoc(doc(db, 'activity_logs', l.id), cleanForFirestore(l));
+              }
+            } else if (!snapshot.empty) {
+              const liveLogs: ActivityLog[] = snapshot.docs.map((d) => d.data() as ActivityLog);
+              setState((prev) => ({
+                ...prev,
+                logs: liveLogs,
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (error) => {
+            console.warn('Firestore logs listener notice:', error.message);
+          }
+        );
+
+        // 5. Customers Real-Time Listener
+        const custCol = collection(db, 'customers');
+        unsubscribeCustomers = onSnapshot(
+          custCol,
+          async (snapshot) => {
+            if (snapshot.empty && !isInitialSeedingDone.current) {
+              console.log('Seeding initial customers to Firestore...');
+              for (const c of INITIAL_CUSTOMERS) {
+                await setDoc(doc(db, 'customers', c.id), cleanForFirestore(c));
+              }
+            } else if (!snapshot.empty) {
+              const liveCustomers: Customer[] = snapshot.docs.map((d) => d.data() as Customer);
+              setState((prev) => ({
+                ...prev,
+                customers: liveCustomers,
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (error) => {
+            console.warn('Firestore customers listener notice:', error.message);
+          }
+        );
+
+        // 6. Auth State Changed Listener
+        unsubscribeAuth = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
+          if (fbUser) {
+            setState((prev) => ({
+              ...prev,
+              isAuthenticated: true,
+              currentUser: {
+                ...prev.currentUser,
+                name: fbUser.displayName || prev.currentUser.name,
+                email: fbUser.email || prev.currentUser.email,
+                avatar_url: fbUser.photoURL || prev.currentUser.avatar_url,
+              },
+            }));
+          }
+        });
+      } catch (err) {
+        console.warn('Firestore sync initialization notice:', err);
+      }
+    };
+
+    initFirestoreSync();
+
+    return () => {
+      unsubscribeVehicles();
+      unsubscribeDrivers();
+      unsubscribeBookings();
+      unsubscribeLogs();
+      unsubscribeCustomers();
+      unsubscribeAuth();
+    };
+  }, []);
 
   const toggleTheme = () => {
     setState((prev) => ({
@@ -127,11 +345,28 @@ export function useFleetStore() {
       category: 'booking',
     };
 
+    const today = new Date().toISOString().split('T')[0];
+    const isStartingToday = createdBooking.start_date <= today && createdBooking.end_date >= today;
+
+    // Async write to Firestore
+    try {
+      setDoc(doc(db, 'bookings', createdBooking.id), cleanForFirestore(createdBooking)).catch((err) =>
+        handleFirestoreError(err, OperationType.CREATE, `bookings/${createdBooking.id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch((err) =>
+        handleFirestoreError(err, OperationType.CREATE, `activity_logs/${newLog.id}`)
+      );
+      if (isStartingToday) {
+        updateDoc(doc(db, 'vehicles', createdBooking.vehicle_id), { status: 'Booked' }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Firestore write notice:', err);
+    }
+
+    // Optimistic local state update
     setState((prev) => {
-      // update vehicle status if starting today
-      const today = new Date().toISOString().split('T')[0];
       const updatedVehicles = prev.vehicles.map((v) => {
-        if (v.id === createdBooking.vehicle_id && createdBooking.start_date <= today && createdBooking.end_date >= today) {
+        if (v.id === createdBooking.vehicle_id && isStartingToday) {
           return { ...v, status: 'Booked' as VehicleStatus };
         }
         return v;
@@ -149,13 +384,49 @@ export function useFleetStore() {
   };
 
   const updateBookingStatus = (id: string, status: BookingStatus) => {
-    setState((prev) => {
-      const updatedBookings = prev.bookings.map((b) => (b.id === id ? { ...b, status } : b));
-      return {
-        ...prev,
-        bookings: updatedBookings,
-      };
-    });
+    // Firestore write
+    try {
+      updateDoc(doc(db, 'bookings', id), { status }).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `bookings/${id}`)
+      );
+    } catch (err) {
+      console.warn('Firestore updateBookingStatus notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      bookings: prev.bookings.map((b) => (b.id === id ? { ...b, status } : b)),
+    }));
+  };
+
+  const updateBooking = (id: string, updates: Partial<Booking>) => {
+    try {
+      updateDoc(doc(db, 'bookings', id), cleanForFirestore(updates)).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `bookings/${id}`)
+      );
+    } catch (err) {
+      console.warn('Firestore updateBooking notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      bookings: prev.bookings.map((b) => (b.id === id ? { ...b, ...updates } : b)),
+    }));
+  };
+
+  const deleteBooking = (id: string) => {
+    try {
+      deleteDoc(doc(db, 'bookings', id)).catch((err) =>
+        handleFirestoreError(err, OperationType.DELETE, `bookings/${id}`)
+      );
+    } catch (err) {
+      console.warn('Firestore deleteBooking notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      bookings: prev.bookings.filter((b) => b.id !== id),
+    }));
   };
 
   const dispatchDriverSMS = (bookingId: string, language: 'RW' | 'EN' = 'RW') => {
@@ -182,6 +453,18 @@ export function useFleetStore() {
       category: 'dispatch',
     };
 
+    // Firestore writes
+    try {
+      updateDoc(doc(db, 'bookings', bookingId), { dispatch_status: 'Dispatched (SMS)' }).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `bookings/${bookingId}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch((err) =>
+        handleFirestoreError(err, OperationType.CREATE, `activity_logs/${newLog.id}`)
+      );
+    } catch (err) {
+      console.warn('Firestore dispatchDriverSMS notice:', err);
+    }
+
     setState((prev) => ({
       ...prev,
       bookings: prev.bookings.map((b) =>
@@ -202,7 +485,6 @@ export function useFleetStore() {
 
     const driver = state.drivers.find((d) => d.id === booking.driver_id);
 
-    // Determine next check-in stage
     let nextStage = targetStage;
     if (!nextStage) {
       if (booking.dispatch_status === 'Not Sent' || booking.dispatch_status === 'Dispatched (SMS)') {
@@ -228,6 +510,21 @@ export function useFleetStore() {
       details: `${driver?.name || 'Chauffeur'} confirmed: "${actionDescription}" for Booking #${booking.id} (${booking.client_name}).`,
       category: 'driver',
     };
+
+    // Firestore writes
+    try {
+      updateDoc(doc(db, 'bookings', bookingId), {
+        dispatch_status: nextStage!,
+        status: nextStage === 'Client Onboard' ? 'In Progress' : booking.status,
+      }).catch((err) => handleFirestoreError(err, OperationType.UPDATE, `bookings/${bookingId}`));
+
+      if (booking.driver_id) {
+        updateDoc(doc(db, 'drivers', booking.driver_id), { status: 'On Trip' }).catch(() => {});
+      }
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore acknowledge notice:', err);
+    }
 
     setState((prev) => ({
       ...prev,
@@ -260,6 +557,24 @@ export function useFleetStore() {
       logMessage = `FLIGHT DELAY DETECTED: ${booking.flight_number || 'Flight'} delayed by ${delayMinutes}m. Chauffeur ${driver.name} notified via Africa's Talking to adjust KIA pickup window.`;
     }
 
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: flightStatus === 'Delayed' ? 'Flight Delay Alert Dispatched' : 'Flight Status Updated',
+      details: logMessage,
+      category: 'booking',
+    };
+
+    try {
+      updateDoc(doc(db, 'bookings', bookingId), {
+        flight_status: flightStatus,
+        flight_delay_minutes: flightStatus === 'Delayed' ? delayMinutes : 0,
+      }).catch((err) => handleFirestoreError(err, OperationType.UPDATE, `bookings/${bookingId}`));
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore flight update notice:', err);
+    }
+
     setState((prev) => ({
       ...prev,
       bookings: prev.bookings.map((b) =>
@@ -271,16 +586,7 @@ export function useFleetStore() {
             }
           : b
       ),
-      logs: [
-        {
-          id: `log-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: flightStatus === 'Delayed' ? 'Flight Delay Alert Dispatched' : 'Flight Status Updated',
-          details: logMessage,
-          category: 'booking',
-        },
-        ...prev.logs,
-      ],
+      logs: [newLog, ...prev.logs],
     }));
   };
 
@@ -290,68 +596,302 @@ export function useFleetStore() {
       id: `veh-${Date.now().toString().slice(-5)}`,
     };
 
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Vehicle Registered',
+      details: `Registered ${newVehicle.model_name} (${newVehicle.plate_number}) at ${newVehicle.daily_rate_rwf.toLocaleString()} RWF/day.`,
+      category: 'fleet',
+    };
+
+    try {
+      setDoc(doc(db, 'vehicles', newVehicle.id), cleanForFirestore(newVehicle)).catch((err) =>
+        handleFirestoreError(err, OperationType.CREATE, `vehicles/${newVehicle.id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore addVehicle notice:', err);
+    }
+
     setState((prev) => ({
       ...prev,
       vehicles: [...prev.vehicles, newVehicle],
-      logs: [
-        {
-          id: `log-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Vehicle Registered',
-          details: `Registered ${newVehicle.model_name} (${newVehicle.plate_number}) at ${newVehicle.daily_rate_rwf.toLocaleString()} RWF/day.`,
-          category: 'fleet',
-        },
-        ...prev.logs,
-      ],
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const updateVehicle = (id: string, updates: Partial<Vehicle>) => {
+    const target = state.vehicles.find((v) => v.id === id);
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Vehicle Specs Updated',
+      details: `Updated fleet records for ${target?.model_name || 'Vehicle'} (${target?.plate_number || id}).`,
+      category: 'fleet',
+    };
+
+    try {
+      updateDoc(doc(db, 'vehicles', id), cleanForFirestore(updates)).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `vehicles/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore updateVehicle notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      vehicles: prev.vehicles.map((v) => (v.id === id ? { ...v, ...updates } : v)),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const deleteVehicle = (id: string) => {
+    const target = state.vehicles.find((v) => v.id === id);
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Vehicle Archived',
+      details: `Archived/removed ${target?.model_name || 'Vehicle'} (${target?.plate_number || id}) from active fleet.`,
+      category: 'fleet',
+    };
+
+    try {
+      deleteDoc(doc(db, 'vehicles', id)).catch((err) =>
+        handleFirestoreError(err, OperationType.DELETE, `vehicles/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore deleteVehicle notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      vehicles: prev.vehicles.filter((v) => v.id !== id),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const updateVehicleStatus = (id: string, status: VehicleStatus) => {
+    try {
+      updateDoc(doc(db, 'vehicles', id), { status }).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `vehicles/${id}`)
+      );
+    } catch (err) {
+      console.warn('Firestore updateVehicleStatus notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      vehicles: prev.vehicles.map((v) => (v.id === id ? { ...v, status } : v)),
     }));
   };
 
   const updateVehicleRate = (id: string, newRateRwf: number) => {
+    const rate = Math.max(10000, newRateRwf);
+    const target = state.vehicles.find((v) => v.id === id);
+    const oldRate = target?.daily_rate_rwf || 0;
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Rate Adjusted',
+      details: `Adjusted daily rate for ${target?.model_name || 'Vehicle'} from ${oldRate.toLocaleString()} RWF to ${rate.toLocaleString()} RWF.`,
+      category: 'fleet',
+    };
+
+    try {
+      updateDoc(doc(db, 'vehicles', id), { daily_rate_rwf: rate }).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `vehicles/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore updateVehicleRate notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      vehicles: prev.vehicles.map((v) => (v.id === id ? { ...v, daily_rate_rwf: rate } : v)),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const toggleVehicleMaintenance = (id: string, notes?: string) => {
+    const target = state.vehicles.find((v) => v.id === id);
+    const isCurrentlyMaintenance = target?.status === 'Maintenance';
+    const newStatus: VehicleStatus = isCurrentlyMaintenance ? 'Available' : 'Maintenance';
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: isCurrentlyMaintenance ? 'Vehicle Cleared from Service' : 'Vehicle Sent to Maintenance',
+      details: `${target?.model_name} (${target?.plate_number}) ${isCurrentlyMaintenance ? 'cleared for customer rental' : `grounded for workshop service${notes ? ` (${notes})` : ''}`}.`,
+      category: 'fleet',
+    };
+
+    try {
+      updateDoc(doc(db, 'vehicles', id), { status: newStatus }).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `vehicles/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore toggleVehicleMaintenance notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      vehicles: prev.vehicles.map((v) => (v.id === id ? { ...v, status: newStatus } : v)),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const addDriver = (driver: Omit<Driver, 'id' | 'trips_completed' | 'rating'>) => {
+    const newDriver: Driver = {
+      ...driver,
+      id: `drv-${Date.now().toString().slice(-5)}`,
+      trips_completed: 0,
+      rating: 5.0,
+    };
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Driver Onboarded',
+      details: `Onboarded ${newDriver.name} (${newDriver.language}).`,
+      category: 'driver',
+    };
+
+    try {
+      setDoc(doc(db, 'drivers', newDriver.id), cleanForFirestore(newDriver)).catch((err) =>
+        handleFirestoreError(err, OperationType.CREATE, `drivers/${newDriver.id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore addDriver notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      drivers: [...prev.drivers, newDriver],
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const updateDriverStatus = (id: string, status: DriverStatus) => {
+    try {
+      updateDoc(doc(db, 'drivers', id), { status }).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `drivers/${id}`)
+      );
+    } catch (err) {
+      console.warn('Firestore updateDriverStatus notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      drivers: prev.drivers.map((d) => (d.id === id ? { ...d, status } : d)),
+    }));
+  };
+
+  const updateDriver = (id: string, updates: Partial<Driver>) => {
+    const target = state.drivers.find((d) => d.id === id);
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Driver Profile Updated',
+      details: `Updated chauffeur record for ${target?.name || 'Driver'}.`,
+      category: 'driver',
+    };
+
+    try {
+      updateDoc(doc(db, 'drivers', id), cleanForFirestore(updates)).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `drivers/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore updateDriver notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      drivers: prev.drivers.map((d) => (d.id === id ? { ...d, ...updates } : d)),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const deleteDriver = (id: string) => {
+    const target = state.drivers.find((d) => d.id === id);
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Driver Deactivated',
+      details: `Deactivated chauffeur ${target?.name || 'Driver'} from active roster.`,
+      category: 'driver',
+    };
+
+    try {
+      deleteDoc(doc(db, 'drivers', id)).catch((err) =>
+        handleFirestoreError(err, OperationType.DELETE, `drivers/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore deleteDriver notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      drivers: prev.drivers.filter((d) => d.id !== id),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const completeDriverTrip = (bookingId: string) => {
+    const booking = state.bookings.find((b) => b.id === bookingId);
+    if (!booking) return;
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Trip Completed',
+      details: `Booking #${booking.id} (${booking.client_name} - ${booking.destination}) marked completed. Vehicle & chauffeur released to Available.`,
+      category: 'driver',
+    };
+
+    try {
+      updateDoc(doc(db, 'bookings', bookingId), { status: 'Completed' }).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `bookings/${bookingId}`)
+      );
+      if (booking.driver_id) {
+        const curDriver = state.drivers.find((d) => d.id === booking.driver_id);
+        const newCount = (curDriver?.trips_completed || 0) + 1;
+        updateDoc(doc(db, 'drivers', booking.driver_id), { status: 'Available', trips_completed: newCount }).catch(() => {});
+      }
+      if (booking.vehicle_id) {
+        updateDoc(doc(db, 'vehicles', booking.vehicle_id), { status: 'Available' }).catch(() => {});
+      }
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore completeTrip notice:', err);
+    }
+
     setState((prev) => {
-      const target = prev.vehicles.find((v) => v.id === id);
-      const oldRate = target?.daily_rate_rwf || 0;
+      const updatedBookings = prev.bookings.map((b) =>
+        b.id === bookingId ? { ...b, status: 'Completed' as BookingStatus } : b
+      );
+      const updatedDrivers = prev.drivers.map((d) =>
+        d.id === booking.driver_id
+          ? { ...d, status: 'Available' as DriverStatus, trips_completed: d.trips_completed + 1 }
+          : d
+      );
       const updatedVehicles = prev.vehicles.map((v) =>
-        v.id === id ? { ...v, daily_rate_rwf: Math.max(10000, newRateRwf) } : v
+        v.id === booking.vehicle_id ? { ...v, status: 'Available' as VehicleStatus } : v
       );
 
       return {
         ...prev,
+        bookings: updatedBookings,
+        drivers: updatedDrivers,
         vehicles: updatedVehicles,
-        logs: [
-          {
-            id: `log-${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            action: 'Rate Adjusted',
-            details: `Adjusted daily rate for ${target?.model_name || 'Vehicle'} from ${oldRate.toLocaleString()} RWF to ${newRateRwf.toLocaleString()} RWF.`,
-            category: 'fleet',
-          },
-          ...prev.logs,
-        ],
-      };
-    });
-  };
-
-  const toggleVehicleMaintenance = (id: string, notes?: string) => {
-    setState((prev) => {
-      const target = prev.vehicles.find((v) => v.id === id);
-      const isCurrentlyMaintenance = target?.status === 'Maintenance';
-      const newStatus: VehicleStatus = isCurrentlyMaintenance ? 'Available' : 'Maintenance';
-
-      return {
-        ...prev,
-        vehicles: prev.vehicles.map((v) =>
-          v.id === id ? { ...v, status: newStatus } : v
-        ),
-        logs: [
-          {
-            id: `log-${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            action: isCurrentlyMaintenance ? 'Vehicle Cleared from Service' : 'Vehicle Sent to Maintenance',
-            details: `${target?.model_name} (${target?.plate_number}) ${isCurrentlyMaintenance ? 'cleared for customer rental' : `grounded for workshop service${notes ? ` (${notes})` : ''}`}.`,
-            category: 'fleet',
-          },
-          ...prev.logs,
-        ],
+        logs: [newLog, ...prev.logs],
       };
     });
   };
@@ -366,7 +906,7 @@ export function useFleetStore() {
     const driver = state.drivers.find((d) => d.id === driverId);
     if (!driver) return { success: false, error: 'Driver not found.' };
 
-    // Check if driver has an existing overlapping trip
+    // Check collision
     const driverConflict = state.bookings.find(
       (b) =>
         b.id !== bookingId &&
@@ -384,95 +924,355 @@ export function useFleetStore() {
       };
     }
 
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Driver Assigned',
+      details: `Linked ${driver.name} to booking #${booking.id} (${booking.client_name}).`,
+      category: 'driver',
+    };
+
+    try {
+      updateDoc(doc(db, 'bookings', bookingId), { driver_id: driverId }).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `bookings/${bookingId}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore assignDriver notice:', err);
+    }
+
     setState((prev) => ({
       ...prev,
       bookings: prev.bookings.map((b) => (b.id === bookingId ? { ...b, driver_id: driverId } : b)),
-      logs: [
-        {
-          id: `log-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Driver Assigned',
-          details: `Linked ${driver.name} to booking #${booking.id} (${booking.client_name}).`,
-          category: 'driver',
-        },
-        ...prev.logs,
-      ],
+      logs: [newLog, ...prev.logs],
     }));
 
     return { success: true };
   };
 
-  const updateVehicleStatus = (id: string, status: VehicleStatus) => {
-    setState((prev) => ({
-      ...prev,
-      vehicles: prev.vehicles.map((v) => (v.id === id ? { ...v, status } : v)),
-    }));
-  };
-
-  const addDriver = (driver: Omit<Driver, 'id' | 'trips_completed' | 'rating'>) => {
-    const newDriver: Driver = {
-      ...driver,
-      id: `drv-${Date.now().toString().slice(-5)}`,
-      trips_completed: 0,
-      rating: 5.0,
+  const addCustomer = (customer: Omit<Customer, 'id' | 'created_at'>) => {
+    const newCustomer: Customer = {
+      ...customer,
+      id: `cust-${Date.now().toString().slice(-6)}`,
+      created_at: new Date().toISOString().split('T')[0],
+      total_spent_rwf: customer.total_spent_rwf || 0,
+      total_bookings_count: customer.total_bookings_count || 0,
+      outstanding_balance_rwf: customer.outstanding_balance_rwf || 0,
     };
 
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Customer Profile Created',
+      details: `Registered ${newCustomer.name} (${newCustomer.category}) - ${newCustomer.phone}.`,
+      category: 'booking',
+    };
+
+    try {
+      setDoc(doc(db, 'customers', newCustomer.id), cleanForFirestore(newCustomer)).catch((err) =>
+        handleFirestoreError(err, OperationType.CREATE, `customers/${newCustomer.id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore addCustomer notice:', err);
+    }
+
     setState((prev) => ({
       ...prev,
-      drivers: [...prev.drivers, newDriver],
-      logs: [
-        {
-          id: `log-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Driver Onboarded',
-          details: `Onboarded ${newDriver.name} (${newDriver.language}).`,
-          category: 'driver',
-        },
-        ...prev.logs,
-      ],
+      customers: [newCustomer, ...prev.customers],
+      logs: [newLog, ...prev.logs],
+    }));
+    return newCustomer;
+  };
+
+  const updateCustomer = (id: string, updates: Partial<Customer>) => {
+    const target = state.customers.find((c) => c.id === id);
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Customer Profile Updated',
+      details: `Updated CRM records for ${target?.name || 'Customer'}.`,
+      category: 'booking',
+    };
+
+    try {
+      updateDoc(doc(db, 'customers', id), cleanForFirestore(updates)).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `customers/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore updateCustomer notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      customers: prev.customers.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+      logs: [newLog, ...prev.logs],
     }));
   };
 
-  const updateDriverStatus = (id: string, status: DriverStatus) => {
+  const deleteCustomer = (id: string) => {
+    const target = state.customers.find((c) => c.id === id);
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Customer Archived',
+      details: `Archived CRM client record for ${target?.name || 'Customer'}.`,
+      category: 'booking',
+    };
+
+    try {
+      deleteDoc(doc(db, 'customers', id)).catch((err) =>
+        handleFirestoreError(err, OperationType.DELETE, `customers/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore deleteCustomer notice:', err);
+    }
+
     setState((prev) => ({
       ...prev,
-      drivers: prev.drivers.map((d) => (d.id === id ? { ...d, status } : d)),
+      customers: prev.customers.filter((c) => c.id !== id),
+      logs: [newLog, ...prev.logs],
     }));
+  };
+
+  const recordCustomerPayment = (customerId: string, amountRwf: number) => {
+    const target = state.customers.find((c) => c.id === customerId);
+    if (!target) return;
+
+    const newBalance = Math.max(0, (target.outstanding_balance_rwf || 0) - amountRwf);
+    const newSpent = (target.total_spent_rwf || 0) + amountRwf;
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Corporate Payment Settled',
+      details: `Received payment of ${amountRwf.toLocaleString()} RWF from ${target.name}. Outstanding balance updated to ${newBalance.toLocaleString()} RWF.`,
+      category: 'booking',
+    };
+
+    try {
+      updateDoc(doc(db, 'customers', customerId), {
+        outstanding_balance_rwf: newBalance,
+        total_spent_rwf: newSpent,
+      }).catch((err) => handleFirestoreError(err, OperationType.UPDATE, `customers/${customerId}`));
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore payment record notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      customers: prev.customers.map((c) =>
+        c.id === customerId
+          ? { ...c, outstanding_balance_rwf: newBalance, total_spent_rwf: newSpent }
+          : c
+      ),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const loginWithGoogle = async () => {
+    try {
+      const res = await signInWithPopup(auth, googleProvider);
+      if (res.user) {
+        setState((prev) => ({
+          ...prev,
+          isAuthenticated: true,
+          currentUser: {
+            ...prev.currentUser,
+            name: res.user.displayName || prev.currentUser.name,
+            email: res.user.email || prev.currentUser.email,
+            avatar_url: res.user.photoURL || undefined,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error('Google Sign-in error:', err);
+    }
+  };
+
+  const login = (userId: string) => {
+    const user = state.users.find((u) => u.id === userId);
+    if (user) {
+      setState((prev) => ({
+        ...prev,
+        currentUser: user,
+        isAuthenticated: true,
+      }));
+    }
+  };
+
+  const loginWithEmail = (email: string) => {
+    const user = state.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (user) {
+      setState((prev) => ({
+        ...prev,
+        currentUser: user,
+        isAuthenticated: true,
+      }));
+      return true;
+    }
+    return false;
+  };
+
+  const switchRole = (role: UserRole) => {
+    setState((prev) => ({
+      ...prev,
+      currentUser: {
+        ...prev.currentUser,
+        role,
+      },
+    }));
+  };
+
+  const logout = async () => {
+    try {
+      await fbSignOut(auth);
+    } catch (e) {
+      console.warn('Firebase logout notice:', e);
+    }
+    setState((prev) => ({
+      ...prev,
+      isAuthenticated: false,
+    }));
+  };
+
+  const registerCompany = (
+    companyDataOrParams:
+      | {
+          companyName: string;
+          businessType: 'Car Rental' | 'Tour Operator' | 'Airport Shuttle' | 'Corporate Transport';
+          tinNumber: string;
+          city: string;
+          ownerName: string;
+          phone: string;
+          email: string;
+          tierId: 'starter' | 'growth' | 'enterprise';
+        }
+      | Omit<Company, 'id' | 'created_at'>,
+    ownerData?: { name: string; email: string; phone: string }
+  ) => {
+    let newCompany: Company;
+    let newOwner: User;
+
+    if ('companyName' in companyDataOrParams) {
+      const p = companyDataOrParams;
+      const slug = p.companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const companyId = `comp-${slug || Date.now().toString().slice(-4)}`;
+      newCompany = {
+        id: companyId,
+        name: p.companyName,
+        slug,
+        business_type: p.businessType,
+        tin_number: p.tinNumber,
+        phone: p.phone,
+        email: p.email,
+        city: p.city || 'Kigali',
+        country: 'Rwanda',
+        currency: 'RWF',
+        tier_id: p.tierId,
+        created_at: new Date().toISOString(),
+      };
+      newOwner = {
+        id: `usr-owner-${Date.now().toString().slice(-4)}`,
+        name: p.ownerName,
+        email: p.email,
+        phone: p.phone,
+        role: 'owner',
+        company_id: companyId,
+      };
+    } else {
+      const companyId = `comp-${companyDataOrParams.slug || Date.now().toString().slice(-4)}`;
+      newCompany = {
+        ...companyDataOrParams,
+        id: companyId,
+        created_at: new Date().toISOString(),
+      };
+      newOwner = {
+        id: `usr-owner-${Date.now().toString().slice(-4)}`,
+        name: ownerData?.name || 'Owner',
+        email: ownerData?.email || newCompany.email,
+        phone: ownerData?.phone || newCompany.phone,
+        role: 'owner',
+        company_id: companyId,
+      };
+    }
+
+    try {
+      setDoc(doc(db, 'companies', newCompany.id), cleanForFirestore(newCompany)).catch(() => {});
+      setDoc(doc(db, 'users', newOwner.id), cleanForFirestore(newOwner)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore registerCompany notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      currentCompany: newCompany,
+      currentUser: newOwner,
+      users: [newOwner, ...prev.users],
+      isAuthenticated: true,
+      activeTierId: newCompany.tier_id,
+    }));
+
+    return { success: true, company: newCompany, owner: newOwner };
   };
 
   const setTier = (tierId: 'starter' | 'growth' | 'enterprise') => {
     setState((prev) => ({
       ...prev,
       activeTierId: tierId,
-      logs: [
-        {
-          id: `log-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Subscription Updated',
-          details: `Agency subscription updated to ${tierId.toUpperCase()}.`,
-          category: 'fleet',
-        },
-        ...prev.logs,
-      ],
+      currentCompany: {
+        ...prev.currentCompany,
+        tier_id: tierId,
+      },
     }));
   };
 
-  const resetToDefaults = () => {
-    const defaultState: StoredState = {
+  const resetToDefaults = async () => {
+    try {
+      // Clean Firestore
+      for (const v of state.vehicles) {
+        deleteDoc(doc(db, 'vehicles', v.id)).catch(() => {});
+      }
+      for (const d of state.drivers) {
+        deleteDoc(doc(db, 'drivers', d.id)).catch(() => {});
+      }
+      for (const b of state.bookings) {
+        deleteDoc(doc(db, 'bookings', b.id)).catch(() => {});
+      }
+
+      // Re-seed defaults
+      for (const v of INITIAL_VEHICLES) {
+        setDoc(doc(db, 'vehicles', v.id), cleanForFirestore(v)).catch(() => {});
+      }
+      for (const d of INITIAL_DRIVERS) {
+        setDoc(doc(db, 'drivers', d.id), cleanForFirestore(d)).catch(() => {});
+      }
+      for (const b of INITIAL_BOOKINGS) {
+        setDoc(doc(db, 'bookings', b.id), cleanForFirestore(b)).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Reset defaults notice:', err);
+    }
+
+    localStorage.removeItem(STORAGE_KEY_FLEET);
+    setState({
       vehicles: INITIAL_VEHICLES,
       drivers: INITIAL_DRIVERS,
       bookings: INITIAL_BOOKINGS,
       logs: INITIAL_LOGS,
+      customers: INITIAL_CUSTOMERS,
       activeTierId: 'growth',
-      theme: state.theme,
-      accentColorId: state.accentColorId || 'amber',
-    };
-    setState(defaultState);
-    try {
-      localStorage.setItem(STORAGE_KEY_FLEET, JSON.stringify(defaultState));
-    } catch (e) {
-      console.warn(e);
-    }
+      theme: 'dark',
+      accentColorId: 'amber',
+      currentUser: INITIAL_USERS[0],
+      currentCompany: INITIAL_COMPANY,
+      users: INITIAL_USERS,
+      isAuthenticated: true,
+      isFirebaseConnected: true,
+    });
   };
 
   const currentTheme = getThemeById(state.accentColorId || 'amber');
@@ -490,18 +1290,41 @@ export function useFleetStore() {
     accentColorId: state.accentColorId || 'amber',
     currentTheme,
     setAccentColor,
+    currentUser: state.currentUser,
+    currentCompany: state.currentCompany,
+    users: state.users,
+    isAuthenticated: state.isAuthenticated,
+    isFirebaseConnected: state.isFirebaseConnected,
+    login,
+    loginWithEmail,
+    loginWithGoogle,
+    switchRole,
+    logout,
+    registerCompany,
     addBooking,
+    updateBooking,
+    deleteBooking,
     updateBookingStatus,
     dispatchDriverSMS,
     acknowledgeDriverCheckin,
     updateFlightStatus,
     addVehicle,
+    updateVehicle,
+    deleteVehicle,
     updateVehicleStatus,
     updateVehicleRate,
     toggleVehicleMaintenance,
     addDriver,
+    updateDriver,
+    deleteDriver,
+    completeDriverTrip,
     updateDriverStatus,
     assignDriverToBooking,
+    customers: state.customers,
+    addCustomer,
+    updateCustomer,
+    deleteCustomer,
+    recordCustomerPayment,
     setTier,
     resetToDefaults,
   };

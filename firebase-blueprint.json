@@ -1,0 +1,145 @@
+{
+  "entities": {
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Fleet vehicle record in Rwanda",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "enum": ["RAV4", "LandCruiser", "Coaster", "Safari Van", "Luxury Sedan"] },
+        "model_name": { "type": "string", "maxLength": 200 },
+        "plate_number": { "type": "string", "maxLength": 20 },
+        "daily_rate_rwf": { "type": "number" },
+        "status": { "type": "string", "enum": ["Available", "Booked", "Maintenance"] },
+        "transmission": { "type": "string", "enum": ["Automatic", "Manual"] },
+        "fuel_type": { "type": "string", "enum": ["Diesel", "Petrol"] },
+        "seating_capacity": { "type": "number" },
+        "current_odometer_km": { "type": "number" },
+        "location": { "type": "string", "maxLength": 200 },
+        "year": { "type": "number" },
+        "assigned_driver_id": { "type": "string", "maxLength": 128 },
+        "assigned_driver_name": { "type": "string", "maxLength": 200 },
+        "insurance_expiry": { "type": "string", "maxLength": 20 },
+        "controle_technique_expiry": { "type": "string", "maxLength": 20 },
+        "last_service_date": { "type": "string", "maxLength": 20 },
+        "last_service_notes": { "type": "string", "maxLength": 500 },
+        "next_service_km": { "type": "number" }
+      },
+      "required": ["category", "model_name", "plate_number", "daily_rate_rwf", "status"]
+    },
+    "Driver": {
+      "title": "Driver",
+      "description": "Chauffeur and operator driver profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "language": { "type": "string", "enum": ["EN", "RW", "FR", "EN/RW"] },
+        "status": { "type": "string", "enum": ["Available", "On Trip", "Off Duty"] },
+        "license_number": { "type": "string", "maxLength": 100 },
+        "trips_completed": { "type": "number" },
+        "rating": { "type": "number" },
+        "assigned_vehicle_id": { "type": "string", "maxLength": 128 },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["name", "phone", "language", "status", "license_number"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Fleet reservation and chauffeur mission",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "client_name": { "type": "string", "maxLength": 200 },
+        "client_email": { "type": "string", "maxLength": 200 },
+        "client_phone": { "type": "string", "maxLength": 50 },
+        "vehicle_id": { "type": "string", "maxLength": 128 },
+        "driver_id": { "type": "string", "maxLength": 128 },
+        "start_date": { "type": "string", "maxLength": 20 },
+        "end_date": { "type": "string", "maxLength": 20 },
+        "total_rwf": { "type": "number" },
+        "destination": { "type": "string", "maxLength": 200 },
+        "status": { "type": "string", "enum": ["Confirmed", "Pending Dispatch", "In Progress", "Completed", "Cancelled"] },
+        "dispatch_status": { "type": "string", "enum": ["Not Sent", "Dispatched (SMS)", "Acknowledged by Driver", "Driver at Terminal", "Client Onboard"] },
+        "payment_status": { "type": "string", "enum": ["Deposit Paid (MoMo)", "Fully Paid", "Pending Payment"] },
+        "payment_method": { "type": "string", "enum": ["MTN Mobile Money", "Airtel Money", "Bank Transfer", "Credit Card"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["client_name", "vehicle_id", "driver_id", "start_date", "end_date", "total_rwf", "status"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "Fleet operator company in Rwanda",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "slug": { "type": "string", "maxLength": 100 },
+        "business_type": { "type": "string", "maxLength": 100 },
+        "tin_number": { "type": "string", "maxLength": 50 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 200 },
+        "city": { "type": "string", "maxLength": 100 },
+        "tier_id": { "type": "string", "enum": ["starter", "growth", "enterprise"] },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["name", "slug", "tin_number", "phone", "email"]
+    },
+    "User": {
+      "title": "User",
+      "description": "System user with role access",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "email": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "role": { "type": "string", "enum": ["owner", "manager", "dispatcher", "driver", "superadmin"] },
+        "company_id": { "type": "string", "maxLength": 128 },
+        "driver_id": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["name", "email", "role", "company_id"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "System event audit trail",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 50 },
+        "action": { "type": "string", "maxLength": 200 },
+        "details": { "type": "string", "maxLength": 500 },
+        "category": { "type": "string", "enum": ["booking", "dispatch", "fleet", "driver"] }
+      },
+      "required": ["timestamp", "action", "details", "category"]
+    }
+  },
+  "firestore": {
+    "/vehicles/{vehicleId}": {
+      "schema": "Vehicle",
+      "description": "Active physical fleet vehicles"
+    },
+    "/drivers/{driverId}": {
+      "schema": "Driver",
+      "description": "Verified driver & chauffeur roster"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Rental bookings, reservations and missions"
+    },
+    "/companies/{companyId}": {
+      "schema": "Company",
+      "description": "Car rental & tour operator companies"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "App users and employees"
+    },
+    "/activity_logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Audit and operational activity logs"
+    }
+  }
+}

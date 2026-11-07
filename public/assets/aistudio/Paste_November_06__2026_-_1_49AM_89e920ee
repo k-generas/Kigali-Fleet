@@ -1,0 +1,1473 @@
+# Kigali Fleet Management SaaS — Complete Product Breakdown
+
+We are going to break down the entire product, from the public homepage to the internal dashboard, every user type, every page, every feature, and what each person is allowed to see and do.
+
+The goal is to understand Kigali Fleet as a complete software business, not just a collection of screens.
+
+Important distinction: I could access the deployed website's URL, but its application screens were not readable through the browser. Therefore, I will distinguish:
+
+-
+
+  Proposal
+
+  &#x20;Features explicitly described in the supplied Kigali Fleet proposal.
+
+
+-
+
+  Product design
+
+  &#x20;Pages and functionality logically needed to make the proposed system complete.
+
+
+-
+
+  Unverified
+
+  &#x20;Features whose existence in the current MVP has not yet been established.
+
+
+
+I will not claim that proposed functionality already exists in the deployed application.
+
+# PART 1. Understanding the entire product
+
+## 1. What exactly is Kigali Fleet?
+
+Kigali Fleet is a Fleet Management and Dispatch SaaS.
+
+Its customers are businesses that manage vehicles and transport services, including:
+
+1. Private car rental companies.
+2. Tour operators.
+3. Airport transfer companies.
+4. Corporate transport providers.
+
+Imagine a company in Kigali with:
+
+- 15 vehicles.
+- 12 drivers.
+- 3 booking coordinators.
+- Customers arriving from different countries.
+- Multiple bookings every day.
+
+Without centralized software, the company might use Excel, notebooks, phone calls, and WhatsApp to manage everything.
+
+Kigali Fleet is intended to centralize these operations.
+
+The complete business operation
+
+Customer
+
+Requests a vehicle or transport service
+
+Booking system
+
+Checks vehicle availability and records bookings
+
+Fleet and driver management
+
+Assigns an available vehicle and driver
+
+Dispatch and trip execution
+
+Driver receives instructions and completes the trip
+
+Financial records
+
+Business records payments and revenue
+
+The important idea is that all these operations should share the same data.
+
+For example, when a customer books a vehicle, the system should update its availability. When the manager assigns a driver, the driver should receive the correct itinerary.
+
+# PART 2. All users and their roles
+
+Before designing pages, we need to understand who uses the software.
+
+There is a difference between a person who uses Kigali Fleet to operate a business and a person who uses it to book a vehicle.
+
+## 2. User categories
+
+I recommend separating users into two major groups.
+
+## A. Internal users
+
+People working for a transport company.
+
+[Digital Transformation in Car Rental: Boost Efficiency 2026 | Nomora](https://images.openai.com/static-rsc-4/96kygWh5b5j0H_ht5rfAdMqzv6bpgs58z3Z5xJpbfjvY6Nzngf4aTm8VZu_trPiQh8jmY0WgDAaj1GBeEZvNIKbJfHLVoDVYgVQ2LgmyrelEXvUadCH-dQiHuVpyGjspXZwAFYe4G_vv_959V3IMPE5_b-kNpcToRe4Pu5Rm9Gk?purpose=inline)
+
+1\. Business Owner
+
+Highest company authority
+
+Controls the company, finances, employees, fleet and subscriptions.
+
+[Business Woman Monitors Live Operations Dashboard](https://images.openai.com/static-rsc-4/ihv9tRVDlnLZZMOKp_vA0QMS7TPJ1z1XaVPpoiNwhQ34ej2jwS8oJYcVv6Osk5dA44Tk4-GB7FFSl8DdURQcOOql5Og-sFZCuJtACR7eZ75B3qfanu9Q38ztHbtFHhWmlFodIgioMSz_qMCD-fy1FdQJdA_Acbpm-hP0262KTiqJWJo1q-vBDSzwhYUrZDO0?purpose=inline)
+
+2\. Administrator / Operations Manager
+
+Manages daily activities, bookings, vehicles, drivers and staff permissions.
+
+[Dein Job zwischen Planung, Kommunikation und Verantwortung: Disponent/in (Transport, Verkehr, Logistik) - Berufeberater](https://images.openai.com/static-rsc-4/RxTfoqixC7VlWGeH0Q_i91y8MckL3K0ZBXBXTcsCVNHjUDycD5bnZdYkREcycHqsVGEc58MAIwulKO9AYSOSgX4PAUzZ_g5QZxgoyRhf4hVpxaFX1Z6drrWeUNikLPGML_V3tgBxmDL-_banbQKLxU4S4DViWrc0ZQ2et-64Atg?purpose=inline)
+
+3\. Booking Agent / Dispatcher
+
+Handles customer requests, booking confirmations, vehicle allocation and driver assignments.
+
+[【峴港】私人機場接送 – 峴港國際機場 (DAD) 往返峴港市 - KKday](https://images.openai.com/static-rsc-4/614p2ymayrZftDWhXODRFCaVm0pIcJ7iJsP_DB0AaNJ29d7oJTaq6ocRprap05-cHxi9-dnctvGkOPtVmKTIne9kCl0U-BPmkXpgpXMB980LqwcpM01aTr0IOwebTIyLxr03OAUJJnENA6FBjMeZTAg6WOBFm5HGw_D8W5puKik?purpose=inline)
+
+4\. Driver
+
+Receives trips, checks schedules, confirms assignments and updates trip status.
+
+## B. External users
+
+People interacting with a transport company.
+
+[Mirencar | Self-Drive Car Rental & Car Sharing Platform in Vietnam](https://images.openai.com/static-rsc-4/taoDyOJ2xer-b-ofh6Q3bOgtCrdUI7UX0h8rT7K7jH1mJ90AZHrmXhZED5CIQ-2Kwx991dSDCy8JdFCfr5nmpZC7k-GRCk6p-jxZLGyL5CDG9wMvNaic2fl8PD5emkOtK15R_OBD4V_NNMbcnifcJaDPC-YlemrZmk__GNAG754?purpose=inline)
+
+5\. Customer / Tourist
+
+Browses available services, requests vehicles, makes bookings and receives confirmations.
+
+[Wetu Tourism Solutions](https://images.openai.com/static-rsc-4/7Bg4MKm6CcM3rbjsz78yA2-9S9wTA7drjKVbLmrckJps0GX_BsneaJCT_2xNMJM__MDBUiPA4coOgkMDVWw8BP2-XwQMkLU-J5AJ77-BTHoZeaw-O9eGdd10i-RFe_Q_MtqZCjmyAMKQjrwKeRX-CzhwMbrkHLrPsTXZb6aBr_4?purpose=inline)
+
+6\. Corporate Client
+
+Books transport for employees, business trips, conferences and organizational activities.
+
+## 3. Platform-level user
+
+There is another important role that is not explicitly described in the proposal but would be necessary if Kigali Fleet itself operates as a multi-company SaaS.
+
+7\. Kigali Fleet Super Administrator
+
+This is the person managing the entire SaaS platform, rather than one rental company.
+
+Responsibilities:
+
+- Register and manage transport companies.
+- Activate, suspend or deactivate company accounts.
+- Monitor subscriptions.
+- Manage subscription plans.
+- Monitor platform-wide activity.
+- Handle support requests.
+- Monitor platform usage.
+- Manage system configuration.
+
+This role must be separated from a company's administrator.
+
+Example:
+
+- Kigali Fleet Super Admin manages 100 transport companies.
+- Company A's Owner manages only Company A.
+- Company A's Dispatcher manages bookings for Company A.
+- Company A's Driver sees only their assigned trips.
+
+This is called multi-tenancy: multiple businesses use one platform while their information remains isolated.
+
+# PART 3. Complete page-by-page breakdown
+
+We need to separate two applications that may share the same domain:
+
+1. The public website, where people discover Kigali Fleet and register.
+2. The private application, where transport companies manage their operations.
+
+## 4. Public website — before login
+
+These pages are intended to attract customers and convert transport businesses into subscribers.
+
+[Fleetora — Modern Fleet & Logistics SaaS Landing Page by Novelino Jonathan on Dribbble](https://images.openai.com/static-rsc-4/2HW0D6kbYCniqykAqMmFm5g8Z2JGjAaVEDe3133wKkirawurDfwgBaJY1sWcpeHXPYcKrf9GSa7FTKWGF5W4NwfZS-ndEuD9hYWfVk10ix-XRTAHNSz731kLzOWIQqbhrls0WKTgSWqWW1XvZ3QecOPgrOHzZth7Di5b0Gtsbao?purpose=inline)
+
+[dribbble.com](https://dribbble.com/shots/27141005-Fleetora-Modern-Fleet-Logistics-SaaS-Landing-Page?utm_source=chatgpt.com)
+
+### Page 1: Homepage `/`
+
+Product design
+
+Purpose: Explain what Kigali Fleet does and convince transport businesses to try it.
+
+What visitors should see:
+
+| Section          | What it contains                                        |
+| ---------------- | ------------------------------------------------------- |
+| Navigation       | Logo, Features, Pricing, About, Login, Get Started      |
+| Hero section     | Main headline explaining the fleet management solution  |
+| Product preview  | Screenshots of the dashboard and booking calendar       |
+| Problem section  | Double bookings, driver confusion and revenue leakage   |
+| Solution section | Centralized fleet, booking and dispatch management      |
+| Features         | Vehicle management, driver management, booking system   |
+| How it works     | Register, add fleet, receive bookings, dispatch drivers |
+| Pricing          | Starter, Growth and Enterprise                          |
+| Testimonials     | Real customer feedback, when available                  |
+| FAQ              | Common questions                                        |
+| Footer           | Contact, terms, privacy and social links                |
+
+Example homepage headline:
+
+Manage Your Fleet. Control Your Bookings. Never Lose Track.
+
+Supporting text:
+
+Manage vehicles, drivers, bookings and transport operations from one centralized platform.
+
+Primary buttons:
+
+- Get Started
+- Explore Features
+
+### Page 2: Features `/features`
+
+Shows all the capabilities of the platform.
+
+Suggested sections:
+
+1. Fleet management.
+2. Vehicle availability calendar.
+3. Online booking.
+4. Driver management.
+5. Dispatch management.
+6. SMS notifications.
+7. Booking collision prevention.
+8. Business reporting.
+
+Each feature should explain the business problem it solves.
+
+### Page 3: Pricing `/pricing`
+
+Displays the subscription packages.
+
+| Feature            | Starter    | Growth     | Enterprise  |
+| ------------------ | ---------- | ---------- | ----------- |
+| Monthly price      | 35,000 RWF | 75,000 RWF | 150,000 RWF |
+| Fleet limit        | 5 cars     | 20 cars    | Large fleet |
+| Vehicle management | Yes        | Yes        | Yes         |
+| Booking management | Yes        | Yes        | Yes         |
+| Driver management  | Yes        | Yes        | Yes         |
+| Advanced reporting | To define  | To define  | To define   |
+
+The prices and fleet limits come from the proposal. The remaining feature entitlements need to be defined.&#x20;
+
+Kigali Fleet Management SaaS Proposal.pdf
+
+
+
+### Page 4: About `/about`
+
+Explains:
+
+- What Kigali Fleet is.
+- Its mission.
+- The problem it addresses.
+- Who it serves.
+- Its approach to improving transport operations.
+
+### Page 5: Contact `/contact`
+
+Contains:
+
+- Contact form.
+- Business email.
+- Telephone contact.
+- Support request.
+- Business inquiries.
+
+### Page 6: Registration `/register`
+
+Allows a transport company to create an account.
+
+Suggested fields:
+
+- Company name.
+- Business email.
+- Telephone number.
+- Country.
+- Business type.
+- Password.
+- Confirm password.
+
+After registration, the owner should complete company setup.
+
+### Page 7: Login `/login`
+
+Allows registered users to access their accounts.
+
+Fields:
+
+- Email.
+- Password.
+- Remember me.
+- Forgot password.
+
+The system should identify the user's company and role after authentication.
+
+### Page 8: Forgot password `/forgot-password`
+
+Allows users to recover access through a verified email or other supported recovery method.
+
+# PART 4. The internal application
+
+This is the most important part of Kigali Fleet.
+
+After login, users should not all see the same dashboard.
+
+Their dashboards and permissions depend on their roles.
+
+## 5. Business Owner / Administrator dashboard
+
+Primary management dashboard
+
+[CARVO - Revolutionary Car Rental Management Platform](https://images.openai.com/static-rsc-4/LpwsxIxXGNnmqAEmzU9TqGmW_rxu4QhxsLH0BuLYXJVvR3lLFg2f1nNsvF0a2mvVEU6-U4yaZjsFYtyz3tUpGz13kS1j8gDrLiVECD20VGHWCbGMAWe7WJnE9lXyQRZko8cI9VPC9OwwfZjt5vd61AI86hefAbnEoIQEo8IvKeI?purpose=inline)
+
+[carvoapp.online](https://www.carvoapp.online/?utm_source=chatgpt.com)
+
+The owner needs a complete overview of the business.
+
+### Page 1: Dashboard `/dashboard`
+
+What should appear:
+
+A. Business statistics
+
+- Total vehicles.
+- Available vehicles.
+- Currently rented vehicles.
+- Vehicles under maintenance.
+- Total drivers.
+- Available drivers.
+- Active bookings.
+- Pending bookings.
+
+B. Financial overview
+
+- Total booking value.
+- Payments received.
+- Outstanding payments.
+- Cancelled booking value.
+- Revenue by period.
+
+C. Booking calendar
+
+Displays bookings across days, weeks and months.
+
+D. Recent activities
+
+Examples:
+
+- New booking created.
+- Driver assigned.
+- Vehicle marked unavailable.
+- Payment received.
+- Booking cancelled.
+
+E. Upcoming trips
+
+Shows the next scheduled trips and their status.
+
+F. Alerts
+
+Examples:
+
+- Vehicle maintenance due.
+- Booking without a driver.
+- Unpaid booking.
+- Conflicting schedule.
+- Driver not yet checked in.
+
+The dashboard should answer one question:
+
+What is happening in my transport business right now?
+
+## 6. Fleet Management `/vehicles`
+
+[Fleet Vehicle Interface - Case Study by Dipu Paul on Dribbble](https://images.openai.com/static-rsc-4/_-m1F1dDUxFySpQxT3SheZ8FVc7p3pB_SLDmLRX2xa2hi9OpMXPYhsVuSnEbDy_xEdiXNlDPQFlj-_oaZkiu551b85AaW7o4UWIXM_oqXm2Kih6x_Ll8zSRPSkgHDIV7RbXQ7fEXza0sWM25Nn5-neYIqkFaCdyhlTPXqMPUyKA?purpose=inline)
+
+[dribbble.com](https://dribbble.com/shots/26244727-Fleet-Vehicle-Interface-Case-Study?utm_source=chatgpt.com)
+
+Purpose: Manage every physical vehicle owned or operated by the company.
+
+### Vehicles list
+
+Each vehicle should display:
+
+| Field            | Example             |
+| ---------------- | ------------------- |
+| Vehicle name     | Toyota Land Cruiser |
+| Plate number     | RAE 123 A           |
+| Category         | SUV                 |
+| Model year       | 2023                |
+| Status           | Available           |
+| Daily rate       | 150,000 RWF         |
+| Assigned driver  | Jean                |
+| Current location | Kigali              |
+
+### Available actions
+
+- Add vehicle.
+- Edit vehicle.
+- View vehicle details.
+- Change vehicle status.
+- Delete or archive vehicle.
+- View booking history.
+- View maintenance history.
+
+### Add vehicle page `/vehicles/new`
+
+Fields:
+
+- Vehicle name.
+- Registration plate.
+- Brand.
+- Model.
+- Category.
+- Year.
+- Seating capacity.
+- Daily rental price.
+- Description.
+- Vehicle image.
+- Operational status.
+
+### Vehicle details `/vehicles/:id`
+
+Shows:
+
+1. Vehicle information.
+2. Current availability.
+3. Booking history.
+4. Assigned drivers.
+5. Maintenance history.
+6. Revenue generated.
+7. Operational notes.
+
+### Vehicle statuses
+
+- Available.
+- Reserved.
+- Rented.
+- In maintenance.
+- Out of service.
+
+Important business rule: A vehicle under maintenance must not be offered as available for overlapping rental dates.
+
+## 7. Driver Management `/drivers`
+
+[FleetCommand Pro - AI-Powered Fleet Management Platform](https://images.openai.com/static-rsc-4/ryHnnaA-bE0mXpemaSShsg24Ev5krdNIFhKqMZ-q0kf7uxSY1u-A70C5bpDl7igcs0G4lCv1ya4K1BqltUwV451ndxww54W8MsG_PMqGhxzDLVuAOqIbnOLD55RqGJXw9d-2Kuzs8dt0kgnm-DRpjZRFYjB8ULRq5_afuqc_FW8?purpose=inline)
+
+[getfleetcommand.com](https://getfleetcommand.com/?utm_source=chatgpt.com)
+
+Purpose: Manage all drivers working with the company.
+
+### Driver list
+
+Each record should display:
+
+- Full name.
+- Phone number.
+- Email (optional).
+- Driver identification.
+- Licence information.
+- Availability.
+- Assigned vehicle, if applicable.
+- Current assignment.
+
+### Add driver `/drivers/new`
+
+Fields:
+
+- Full name.
+- Phone number.
+- Email.
+- Licence number.
+- Licence expiry date.
+- Address.
+- Emergency contact.
+- Employment status.
+
+### Driver details `/drivers/:id`
+
+Shows:
+
+- Personal and employment information.
+- Upcoming trips.
+- Completed trips.
+- Cancelled trips.
+- Driver availability.
+- Performance history.
+- Assignment history.
+
+### Driver availability statuses
+
+- Available.
+- Assigned.
+- On trip.
+- Off duty.
+- Unavailable.
+
+Critical rule: The same driver should not receive two overlapping assignments.
+
+## 8. Booking Management `/bookings`
+
+Core business functionality
+
+[Rently Soft | Car Rental Management Software](https://images.openai.com/static-rsc-4/p4qNIdRsXOsj0XxCXVpGtG66D0wwbJXXn7x3uJC3IjF0_etGMLUOpTrT7gc0-uhemaQmgHAvysk0tvxJ9-pkuzQSdxGyA1MRBkFIDd-EredfL7MxXY-Q885ieDcjFfE_5V2HGXL4NoXW7rrNNNATR7pLUb8Mgj7h59NzLmuP3gU?purpose=inline)
+
+[rentlysoft.com](https://www.rentlysoft.com/?utm_source=chatgpt.com)
+
+This is where customer requests become actual business transactions.
+
+### Booking list
+
+Display:
+
+| Field       | Description               |
+| ----------- | ------------------------- |
+| Booking ID  | Unique reference          |
+| Customer    | Person making the request |
+| Vehicle     | Selected vehicle          |
+| Pickup      | Collection location       |
+| Destination | Travel destination        |
+| Start date  | Rental beginning          |
+| End date    | Rental ending             |
+| Amount      | Booking price             |
+| Status      | Booking progress          |
+
+### Booking statuses
+
+I recommend:
+
+1. Pending.
+2. Confirmed.
+3. Assigned.
+4. In progress.
+5. Completed.
+6. Cancelled.
+7. Rejected.
+
+### Create booking `/bookings/new`
+
+A staff member should be able to:
+
+- Select an existing customer.
+- Create a new customer.
+- Select pickup and return dates.
+- Enter pickup location.
+- Enter destination.
+- Select vehicle category.
+- Check availability.
+- Select a vehicle.
+- Calculate the price.
+- Record payment information.
+- Save the booking.
+
+### Booking details `/bookings/:id`
+
+Shows:
+
+- Booking reference.
+- Customer details.
+- Vehicle details.
+- Driver details.
+- Pickup and destination.
+- Rental dates.
+- Price breakdown.
+- Payment status.
+- Booking status.
+- Activity history.
+
+### The most important feature: Collision prevention
+
+The proposal explicitly describes a system that checks the actual physical inventory for overlapping booking dates before confirming a vehicle.&#x20;
+
+Kigali Fleet Management SaaS Proposal.pdf
+
+
+
+Example:
+
+A company has one Toyota RAV4.
+
+- Customer A books November 10–13.
+- Customer B requests November 12–15.
+
+The system must reject the overlapping allocation.
+
+It must also protect against two customers trying to reserve the same vehicle simultaneously.
+
+This is not merely a calendar feature. It requires backend validation and reliable database transactions.
+
+## 9. Booking Calendar `/calendar`
+
+[Coastr Software Pricing, Alternatives & More 2026 | Capterra](https://images.openai.com/static-rsc-4/B0pGM7L25XUREAtGCSTsK2vVr1hS5XsE6MhVYmQhyl1Qi7Is_NpqgptQlMuHT9bKQ-pKHFTiJjva98TfoqRr3cioXsGGUVvSm8cKrz9oFkrNTXDZUnBIYBbxQ5NDnCbwOjv4d8fN3T1jgU8goIMpkXRrmU5UoeED9rwwOFxtyzI?purpose=inline)
+
+[capterra.com](https://www.capterra.com/p/207432/coastr/?utm_source=chatgpt.com)
+
+This page provides a visual representation of the entire fleet schedule.
+
+Possible views:
+
+- Daily.
+- Weekly.
+- Monthly.
+- By vehicle.
+- By driver.
+
+Example:
+
+| Vehicle      | Nov 6       | Nov 7       | Nov 8     | Nov 9     |
+| ------------ | ----------- | ----------- | --------- | --------- |
+| Land Cruiser | Rented      | Rented      | Available | Available |
+| RAV4         | Available   | Reserved    | Reserved  | Available |
+| Coaster      | Maintenance | Maintenance | Available | Reserved  |
+
+Users should be able to click a booking and open its details.
+
+## 10. Dispatch Management `/dispatch`
+
+Core operational functionality
+
+[MotionTools TMS Software | Sendungen digital erfassen, Touren automatisch optimieren und Lieferungen effizient zustellen.](https://images.openai.com/static-rsc-4/A8qSNjgSHDLjjRd1nTmmLr26UNL1mI_Fb9tZ9lxTDyw7ipu1c5cMbCASydlxBcYiLtNWd8BoQTG2J95sTxjDf63JpTeLfnmUVz2fc0e6xCEBepscUdvhcijQV_LU07ZTaIMR3lRFjAcXYGolNQKoL93tRlVgGDEBzhn0Bqvb2gg?purpose=inline)
+
+[motiontools.com](https://www.motiontools.com/de/tms-software?utm_source=chatgpt.com)
+
+This page handles the coordination of vehicles and drivers.
+
+Imagine:
+
+A tourist books a Land Cruiser for a trip from Kigali to Musanze.
+
+The dispatcher must:
+
+1. Open the confirmed booking.
+2. Select an available driver.
+3. Confirm the vehicle.
+4. Set pickup time.
+5. Send instructions to the driver.
+6. Monitor assignment status.
+7. Update the booking when the trip begins.
+
+### Dispatch board
+
+It should display:
+
+- Unassigned bookings.
+- Assigned bookings.
+- Drivers available.
+- Drivers on trips.
+- Upcoming pickups.
+- Delayed pickups.
+- Completed trips.
+
+### Dispatch details
+
+Each dispatch should contain:
+
+- Booking reference.
+- Driver.
+- Vehicle.
+- Pickup time.
+- Pickup address.
+- Destination.
+- Customer contact.
+- Special instructions.
+- Dispatch status.
+
+### Dispatch statuses
+
+- Waiting for assignment.
+- Assigned.
+- Driver notified.
+- Driver acknowledged.
+- En route.
+- Arrived.
+- Trip started.
+- Trip completed.
+
+The proposal specifically describes SMS-based dispatch through Africa's Talking and a zero-data driver check-in mechanism.&#x20;
+
+Kigali Fleet Management SaaS Proposal.pdf
+
+
+
+## 11. Customers `/customers`
+
+[客户管理-灵当CRM客户帮助中心](https://images.openai.com/static-rsc-4/Pn14Us5jt8YF1hk2QMsC-sPa1HVt4pFwa4S8fg5haksYvk40ZK2Qb6sOnTHZVV-ty-5FZ9lZnoPEGjeNiSx5FDiUF0Xd9lH1k6FY0SGBIGWkY_gnbL-couhFOes4R7yy5MN-snj_i7AM-Ky04hPZ2lUnuvXbhXh8i0JUlrBPKdQ?purpose=inline)
+
+[help.51mis.com](https://help.51mis.com/docs/lu2OzD?utm_source=chatgpt.com)
+
+This page manages people and organizations that book vehicles.
+
+### Customer list
+
+- Full name or company name.
+- Telephone number.
+- Email.
+- Customer category.
+- Total bookings.
+- Total booking value.
+- Outstanding payments.
+
+### Customer categories
+
+- Individual.
+- Tourist.
+- Corporate.
+- NGO.
+- Travel agency.
+
+### Customer profile `/customers/:id`
+
+Shows:
+
+- Contact information.
+- Booking history.
+- Active bookings.
+- Payment history.
+- Outstanding balances.
+- Notes.
+- Customer activity.
+
+Why this matters: A company should be able to identify returning customers and understand its business relationships.
+
+## 12. Payments and Financial Management `/payments`
+
+Necessary product design
+
+The proposal identifies payment fraud and revenue leakage as problems, but does not define a complete financial module.
+
+I recommend:
+
+### Payments page
+
+Display:
+
+- Payment reference.
+- Booking ID.
+- Customer.
+- Amount expected.
+- Amount paid.
+- Payment method.
+- Payment date.
+- Payment status.
+- Recorded by.
+
+### Payment statuses
+
+- Unpaid.
+- Partially paid.
+- Paid.
+- Refunded.
+- Overdue.
+
+### Payment methods
+
+Potential options:
+
+- Cash.
+- Bank transfer.
+- Mobile Money.
+- Card.
+- Other.
+
+### Financial reports
+
+- Daily revenue.
+- Weekly revenue.
+- Monthly revenue.
+- Payments by method.
+- Outstanding balances.
+- Revenue by vehicle.
+- Revenue by customer.
+
+Important: Recording a payment is not the same as processing a payment. Real Mobile Money integration requires a payment provider and transaction verification.
+
+## 13. Maintenance Management `/maintenance`
+
+Recommended addition
+
+This module is not explicitly detailed in the supplied proposal.
+
+It would allow businesses to track vehicle servicing.
+
+### Maintenance list
+
+- Vehicle.
+- Maintenance type.
+- Description.
+- Date.
+- Cost.
+- Service provider.
+- Next maintenance date.
+- Status.
+
+### Example
+
+A Toyota RAV4 requires servicing.
+
+The manager:
+
+1. Creates a maintenance record.
+2. Marks the vehicle unavailable.
+3. Records the maintenance cost.
+4. Updates the vehicle after servicing.
+
+This prevents the company from accidentally renting a vehicle that cannot operate.
+
+## 14. Reports and Analytics `/reports`
+
+[Fleet Management Dashboard :: Behance](https://images.openai.com/static-rsc-4/_ZG-YNTVv7O_URlkmrD5i4LM_qCVLlafZplROgbQN2RUrTpXHhgddx9n4OpyGNOsT9uGjwY9opdZClcnfBdeXbBm4FK8_CjuPnPMkrT9xPkHwvD6GFh4aZGKxJVznGnyQ_mCzdjsemYBbvdeZIb1EBlDYnacyWCSFDTVd3M04Bk?purpose=inline)
+
+[behance.net](https://www.behance.net/gallery/174750891/Fleet-Management-Dashboard?utm_source=chatgpt.com)
+
+This page helps the owner make business decisions.
+
+Recommended reports:
+
+| Report               | What it answers                          |
+| -------------------- | ---------------------------------------- |
+| Booking report       | How many bookings were received?         |
+| Revenue report       | How much money was generated?            |
+| Fleet utilization    | How frequently are vehicles rented?      |
+| Driver performance   | How many trips did each driver complete? |
+| Cancellation report  | How many bookings were cancelled?        |
+| Outstanding payments | Who still owes money?                    |
+| Vehicle performance  | Which vehicles generate more revenue?    |
+
+The owner should be able to filter reports by date, vehicle, driver and customer.
+
+## 15. Online Booking Storefront `/booking/:companySlug`
+
+Explicitly proposed feature
+
+[Landing Page by Lunanium on Dribbble](https://images.openai.com/static-rsc-4/KfMHDy-yzLsrFQgSIDaNfo37B-VZNWm9Ar87iv3bixFij-eSbRgOijkD0AlGgmFePxHL2N4_LhUx5cU0wQupTdneTn3F0MxzqFZr-704I4BGxKPX77VXXh52j_ahwc-HMEr4SHsYxvRAHaWiw2QyEziekY_zwYuzOirM2mnnfyo?purpose=inline)
+
+[dribbble.com](https://dribbble.com/shots/19605275-Landing-Page?utm_source=chatgpt.com)
+
+This is one of the most interesting features in the proposal.
+
+Every transport company should receive its own public booking page.
+
+For example:
+
+`kigalifleet.vercel.app/booking/abc-rentals`
+
+The company can share this link with tourists, corporate clients and other customers.
+
+### Storefront homepage
+
+Displays:
+
+- Company name and logo.
+- Company description.
+- Available vehicle categories.
+- Rental prices.
+- Booking search.
+- Contact details.
+- Service locations.
+
+### Vehicle listing
+
+Each vehicle card should show:
+
+- Image.
+- Vehicle name.
+- Category.
+- Seating capacity.
+- Daily price.
+- Description.
+- Availability.
+
+### Booking form
+
+The customer enters:
+
+- Pickup date.
+- Return date.
+- Pickup location.
+- Destination.
+- Vehicle category.
+- Contact information.
+
+### Booking confirmation
+
+After submitting:
+
+- Generate a booking reference.
+- Display booking status.
+- Send confirmation if configured.
+- Notify the business.
+
+One important distinction: the proposal describes a storefront link and availability checking. It does not establish that online payment or instant confirmation is already implemented.
+
+# PART 5. Pages according to each user's role
+
+Now we need to answer a critical question:
+
+If six different people log into the same platform, what should each person see?
+
+They should not all have the same interface.
+
+## 16. Driver Portal `/driver`
+
+Explicitly proposed user workflow
+
+[Spare Driver | Dynamic Driver Experience](https://images.openai.com/static-rsc-4/E6RplPwFEw1Ql4flQnG7j6W5wHTs7dvVKzv_cdWkWK3kbbHngnBkqymBFA12mptrRI5g77nYhVSSezUxH10DS74JQFvLEaNgGlAwrobnmh9ozC4tz45v1ZS2UVP45L50Ei9Yk2BxUTe9LQ9XI6zpNr3hR5zaHsz__Pwx-1M9vaU?purpose=inline)
+
+[spare.com](https://spare.com/products/driver?utm_source=chatgpt.com)
+
+Drivers need a simpler interface, preferably optimized for mobile phones.
+
+A driver should not need access to the company's entire financial records or customer database.
+
+### Driver dashboard
+
+Displays:
+
+- Today's assigned trips.
+- Next pickup.
+- Current assignment.
+- Upcoming assignments.
+- Completed trips.
+- Notifications.
+
+### Driver pages
+
+| Page                    | What it shows                    |
+| ----------------------- | -------------------------------- |
+| `/driver/dashboard`     | Overview of assigned work        |
+| `/driver/trips`         | All assigned trips               |
+| `/driver/trips/:id`     | Trip details and instructions    |
+| `/driver/schedule`      | Personal schedule                |
+| `/driver/notifications` | Assignment and schedule messages |
+| `/driver/profile`       | Personal account information     |
+
+### Driver trip details
+
+The driver sees:
+
+- Customer name.
+- Customer contact.
+- Pickup address.
+- Destination.
+- Pickup date and time.
+- Vehicle assigned.
+- Booking reference.
+- Special instructions.
+
+### Driver actions
+
+The driver should be able to:
+
+- Acknowledge an assignment.
+- Confirm availability.
+- Check in.
+- Mark arrival.
+- Start a trip.
+- Complete a trip.
+- Report a problem.
+
+### Zero-data check-in
+
+The proposal mentions a zero-data check-in hook. This requires careful technical definition.
+
+A possible implementation is SMS-based commands.
+
+For example:
+
+- Driver receives an SMS with a trip reference.
+- Driver replies with a predefined confirmation.
+- The backend receives and validates the message.
+- The trip status updates.
+
+This would reduce the driver's dependence on mobile internet.
+
+## 17. Booking Agent / Dispatcher Portal
+
+The dispatcher needs a focused operational dashboard.
+
+They should see:
+
+Dashboard
+
+- New booking requests.
+- Pending confirmations.
+- Unassigned trips.
+- Available vehicles.
+- Available drivers.
+- Today's pickups.
+
+Pages
+
+- Dashboard.
+- Bookings.
+- Booking calendar.
+- Dispatch.
+- Customers.
+- Notifications.
+
+Permissions
+
+The dispatcher can create and manage bookings, assign vehicles and drivers, and update operational statuses.
+
+They should not automatically have access to:
+
+- Subscription management.
+- Company ownership settings.
+- Other companies' records.
+- Sensitive platform configuration.
+- Full financial administration.
+
+## 18. Company Owner Portal
+
+The owner gets the broadest access within their company.
+
+Pages:
+
+- Dashboard.
+- Vehicles.
+- Drivers.
+- Bookings.
+- Calendar.
+- Dispatch.
+- Customers.
+- Payments.
+- Reports.
+- Maintenance.
+- Employees and permissions.
+- Subscription and billing.
+- Company settings.
+
+The owner should be able to create additional employee accounts and decide what those employees can access.
+
+## 19. Super Admin Portal `/super-admin`
+
+Recommended for SaaS operations
+
+[Multi-tenant Admin Dashboard · interface-design](https://images.openai.com/static-rsc-4/WNh6xSaCLe177TOVG1MsQulH49MhsEAAEqNvmTRijaoYZel66WrIg3tsOzVUvaLmtS60vVXQ-fl7M0BTbzx4j321K62vb7wjrBiOhpLBkDYdJpXDnk8I8UG2ghH2OY-deDmsmiQVpgOP_THpnXNeQDQ606A1HRXRMbI8su_J1c8?purpose=inline)
+
+[interface-design.dev](https://interface-design.dev/experiments/admin-dashboard.html?utm_source=chatgpt.com)
+
+This is the control center of Kigali Fleet as a software business.
+
+The super admin does not manage one company's vehicles. They manage the entire platform.
+
+### Dashboard
+
+Displays:
+
+- Total registered companies.
+- Active companies.
+- Suspended companies.
+- Total registered vehicles.
+- Total platform bookings.
+- Active subscriptions.
+- Expired subscriptions.
+- Monthly recurring revenue.
+- New registrations.
+
+### Pages
+
+| Route                        | Purpose                      |
+| ---------------------------- | ---------------------------- |
+| `/super-admin/dashboard`     | Platform overview            |
+| `/super-admin/companies`     | Manage registered companies  |
+| `/super-admin/companies/:id` | View company account         |
+| `/super-admin/subscriptions` | Manage subscription records  |
+| `/super-admin/plans`         | Manage subscription packages |
+| `/super-admin/users`         | Manage platform users        |
+| `/super-admin/payments`      | Track subscription payments  |
+| `/super-admin/support`       | Handle customer support      |
+| `/super-admin/analytics`     | Platform-wide analytics      |
+| `/super-admin/settings`      | Global configuration         |
+
+### Example
+
+Suppose Kigali Fleet has 50 registered companies.
+
+The super admin should be able to:
+
+- See all 50 companies.
+- Identify which subscriptions are active.
+- Identify which accounts have expired.
+- Change subscription status.
+- Investigate reported issues.
+- View platform usage.
+
+However, platform administration should not mean unrestricted access to private customer information. Access to sensitive company data should be controlled and audited.
+
+# PART 6. Other important system features
+
+These features are not necessarily separate pages. They are services that work across multiple pages.
+
+## 20. Notifications `/notifications`
+
+[Next.js SaaS Boilerplate (Tailwind + shadcn) | thefrontkit](https://images.openai.com/static-rsc-4/v9jSH_O_7xf5_9zq65tGLbPWXA-Y02h6RwgnQTksAdwFdYl-_K1fug6Y7IxJCPclj_ErifuVvNbZ1fIetWuTo9L9OY9tJxK_sRJnPkzZGRNyu8YO3oSrfnT8Tpw4qmqVUVUFny9o7_6hdK7Qh2OO2neUU_QT-XYLBt2AT1AcIVI?purpose=inline)
+
+[thefrontkit.com](https://thefrontkit.com/apps/saas-starter-kit?utm_source=chatgpt.com)
+
+Different users receive different notifications.
+
+| Event                   | Recipient                  |
+| ----------------------- | -------------------------- |
+| New booking request     | Booking agent              |
+| Booking confirmed       | Customer                   |
+| Driver assigned         | Driver and dispatcher      |
+| Pickup approaching      | Driver and dispatcher      |
+| Booking cancelled       | Customer and manager       |
+| Payment recorded        | Owner and authorized staff |
+| Vehicle maintenance due | Manager                    |
+| Subscription expiring   | Owner                      |
+
+Channels:
+
+- In-app notifications.
+- SMS.
+- Email.
+
+The proposal specifically mentions SMS dispatch using Africa's Talking.&#x20;
+
+Kigali Fleet Management SaaS Proposal.pdf
+
+
+
+## 21. Employee Management `/employees`
+
+The owner should be able to:
+
+- Invite employees.
+- Create accounts.
+- Assign roles.
+- Change permissions.
+- Deactivate accounts.
+- View employee activity.
+
+For example, the owner can create an account for a booking agent without giving that person access to subscription settings.
+
+## 22. Company Settings `/settings`
+
+Suggested sections:
+
+Business profile
+
+- Company name.
+- Logo.
+- Address.
+- Contact information.
+- Business registration information.
+
+Booking settings
+
+- Currency.
+- Booking rules.
+- Cancellation rules.
+- Minimum rental duration.
+- Booking confirmation settings.
+
+Fleet settings
+
+- Vehicle categories.
+- Pricing rules.
+- Operational statuses.
+
+Notifications
+
+- SMS preferences.
+- Email preferences.
+- Notification recipients.
+
+Security
+
+- Password changes.
+- Account security.
+- Active sessions.
+- Employee permissions.
+
+Subscription
+
+- Current plan.
+- Fleet limit.
+- Renewal date.
+- Billing history.
+
+## 23. Authentication and authorization
+
+These are two different concepts.
+
+- Authentication: Who are you?
+- Authorization: What are you allowed to do?
+
+For example:
+
+A driver logs in successfully.
+
+Authentication confirms their identity.
+
+Authorization ensures they can only see their own assigned trips and permitted profile information.
+
+This distinction is fundamental when developing multi-user SaaS software.
+
+# PART 7. Complete roles and permissions matrix
+
+## 24. Who can access what?
+
+Here is a recommended starting permission model.
+
+Legend:
+
+- ✅ Full access.
+- 👁 View only.
+- ✏️ Limited management.
+- ❌ No access.
+
+| Feature             | Super Admin      | Owner         | Manager | Dispatcher | Driver       |
+| ------------------- | ---------------- | ------------- | ------- | ---------- | ------------ |
+| Platform management | ✅                | ❌             | ❌       | ❌          | ❌            |
+| Company settings    | 👁               | ✅             | ✏️      | ❌          | ❌            |
+| Vehicles            | 👁               | ✅             | ✅       | 👁         | 👁 Assigned  |
+| Drivers             | 👁               | ✅             | ✅       | ✏️         | 👁 Self      |
+| Bookings            | 👁               | ✅             | ✅       | ✅          | 👁 Assigned  |
+| Calendar            | 👁               | ✅             | ✅       | ✅          | 👁 Personal  |
+| Dispatch            | 👁               | ✅             | ✅       | ✅          | ✏️ Own trips |
+| Customers           | 👁               | ✅             | ✅       | ✏️         | 👁 Assigned  |
+| Payments            | Platform billing | ✅             | ✏️      | ❌          | ❌            |
+| Reports             | Platform-wide    | ✅             | ✏️      | ❌          | ❌            |
+| Employees           | Platform users   | ✅             | ✏️      | ❌          | ❌            |
+| Subscriptions       | ✅                | 👁/Manage own | ❌       | ❌          | ❌            |
+
+These are proposed defaults. The company owner should be able to configure certain employee permissions.
+
+## 25. How everything connects
+
+Understanding the relationships between pages is more important than memorizing their names.
+
+Consider this example:
+
+A tourist wants to rent a Toyota Land Cruiser for three days.
+
+## Complete booking lifecycle
+
+1. Customer visits the storefront
+
+   Selects dates, vehicle category and pickup location.
+2. Availability engine checks the fleet
+
+   Checks the actual vehicle inventory and overlapping reservations.
+3. Booking is created
+
+   A booking reference is generated and the request is recorded.
+4. Booking agent confirms the booking
+
+   Confirms the customer request and applicable price.
+5. Dispatcher assigns resources
+
+   Selects an available vehicle and driver.
+6. Driver receives instructions
+
+   Receives trip details through the configured notification channel.
+7. Trip begins
+
+   Driver checks in and updates the trip status.
+8. Trip is completed
+
+   Vehicle becomes available again after the rental period and any required checks.
+9. Financial records are updated
+
+   Payment records, booking value and outstanding balances are updated.
+10. Owner reviews performance
+
+    The completed transaction contributes to reports and analytics.
+
+This is the central workflow that the entire product must support.
+
+# PART 8. The complete proposed sitemap
+
+Here is the consolidated page structure.
+
+## Kigali Fleet
+
+1\. Public Website
+
+- Home
+- Features
+- Pricing
+- About
+- Contact
+- Register
+- Login
+- Forgot Password
+
+2\. Company Application
+
+- Dashboard
+- Vehicles
+  - Vehicle List
+  - Add Vehicle
+  - Vehicle Details
+- Drivers
+  - Driver List
+  - Add Driver
+  - Driver Details
+- Bookings
+  - Booking List
+  - Create Booking
+  - Booking Details
+- Calendar
+- Dispatch
+- Customers
+  - Customer List
+  - Customer Details
+- Payments
+- Maintenance
+- Reports
+- Notifications
+- Employees
+- Company Settings
+- Subscription
+
+3\. Customer Application
+
+- Company Storefront
+- Vehicle Listings
+- Vehicle Details
+- Booking Form
+- Booking Confirmation
+- Booking Status
+
+4\. Driver Application
+
+- Driver Dashboard
+- My Trips
+- Trip Details
+- My Schedule
+- Notifications
+- My Profile
+
+5\. Platform Super Admin
+
+- Dashboard
+- Companies
+- Company Details
+- Subscriptions
+- Plans
+- Users
+- Payments
+- Support
+- Analytics
+- Settings
+
+# PART 9. What is missing from the original proposal?
+
+This is where we need to think critically.
+
+The proposal explains the main problem and proposed solution, but it is not a complete software requirements specification.
+
+Several important questions remain unanswered.
+
+| Area            | Missing decision                                               |
+| --------------- | -------------------------------------------------------------- |
+| Authentication  | How are companies and employees registered?                    |
+| Multi-tenancy   | How is company data isolated?                                  |
+| Roles           | Can owners create custom employee permissions?                 |
+| Payments        | How are deposits and refunds handled?                          |
+| Booking         | Can customers modify or cancel reservations?                   |
+| Pricing         | How are weekend, seasonal and long-distance prices calculated? |
+| Drivers         | How are driver schedules and time off managed?                 |
+| Maintenance     | How are unavailable vehicles handled?                          |
+| Dispatch        | What happens when a driver rejects an assignment?              |
+| Notifications   | What happens when an SMS fails?                                |
+| Reporting       | Which figures are considered actual revenue?                   |
+| Security        | Who can access sensitive customer information?                 |
+| Offline support | What happens when internet connectivity disappears?            |
+| SaaS billing    | How are subscription renewals and overdue accounts handled?    |
+
+These are not minor details. They affect the database, architecture, user experience and business model.
+
+# PART 10. How I want us to study the actual MVP
+
+We now have a proposed product blueprint. But we must not confuse this blueprint with what has already been developed.
+
+I want us to build an actual feature audit.
+
+## MVP inspection checklist
+
+Mark each area after inspecting the actual application.
+
+## 0/14
+
+Public homepage
+
+Navigation, hero, pricing and registration.
+
+Authentication
+
+Login, registration and password recovery.
+
+Dashboard
+
+Statistics, activities, alerts and overview.
+
+Vehicles
+
+Vehicle creation, editing and availability.
+
+Drivers
+
+Driver records and assignments.
+
+Bookings
+
+Booking creation and management.
+
+Calendar
+
+Vehicle and driver scheduling.
+
+Dispatch
+
+Assignment and trip coordination.
+
+Customers
+
+Customer records and history.
+
+Payments
+
+Payment records and financial tracking.
+
+Reports
+
+Business analytics.
+
+Storefront
+
+Public booking experience.
+
+Driver portal
+
+Driver-specific experience.
+
+Super admin
+
+Platform-level management.
+
+&#x20;Copy inspection checklist
+
+## Our next learning stage
+
+I want to start with the actual homepage, then proceed page by page.
+
+Send me a screenshot of the homepage of `https://kigalifleet.vercel.app/`.
+
+We will analyze:
+
+1. Every visible element.
+2. Every button and its expected action.
+3. Every navigation link.
+4. The user journey.
+5. What the developer implemented correctly.
+6. What is missing.
+7. How each feature should work behind the interface.
+
+We will eventually get down to the database tables, relationships, APIs, permissions and business rules.
+
+The standard: By the end, you should be able to explain Kigali Fleet to a business owner, draw its architecture, and independently understand how its features should be implemented.

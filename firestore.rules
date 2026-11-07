@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Security Helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. Vehicles Collection (Physical Fleet)
+    match /vehicles/{vehicleId} {
+      allow read: if true;
+      allow write: if isValidId(vehicleId);
+    }
+
+    // 2. Drivers Collection (Chauffeurs)
+    match /drivers/{driverId} {
+      allow read: if true;
+      allow write: if isValidId(driverId);
+    }
+
+    // 3. Bookings Collection (Reservations & Storefront)
+    match /bookings/{bookingId} {
+      allow read: if true;
+      allow write: if isValidId(bookingId);
+    }
+
+    // 4. Companies Collection (Tenants)
+    match /companies/{companyId} {
+      allow read: if true;
+      allow write: if isValidId(companyId);
+    }
+
+    // 5. Users Collection (Staff & Chauffeurs)
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isValidId(userId);
+    }
+
+    // 6. Activity Logs Collection (Audit Trail)
+    match /activity_logs/{logId} {
+      allow read: if true;
+      allow write: if isValidId(logId);
+    }
+
+    // 7. Connection test document
+    match /test/connection {
+      allow read, write: if true;
+    }
+  }
+}

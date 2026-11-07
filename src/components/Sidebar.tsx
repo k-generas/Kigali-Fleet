@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Compass,
   LayoutDashboard,
   CalendarDays,
   Car,
@@ -16,9 +17,10 @@ import {
   Share2,
   X,
   Palette,
+  Building2,
 } from 'lucide-react';
 import { ColorTheme, COLOR_THEMES } from '../theme';
-import { Vehicle, Driver, Booking } from '../types';
+import { Vehicle, Driver, Booking, User, Company, Customer } from '../types';
 
 interface SidebarProps {
   currentTab: string;
@@ -36,6 +38,9 @@ interface SidebarProps {
   vehicles: Vehicle[];
   drivers: Driver[];
   bookings: Booking[];
+  customers?: Customer[];
+  currentUser?: User;
+  currentCompany?: Company;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -54,57 +59,93 @@ export const Sidebar: React.FC<SidebarProps> = ({
   vehicles,
   drivers,
   bookings,
+  customers,
+  currentUser,
+  currentCompany,
 }) => {
-  const navItems = [
+  const userRole = currentUser?.role || 'owner';
+
+  const allNavItems = [
+    {
+      id: 'landing',
+      label: 'SaaS Homepage',
+      icon: Compass,
+      badge: 'Public',
+      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
+    },
     {
       id: 'overview',
-      label: 'Overview',
+      label: userRole === 'driver' ? 'My Missions' : 'Overview',
       icon: LayoutDashboard,
       badge: undefined,
+      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
     },
     {
       id: 'calendar',
-      label: 'Fleet Timeline',
+      label: userRole === 'driver' ? 'My Schedule' : 'Fleet Timeline',
       icon: CalendarDays,
       badge: 'Live',
+      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
     },
     {
       id: 'vehicles',
       label: 'Vehicles',
       icon: Car,
       badge: vehicles.length.toString(),
+      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
     },
     {
       id: 'drivers',
-      label: 'Drivers',
+      label: userRole === 'driver' ? 'Driver Portal' : 'Drivers',
       icon: Users,
       badge: drivers.length.toString(),
+      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
     },
     {
       id: 'bookings',
-      label: 'Dispatch & Bookings',
+      label: userRole === 'driver' ? 'Assigned Trips' : 'Bookings & Invoices',
       icon: ClipboardList,
       badge: bookings.length.toString(),
+      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
+    },
+    {
+      id: 'dispatch',
+      label: userRole === 'driver' ? 'Chauffeur Terminal' : 'Dispatch Control',
+      icon: Radio,
+      badge: 'Live',
+      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
+    },
+    {
+      id: 'customers',
+      label: 'Clients & CRM',
+      icon: Building2,
+      badge: customers?.length ? customers.length.toString() : undefined,
+      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
     },
     {
       id: 'simulator',
       label: "Africa's Talking Hub",
-      icon: Radio,
+      icon: Globe,
       badge: 'KIA',
+      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
     },
     {
       id: 'storefront',
       label: 'Public Storefront',
       icon: Globe,
       badge: 'B2B',
+      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
     },
     {
       id: 'pricing',
       label: 'Subscription Plans',
       icon: Layers,
       badge: undefined,
+      roles: ['owner', 'manager', 'superadmin'],
     },
   ];
+
+  const navItems = allNavItems.filter((item) => item.roles.includes(userRole));
 
   const handleNavClick = (tabId: string) => {
     onSelectTab(tabId);
@@ -141,19 +182,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               KF
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-                  KigaliFleet
+                <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white truncate max-w-[130px]" title={currentCompany?.name || 'KigaliFleet'}>
+                  {currentCompany?.name ? currentCompany.name.split(' ')[0] + ' Fleet' : 'KigaliFleet'}
                 </span>
                 <span
-                  className="w-2 h-2 rounded-full animate-pulse"
+                  className="w-2 h-2 rounded-full animate-pulse shrink-0"
                   style={{ backgroundColor: activeThemeObj.hex }}
                   title="System Online"
                 />
               </div>
-              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                Rwanda Dispatch SaaS
+              <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 capitalize truncate">
+                {currentUser ? `${currentUser.name.split(' ')[0]} · ${currentUser.role}` : 'Rwanda Dispatch SaaS'}
               </p>
             </div>
           </div>

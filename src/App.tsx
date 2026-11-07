@@ -17,22 +17,33 @@ import { PublicStorefrontView } from './components/PublicStorefrontView';
 import { AfricasTalkingSimulator } from './components/AfricasTalkingSimulator';
 import { NewBookingModal } from './components/NewBookingModal';
 import { SMSDispatchModal } from './components/SMSDispatchModal';
+import { LandingPageView } from './components/LandingPageView';
+import { LoginView } from './components/LoginView';
+import { RegisterView } from './components/RegisterView';
+import { ForgotPasswordModal } from './components/ForgotPasswordModal';
 import { StorefrontModal } from './components/StorefrontModal';
+import { DispatchView } from './components/DispatchView';
+import { CustomersView } from './components/CustomersView';
 import { RotateCcw } from 'lucide-react';
 
 const VALID_TABS = [
+  'landing',
+  'login',
+  'register',
   'overview',
   'calendar',
   'vehicles',
   'drivers',
   'bookings',
+  'dispatch',
+  'customers',
   'simulator',
   'storefront',
   'pricing',
 ];
 
 function getTabFromLocation(): string {
-  if (typeof window === 'undefined') return 'overview';
+  if (typeof window === 'undefined') return 'landing';
   try {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
@@ -44,13 +55,22 @@ function getTabFromLocation(): string {
       return hash;
     }
     const path = window.location.pathname.toLowerCase();
+    if (path.includes('/login') || path.includes('/signin')) {
+      return 'login';
+    }
+    if (path.includes('/register') || path.includes('/signup')) {
+      return 'register';
+    }
     if (path.includes('/rent') || path.includes('/storefront') || path.includes('/book')) {
       return 'storefront';
+    }
+    if (path.includes('/app') || path.includes('/dashboard') || path.includes('/overview')) {
+      return 'overview';
     }
   } catch (err) {
     console.error('Error reading location tab:', err);
   }
-  return 'overview';
+  return 'landing';
 }
 
 export default function App() {
@@ -62,6 +82,7 @@ export default function App() {
   const [selectedVehicleForBooking, setSelectedVehicleForBooking] = useState<string | undefined>();
   const [selectedDateForBooking, setSelectedDateForBooking] = useState<string | undefined>();
   const [isStorefrontOpen, setIsStorefrontOpen] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [smsDispatchBookingId, setSmsDispatchBookingId] = useState<string | null>(null);
 
   // Sync tab changes to URL search params so browser address bar can be copied/shared
@@ -112,6 +133,101 @@ export default function App() {
     ? store.vehicles.find((v) => v.id === activeDispatchBooking.vehicle_id) || null
     : null;
 
+  if (currentTab === 'login') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+        <LoginView
+          onLoginSuccess={() => handleSelectTab('overview')}
+          onNavigateToRegister={() => handleSelectTab('register')}
+          onNavigateToLanding={() => handleSelectTab('landing')}
+          onOpenForgotPassword={() => setIsForgotPasswordOpen(true)}
+          currentTheme={store.currentTheme}
+          users={store.users}
+          onSelectUser={store.login}
+          onLoginWithGoogle={store.loginWithGoogle}
+        />
+
+        <ForgotPasswordModal
+          isOpen={isForgotPasswordOpen}
+          onClose={() => setIsForgotPasswordOpen(false)}
+          currentTheme={store.currentTheme}
+        />
+      </div>
+    );
+  }
+
+  if (currentTab === 'register') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+        <RegisterView
+          onRegisterSuccess={() => handleSelectTab('overview')}
+          onNavigateToLogin={() => handleSelectTab('login')}
+          onNavigateToLanding={() => handleSelectTab('landing')}
+          currentTheme={store.currentTheme}
+          onRegisterCompany={store.registerCompany}
+        />
+      </div>
+    );
+  }
+
+  if (currentTab === 'landing') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+        <LandingPageView
+          onEnterApp={() => handleSelectTab('overview')}
+          onOpenStorefront={() => handleSelectTab('storefront')}
+          onSelectTab={handleSelectTab}
+          currentTheme={store.currentTheme}
+          accentColorId={store.accentColorId}
+          onSelectAccentColor={store.setAccentColor}
+          themeMode={store.theme}
+          onToggleThemeMode={store.toggleTheme}
+          vehicles={store.vehicles}
+          drivers={store.drivers}
+          bookings={store.bookings}
+        />
+
+        {/* Collision-Guarded New Booking Modal */}
+        <NewBookingModal
+          isOpen={isNewBookingOpen}
+          onClose={() => {
+            setIsNewBookingOpen(false);
+            setSelectedVehicleForBooking(undefined);
+            setSelectedDateForBooking(undefined);
+          }}
+          vehicles={store.vehicles}
+          drivers={store.drivers}
+          existingBookings={store.bookings}
+          onSubmitBooking={store.addBooking}
+          initialVehicleId={selectedVehicleForBooking}
+          initialDate={selectedDateForBooking}
+          currentTheme={store.currentTheme}
+        />
+
+        {/* Africa's Talking SMS Dispatch Modal */}
+        <SMSDispatchModal
+          isOpen={!!smsDispatchBookingId}
+          onClose={() => setSmsDispatchBookingId(null)}
+          booking={activeDispatchBooking}
+          driver={activeDispatchDriver}
+          vehicle={activeDispatchVehicle}
+          onConfirmDispatch={(bkId, lang) => {
+            store.dispatchDriverSMS(bkId, lang);
+          }}
+          currentTheme={store.currentTheme}
+        />
+
+        {/* Instant B2B / Tourist Storefront Modal */}
+        <StorefrontModal
+          isOpen={isStorefrontOpen}
+          onClose={() => setIsStorefrontOpen(false)}
+          onNavigateToStorefront={() => handleSelectTab('storefront')}
+          currentTheme={store.currentTheme}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans transition-colors antialiased">
       {/* 1. Left Sidebar Navigation Menu */}
@@ -131,6 +247,9 @@ export default function App() {
         vehicles={store.vehicles}
         drivers={store.drivers}
         bookings={store.bookings}
+        customers={store.customers}
+        currentUser={store.currentUser}
+        currentCompany={store.currentCompany}
       />
 
       {/* 2. Main Workspace Layout (Offset on Desktop by Sidebar width) */}
@@ -147,6 +266,15 @@ export default function App() {
           themeMode={store.theme}
           onToggleThemeMode={store.toggleTheme}
           activeTierName={store.activeTier.name}
+          currentUser={store.currentUser}
+          currentCompany={store.currentCompany}
+          onSwitchRole={store.switchRole}
+          isFirebaseConnected={store.isFirebaseConnected}
+          onLoginWithGoogle={store.loginWithGoogle}
+          onLogout={() => {
+            store.logout();
+            handleSelectTab('landing');
+          }}
         />
 
         {/* Dynamic Page Content */}
@@ -158,10 +286,13 @@ export default function App() {
               bookings={store.bookings}
               logs={store.logs}
               currentTheme={store.currentTheme}
+              currentUser={store.currentUser}
+              currentCompany={store.currentCompany}
               onOpenNewBooking={() => handleOpenBooking()}
               onOpenStorefront={() => setIsStorefrontOpen(true)}
               onSelectBookingForDispatch={handleSelectDispatch}
               onAcknowledgeCheckin={store.acknowledgeDriverCheckin}
+              onNavigateTab={handleSelectTab}
             />
           )}
 
@@ -173,6 +304,9 @@ export default function App() {
               currentTheme={store.currentTheme}
               onOpenBookingForVehicle={(vehId, dt) => handleOpenBooking(vehId, dt)}
               onAssignDriver={store.assignDriverToBooking}
+              onToggleMaintenance={store.toggleVehicleMaintenance}
+              onUpdateBookingStatus={store.updateBookingStatus}
+              onSelectBookingForDispatch={(booking) => handleSelectDispatch(booking.id)}
             />
           )}
 
@@ -180,12 +314,15 @@ export default function App() {
             <VehiclesView
               vehicles={store.vehicles}
               bookings={store.bookings}
+              drivers={store.drivers}
               currentTheme={store.currentTheme}
               onAddVehicle={store.addVehicle}
               onUpdateStatus={store.updateVehicleStatus}
               onUpdateRate={store.updateVehicleRate}
               onToggleMaintenance={store.toggleVehicleMaintenance}
               onOpenBookingForVehicle={(vehId) => handleOpenBooking(vehId)}
+              onUpdateVehicle={store.updateVehicle}
+              onDeleteVehicle={store.deleteVehicle}
             />
           )}
 
@@ -198,6 +335,11 @@ export default function App() {
               onAddDriver={store.addDriver}
               onUpdateStatus={store.updateDriverStatus}
               onAssignDriver={store.assignDriverToBooking}
+              onUpdateDriver={store.updateDriver}
+              onDeleteDriver={store.deleteDriver}
+              onAcknowledgeCheckin={store.acknowledgeDriverCheckin}
+              onCompleteTrip={store.completeDriverTrip}
+              onDispatchSMS={store.dispatchDriverSMS}
             />
           )}
 
@@ -212,6 +354,42 @@ export default function App() {
               onAcknowledgeCheckin={store.acknowledgeDriverCheckin}
               onUpdateBookingStatus={store.updateBookingStatus}
               onUpdateFlightStatus={store.updateFlightStatus}
+              onUpdateBooking={store.updateBooking}
+              onDeleteBooking={store.deleteBooking}
+              onAssignDriver={store.assignDriverToBooking}
+            />
+          )}
+
+          {currentTab === 'dispatch' && (
+            <DispatchView
+              bookings={store.bookings}
+              drivers={store.drivers}
+              vehicles={store.vehicles}
+              currentTheme={store.currentTheme}
+              currentUser={store.currentUser}
+              currentCompany={store.currentCompany}
+              onDispatchSMS={(bkId, lang) => store.dispatchDriverSMS(bkId, lang)}
+              onAdvanceCheckin={store.acknowledgeDriverCheckin}
+              onUpdateFlightStatus={store.updateFlightStatus}
+              onAssignDriver={store.assignDriverToBooking}
+              onCompleteTrip={store.completeDriverTrip}
+              onUpdateBookingStatus={store.updateBookingStatus}
+            />
+          )}
+
+          {currentTab === 'customers' && (
+            <CustomersView
+              customers={store.customers}
+              bookings={store.bookings}
+              vehicles={store.vehicles}
+              currentTheme={store.currentTheme}
+              onAddCustomer={store.addCustomer}
+              onUpdateCustomer={store.updateCustomer}
+              onDeleteCustomer={store.deleteCustomer}
+              onRecordPayment={store.recordCustomerPayment}
+              onOpenNewBookingForCustomer={(name, phone, email) => {
+                handleOpenBooking();
+              }}
             />
           )}
 
@@ -315,6 +493,13 @@ export default function App() {
         isOpen={isStorefrontOpen}
         onClose={() => setIsStorefrontOpen(false)}
         onNavigateToStorefront={() => handleSelectTab('storefront')}
+        currentTheme={store.currentTheme}
+      />
+
+      {/* Forgot Password Recovery Modal */}
+      <ForgotPasswordModal
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
         currentTheme={store.currentTheme}
       />
     </div>
