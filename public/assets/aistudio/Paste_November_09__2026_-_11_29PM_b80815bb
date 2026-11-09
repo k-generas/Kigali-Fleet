@@ -1,0 +1,991 @@
+KigaliFleet — Public Storefront Product Requirements Document (PRD)
+Version 1.0 · 9 November 2026 · Product specification for implementation
+
+This document defines how the public storefront should work when a vehicle rental or transport company shares its KigaliFleet link with customers.
+
+Important distinction: This is the target product specification, not a claim that these features already exist in the current MVP. Existing functionality must be inspected before implementation. Do not delete or replace working features simply to match this document.
+Implementation specification
+1. Product definition
+KigaliFleet's storefront is a public-facing booking website for each transport or vehicle-rental business using the platform.
+
+Each business gets its own branded page and booking experience.
+
+Example:
+
+kigalifleet.vercel.app/booking/green-rides
+
+A customer opens the link, explores the business, checks available vehicles or services, submits a booking, receives confirmation, and can track or manage their booking.
+
+The storefront has three connected parts:
+1. Business website: Shows the company, vehicles, services, policies and contact information.
+2. Booking engine: Handles availability, pricing, booking requests and payment.
+3. Customer service system: Handles confirmations, vouchers, support and booking updates.
+All three must connect to the company's KigaliFleet dashboard.
+2. Product objectives
+Objective	Expected result
+Build trust	Customers understand who they are booking with
+Discover services	Customers can find the right vehicle or transport service
+Book easily	Customers can submit a booking without unnecessary steps
+Show accurate prices	Customers understand what they will pay
+Confirm bookings	Customers know whether a booking is requested or confirmed
+Support customers	Customers can contact the company and resolve problems
+Reduce manual work	Operators receive bookings directly in their dashboard
+
+Core rule: Never show a vehicle as available when the booking engine knows it is unavailable.
+3. Users and access permissions
+There are five primary customer types.
+Customer type	Main needs
+Local individual	Simple booking, RWF pricing, local payment options
+International tourist	Airport pickup, clear policies, language and currency options
+Corporate customer	Quotes, invoices, multiple vehicles and business details
+Travel agency	Group bookings and multi-day itineraries
+Returning customer	Booking history, receipts, support and modifications
+
+Customer access rules
+Information or action	Public visitor	Verified booking owner
+View company profile	Yes	Yes
+View published vehicles	Yes	Yes
+View published prices	Yes	Yes
+Submit booking	Yes	Yes
+View own booking status	No	Yes
+Download own voucher	No	Yes
+View own payment receipt	No	Yes
+View another customer's booking	No	No
+View internal company notes	No	No
+View company financial reports	No	No
+
+A customer should not be forced to create an account just to request a booking.
+
+Guest booking should be supported.
+4. Storefront sitemap
+These are proposed routes, not verified existing routes.
+Page	Suggested route	Purpose
+Homepage	/booking/:slug	Introduce the business
+Vehicles	/vehicles	Browse available vehicles
+Vehicle details	/vehicles/:id	Inspect a vehicle
+Services	/services	Explore transport services
+Search results	/search	Find matching vehicles
+Booking form	/book/:id	Configure booking
+Checkout	/checkout	Review booking and price
+Verification	/verification	Complete required verification
+Confirmation	/confirmation/:ref	Show booking outcome
+Track booking	/track	Check booking status
+About	/about	Company information
+Contact	/contact	Reach the business
+FAQ	/faq	Answer common questions
+Customer account	/account	Optional customer account
+My bookings	/my-bookings	Manage bookings
+Support	/support	Request assistance
+Terms	/terms	Booking conditions
+Privacy	/privacy	Privacy information
+Cancellation	/cancellation-policy	Cancellation rules
+Refunds	/refund-policy	Refund rules
+
+
+5. Page-by-page requirements
+Page 1: Homepage
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The homepage should immediately answer:
+- Who is this company?
+- What services does it offer?
+- Where does it operate?
+- Which vehicles can customers book?
+- How can customers contact it?
+Required sections:
+
+1. Navigation bar
+- Company logo and name
+- Home
+- Vehicles
+- Services
+- About
+- Contact
+- Language selector
+- Book Now button
+2. Hero section
+- Clear headline
+- Short company description
+- Professional vehicle or service image
+- Main booking action
+3. Booking search
+- Service type
+- Pickup location
+- Destination, where applicable
+- Pickup date and time
+- Return date and time, where applicable
+- Search button
+4. Featured vehicles
+- Vehicle image
+- Name
+- Main specifications
+- Starting price, if configured
+- View details action
+5. Services
+- Self-drive rental
+- Chauffeur-driven transport
+- Airport transfers
+- Corporate transport
+- Other services enabled by the business
+6. Why choose this company
+- Only factual, company-provided information
+- No fabricated guarantees or statistics
+7. Customer reviews
+- Genuine reviews only
+- Show review source where appropriate
+8. How booking works
+
+9. Frequently asked questions
+
+10. Footer
+- Contact details
+- Business address
+- Social links
+- Terms
+- Privacy
+- Cancellation policy
+Page 2: Vehicle listing
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8
+
+
+
+
+
+
+
+
+
+
+
+Customers should see vehicles that match their search.
+
+Each vehicle card should display:
+- Vehicle photo
+- Vehicle name
+- Category
+- Passenger capacity
+- Transmission
+- Fuel type
+- Service mode
+- Price
+- Availability indicator
+- View details button
+Filters:
+- Vehicle category
+- Passenger capacity
+- Transmission
+- Price range
+- Service type
+- Vehicle features
+Sorting:
+- Price: lowest first
+- Price: highest first
+- Recommended
+- Vehicle category
+Critical availability requirement
+
+The listing must check:
+- Existing confirmed bookings
+- Active temporary booking holds
+- Maintenance periods
+- Vehicle operational status
+- Relevant availability buffers
+A frontend-only availability check is insufficient. The server must verify availability before accepting a booking.
+Page 3: Vehicle details
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12
+
+
+
+
+
+
+
+
+
+
+
+Every published vehicle should have its own details page.
+
+Required information:
+- Vehicle name
+- Photo gallery
+- Description
+- Passenger capacity
+- Luggage capacity, if known
+- Transmission
+- Fuel type
+- Air conditioning, if applicable
+- Rental conditions
+- Service options
+- Pricing
+- Available extras
+- Cancellation policy
+- Availability
+- Book this vehicle button
+Pricing must be understandable.
+
+For example:
+Item	Example
+Daily rental	80,000 RWF
+Duration	3 days
+Rental subtotal	240,000 RWF
+Optional extras	20,000 RWF
+Deposit	50,000 RWF
+Total estimated charge	260,000 RWF
+
+The deposit is shown separately because it is not necessarily an additional charge on top of the total.
+
+The example is illustrative, not an actual KigaliFleet price.
+Page 4: Services
+The business should be able to publish its available services.
+
+Service categories:
+- Self-drive car rental
+- Chauffeur-driven rental
+- Airport pickup
+- Airport drop-off
+- Corporate transport
+- City transport
+- Long-distance transport
+- Tours and custom itineraries
+Each service page or section should show:
+- Description
+- Who it is for
+- Operating locations
+- Pricing method
+- What's included
+- What's excluded
+- Booking requirements
+- Request service button
+Do not force every service into the same booking form.
+
+Airport transfers, for example, require different information from self-drive rental.
+Page 5: Booking configuration
+
+
+
+
+
+
+
+
+duffel.com
+
+
+This is where customers provide booking information.
+
+Step 1 — Select service
+
+The available fields depend on the selected service.
+
+Step 2 — Select dates and locations
+- Pickup date
+- Pickup time
+- Return date
+- Return time
+- Pickup location
+- Return location
+Step 3 — Select extras
+
+Examples:
+- Child seat
+- Additional driver
+- GPS
+- Additional equipment
+- Other company-configured extras
+Step 4 — Customer information
+- Full name
+- Phone number
+- Email address
+- Country, if needed
+- Special instructions
+Step 5 — Additional details
+
+For self-drive:
+- Driving licence information, where required
+- Verification requirements
+- Additional driver details, where applicable
+For airport transfer:
+- Airline
+- Flight number
+- Arrival date and time
+- Passenger count
+- Luggage count
+- Destination
+For corporate booking:
+- Organization name
+- Contact person
+- Purchase order reference, if applicable
+- Billing information
+Important: Do not collect identity documents from every customer by default. Only request what the business actually needs, with appropriate privacy protections.
+Page 6: Checkout
+
+
+
+
+
+
+
+
+dribbble.com
+
+
+Before submitting, the customer must see a complete booking summary.
+
+Required summary:
+- Company
+- Selected service
+- Selected vehicle
+- Dates and times
+- Pickup and return locations
+- Extras
+- Customer information
+- Subtotal
+- Taxes or other fees, if applicable
+- Deposit
+- Total
+- Amount due now
+- Amount due later, if applicable
+The customer must be able to review the cancellation and refund policies.
+
+Terms acceptance must be recorded. Marketing consent must be separate and optional.
+
+Two booking modes must exist:
+Mode	Customer experience
+Instant booking	Booking is confirmed once all required checks and conditions pass
+Request booking	Company reviews and accepts or rejects the request
+
+A submitted request must never be presented as a confirmed booking.
+Page 7: Verification
+Some companies may require additional customer verification.
+
+Possible requirements:
+- Email verification
+- Phone OTP
+- Driving licence details
+- Identification documents
+- Additional driver information
+Requirements should be configurable by service and business policy.
+
+Security requirements:
+- Protect uploaded documents
+- Restrict access to authorized staff
+- Do not expose documents through public URLs
+- Define retention and deletion rules
+- Record access where appropriate
+Page 8: Booking confirmation
+
+
+
+
+
+
+
+
+dribbble.com
+
+
+This page is extremely important.
+
+It must clearly distinguish two outcomes.
+Outcome A
+Booking confirmed
+
+Show only when the booking has passed the required confirmation conditions.
+- Booking reference
+- Confirmed status
+- Vehicle or service
+- Pickup and return details
+- Payment status
+- Next steps
+- Contact information
+- Download voucher
+
+Outcome B
+Booking request received
+
+Show when the company still needs to review the request.
+- Request reference
+- Pending review status
+- Requested vehicle or service
+- Dates and locations
+- Expected response process
+- Contact information
+Clearly state that the booking is not yet confirmed.
+
+Notifications:
+
+Depending on enabled integrations and customer preferences:
+- Email confirmation
+- SMS confirmation
+- WhatsApp confirmation
+- PDF voucher
+- Payment receipt
+A message accepted by a messaging provider does not necessarily mean it was delivered. Delivery status and failures should be tracked.
+Page 9: Booking tracking
+Customers need a way to check their booking without calling the company repeatedly.
+
+Possible statuses:
+1. Request submitted
+2. Under review
+3. Awaiting payment
+4. Confirmed
+5. Driver assigned
+6. Driver en route
+7. Vehicle picked up
+8. In progress
+9. Completed
+10. Cancellation requested
+11. Cancelled
+12. Refund pending
+13. Refunded
+Only show statuses relevant to the booking.
+
+Customer authentication: use a secure booking reference plus verified phone/email or an expiring secure access link. Do not expose booking information merely because someone knows a predictable reference number.
+Page 10: Booking voucher
+The voucher should be downloadable as a PDF.
+
+It should contain:
+- Company name and contact
+- Company logo
+- Booking reference
+- Customer name
+- Vehicle or service
+- Pickup and return details
+- Booking status
+- Payment status
+- Price breakdown
+- Important conditions
+- Emergency contact, only if genuinely staffed and available
+The voucher should be generated from server-side booking data, not untrusted browser values.
+Page 11: About
+Display:
+- Company description
+- Company history
+- Operating locations
+- Services
+- Team, if the company chooses to publish it
+- Business contact information
+- Genuine photos
+Do not display false registration claims, fake awards or unverified trust badges.
+Page 12: Contact and support
+
+
+
+
+
+
+
+
+shadcnblocks.com
+
+
+Contact information:
+- Phone
+- WhatsApp
+- Email
+- Office address
+- Operating hours
+- Social media links
+Support form:
+- Customer name
+- Phone/email
+- Booking reference, if relevant
+- Issue category
+- Message
+- Optional attachment
+Suggested categories:
+- New booking
+- Existing booking
+- Payment
+- Cancellation
+- Refund
+- Vehicle problem
+- General question
+After submission, the customer should receive a support reference.
+
+A support system should track:
+- Ticket number
+- Status
+- Assigned staff
+- Customer messages
+- Staff replies
+- Creation date
+- Resolution date
+Do not advertise emergency support unless the company can actually provide it.
+Page 13: FAQ
+The business should manage its own FAQs.
+
+Suggested questions:
+- How do I book a vehicle?
+- Is the booking confirmed immediately?
+- What payment methods are accepted?
+- Is a deposit required?
+- Can I cancel?
+- Can I change my booking?
+- What documents are required?
+- What happens if my flight is delayed?
+- Can I book for someone else?
+- How can I contact the company?
+Page 14: Policies
+Every business should publish its own policies.
+
+Required policy areas:
+- Terms and conditions
+- Privacy policy
+- Cancellation policy
+- Refund policy
+- Rental requirements
+- Payment conditions
+- Late return conditions
+- Damage and responsibility conditions
+Important implementation requirement: Save a snapshot or version of the terms accepted at booking time. If the business changes its policy later, that should not silently rewrite the conditions of an older booking.
+
+6. Special booking workflows
+These workflows should not be treated as identical.
+A. Self-drive rental
+1. Customer selects a vehicle.
+2. Customer chooses pickup and return dates.
+3. System checks vehicle availability.
+4. System calculates the rental price and deposit.
+5. Customer provides required details.
+6. Customer submits the booking or completes instant booking.
+7. Company receives the booking in its dashboard.
+8. Customer receives the appropriate confirmation.
+B. Airport transfer
+
+
+
+
+
+
+
+
+skybridgecars.com
+
+
+Additional information:
+- Airport
+- Flight number
+- Airline
+- Arrival date and time
+- Passenger count
+- Luggage count
+- Destination
+- Contact phone
+- Special requirements
+The company should be able to see this information before assigning a driver.
+
+Flight tracking can be added later. Do not make an external flight API a launch dependency.
+C. Chauffeur-driven transport
+Additional information:
+- Pickup location
+- Destination
+- Journey date
+- Start time
+- Expected duration
+- Passenger count
+- Itinerary
+- Special instructions
+Pricing may depend on time, distance, route or a company quotation.
+D. Corporate booking
+A corporate customer may need:
+- Company name
+- Organization contact
+- Multiple vehicles
+- Multiple passengers
+- Quote request
+- Purchase order reference
+- Invoice
+- Approval process
+Start with a request-and-quotation workflow. A full corporate account system can come later.
+E. Group and tour booking
+For multi-day trips, multiple vehicles or custom itineraries, allow a quote request rather than pretending a simple vehicle booking can calculate every cost.
+
+7. Pricing and availability engine
+This is a critical backend requirement.
+Pricing inputs
+The pricing engine should support configurable rules such as:
+- Daily rental rate
+- Hourly rate
+- Rental duration
+- Weekend pricing
+- Seasonal pricing
+- Chauffeur fee
+- Distance fee
+- Pickup or drop-off fee
+- Additional services
+- Discounts
+- Taxes
+- Deposit
+- Late return fee
+Not every business needs every rule.
+Availability rules
+The system must consider:
+- Vehicle bookings
+- Temporary booking holds
+- Maintenance schedules
+- Vehicle operational status
+- Pickup and return buffers
+- Driver availability for chauffeur services
+Technical rule: availability must be checked again on the server when the customer submits the booking. Two customers must not be able to confirm the same vehicle for overlapping dates.
+
+Temporary holds must expire and release the vehicle when the customer abandons checkout.
+
+8. Payments and financial confirmation
+Payment integration should be configurable by business.
+
+Potential methods:
+- MTN Mobile Money
+- Airtel Money
+- Bank transfer
+- Card payment
+- Manual payment confirmation
+Do not show a payment method as available until the company has configured and tested it.
+Payment lifecycle
+Stage	Expected system behavior
+Payment initiated	Record payment attempt
+Awaiting response	Show pending
+Successful	Verify through trusted server-side provider response
+Failed	Show failure and retry option
+Cancelled	Record cancellation
+Refund requested	Record refund request
+Refunded	Update refund status after verification
+
+Never trust a browser redirect as proof of payment.
+
+A booking and a payment are separate records. One booking may have multiple payment attempts or partial payments.
+
+9. Customer communication
+The system should support configurable notifications.
+Event	Customer notification
+Booking submitted	Request received
+Booking approved	Booking confirmed
+Booking rejected	Request declined
+Payment received	Payment confirmation
+Driver assigned	Driver details, if appropriate
+Pickup approaching	Reminder
+Booking completed	Completion message
+Cancellation	Cancellation confirmation
+Refund completed	Refund notification
+
+Channels can include email, SMS and WhatsApp, depending on configured integrations.
+
+The company must be able to see failed notifications and retry them safely.
+
+10. Storefront management inside the company dashboard
+A public storefront is not useful if the business cannot control it.
+
+Add a dedicated Storefront Management section to the company's existing dashboard.
+
+
+
+
+
+
+
+
+fleetbold.com
+
+
+Required settings
+Section	Business controls
+Branding	Logo, name, colors, images
+Business profile	Description, address, contact
+Storefront URL	Public link and slug
+Vehicles	Publish, hide, edit, photos
+Services	Enable or disable services
+Pricing	Rates, deposits, extras
+Availability	Booking windows, buffers, schedules
+Policies	Terms, cancellations, refunds
+Payments	Enabled payment methods
+Notifications	Email, SMS, WhatsApp settings
+Languages	Enabled languages
+Currency	Display and booking currency
+Reviews	Approved customer reviews
+FAQ	Questions and answers
+SEO	Page titles, descriptions, social preview
+
+Publishing controls
+Every business should have:
+- Draft
+- Published
+- Hidden
+- Temporarily unavailable
+The business should also be able to preview its storefront on desktop and mobile before publishing.
+
+A storefront should not publish incomplete or misleading information.
+
+11. Security, privacy and customer trust
+These requirements are not optional.
+1. Separate each business's data through tenant isolation.
+2. Customers can only access their own bookings.
+3. Company employees can only access information allowed by their role.
+4. Use server-side permission checks.
+5. Do not expose private documents or internal notes.
+6. Protect payment operations against duplicate submissions.
+7. Validate all customer input on the server.
+8. Use rate limits on public booking and verification endpoints.
+9. Store only necessary personal information.
+10. Define data retention and deletion procedures.
+11. Record important booking and payment changes in an audit trail.
+12. Use HTTPS and secure authentication.
+13. Avoid predictable booking access links.
+14. Make privacy and consent information understandable.
+The storefront must also be usable on low-end Android devices and slower connections.
+
+12. Edge cases the system must handle
+A professional booking system is not defined only by the happy path.
+Situation	Expected behavior
+Vehicle becomes unavailable during checkout	Stop booking and offer alternatives
+Customer clicks submit twice	Prevent duplicate bookings
+Payment fails	Preserve booking state and offer safe retry
+Customer closes browser	Allow secure recovery of booking
+Company rejects request	Explain outcome and next steps
+Driver becomes unavailable	Notify company and customer as appropriate
+Customer changes dates	Recheck availability and recalculate
+Flight is delayed	Allow staff to update pickup arrangements
+Refund fails	Keep refund pending and alert staff
+Storefront is disabled	Display a clear unavailable message
+Business subscription expires	Apply defined access rules without losing booking records
+Notification fails	Record failure and allow retry
+Price changes after quote	Preserve the accepted quote or request customer approval for changes
+
+
+13. Data model requirements
+The storefront should not rely on browser-only storage for real business operations.
+
+The following is a proposed logical data model. It is not a claim about the current database.
+Entity	Purpose
+Businesses	Company information and tenant identity
+StorefrontSettings	Branding, URL, language and visibility
+Vehicles	Vehicle records
+VehicleImages	Vehicle photo records
+Services	Business services
+PricingRules	Rates and pricing conditions
+AvailabilityBlocks	Maintenance and unavailable periods
+Bookings	Customer booking records
+BookingItems	Vehicles, services and extras in a booking
+Customers	Customer profiles
+Payments	Payment attempts and records
+Refunds	Refund records
+Documents	Secure customer and booking documents
+Drivers	Driver records
+Assignments	Driver and vehicle assignments
+Notifications	Communication records
+Reviews	Customer reviews
+SupportTickets	Customer support records
+SupportMessages	Ticket conversations
+Policies	Policy versions
+BookingPolicySnapshots	Accepted policy versions
+AuditLogs	Important system activity
+
+Architecture requirement: every business-owned record must be associated with the correct business. The backend must enforce tenant isolation, not merely filter data in the frontend.
+
+14. Release plan
+Do not build the entire specification at once.
+Release 1 — Booking foundation
+First priority
+
+- Business branding and public URL
+- Homepage
+- Vehicle listing
+- Vehicle detail
+- Service information
+- Search and availability
+- Booking form
+- Server-side pricing
+- Booking submission
+- Request/confirmation distinction
+- Booking reference
+- Basic email or SMS notification
+- Contact information
+- Terms and cancellation policy
+- Responsive mobile design
+- Secure persistent backend
+  
+  Release 2 — Transactions and customer service
+- Payment integration
+- Deposits
+- PDF vouchers
+- Booking tracking
+- Customer verification
+- WhatsApp notifications
+- Support tickets
+- Corporate quote requests
+- Driver assignment notifications
+- Multilingual storefront
+- Currency display
+  
+  Release 3 — Advanced operations
+- Group bookings
+- Corporate customer accounts
+- Custom tour itineraries
+- Flight status integration
+- GPS and telematics
+- Promotions and loyalty
+- Partner portal
+- Advanced analytics
+
+What must not delay Release 1
+- GPS tracking
+- Flight API
+- AI chatbot
+- Loyalty programs
+- Complex corporate portals
+- Multi-country tax automation
+- Advanced marketing automation
+These may become valuable, but they do not need to exist before the first customer can book successfully.
+
+15. Acceptance criteria
+The storefront is not ready for launch until these tests pass.
+Test	Pass condition
+Public access	Customer can open the business's shared link
+Branding	Correct business information appears
+Vehicle publishing	Only published vehicles are visible
+Availability	Unavailable vehicles cannot be booked
+Pricing	Server calculates the correct price
+Booking	Booking appears in the correct business dashboard
+Tenant isolation	One business cannot access another's records
+Confirmation	Request and confirmed statuses are distinct
+Payment	Browser redirect alone cannot mark payment successful
+Duplicate submission	Duplicate bookings are prevented
+Voucher	Customer can securely access their own voucher
+Customer privacy	Other customers' data remains inaccessible
+Mobile	Core booking flow works on mobile
+Notifications	Failures are recorded and visible
+Policies	Accepted policy version is retained
+
+16. Recommended implementation order
+Build in this sequence:
+1. Inspect the existing KigaliFleet codebase and database.
+2. Document what already works.
+3. Identify missing backend capabilities.
+4. Design tenant-aware storefront configuration.
+5. Build the public homepage and business branding.
+6. Connect published vehicles and services.
+7. Build search and server-side availability.
+8. Implement booking and pricing.
+9. Implement booking status and dashboard synchronization.
+10. Add confirmation and notifications.
+11. Test security and edge cases.
+12. Deploy a pilot with one real transport business.
+Do not begin by redesigning every page. First establish the current implementation and preserve working functionality.
+
+17. The business questions that must be answered before coding
+There are product decisions that technical implementation cannot safely guess.
+Question	Why it matters
+Can a company enable instant booking?	Changes the booking workflow
+Can a customer book without an account?	Determines authentication requirements
+Can a booking contain multiple vehicles?	Changes data structure and pricing
+Are deposits mandatory?	Changes checkout and payment
+Can businesses set different pricing rules?	Changes pricing engine
+Can a company accept manual payments?	Changes payment confirmation
+Can a customer cancel online?	Changes booking lifecycle
+Can customers request date changes?	Changes availability and pricing
+Does every business need document verification?	Changes privacy and workflow
+Can one business have multiple branches?	Changes business structure
+Can one driver serve multiple bookings?	Changes assignment rules
+What happens when a subscription expires?	Changes storefront availability and access
+
+These questions should be resolved before finalizing the database and booking workflows.
+
+18. Final product recommendation
+The storefront should not be treated as a decorative website builder.
+
+It is a revenue-generating interface connected to the fleet, booking, payment and customer-service operations of each company.
+
+The most important user journey is:
+Business shares storefront link
+
+Customer explores vehicles and services
+
+Customer checks availability and price
+
+Customer submits booking
+
+Company receives booking in KigaliFleet
+
+Customer receives verified confirmation and next steps
+
+
+My strongest recommendation: get this journey working reliably for one real business before adding advanced features. A beautiful storefront that accepts bookings it cannot fulfill is worse than a simple storefront that works.

@@ -24,6 +24,11 @@ import { ForgotPasswordModal } from './components/ForgotPasswordModal';
 import { StorefrontModal } from './components/StorefrontModal';
 import { DispatchView } from './components/DispatchView';
 import { CustomersView } from './components/CustomersView';
+import { PaymentsView } from './components/PaymentsView';
+import { ReportsView } from './components/ReportsView';
+import { MaintenanceView } from './components/MaintenanceView';
+import { SuperAdminView } from './components/SuperAdminView';
+import { SettingsView } from './components/SettingsView';
 import { RotateCcw } from 'lucide-react';
 
 const VALID_TABS = [
@@ -33,13 +38,18 @@ const VALID_TABS = [
   'overview',
   'calendar',
   'vehicles',
+  'maintenance',
   'drivers',
   'bookings',
   'dispatch',
   'customers',
+  'payments',
+  'reports',
   'simulator',
   'storefront',
   'pricing',
+  'settings',
+  'super-admin',
 ];
 
 function getTabFromLocation(): string {
@@ -63,6 +73,18 @@ function getTabFromLocation(): string {
     }
     if (path.includes('/rent') || path.includes('/storefront') || path.includes('/book')) {
       return 'storefront';
+    }
+    if (path.includes('/reports')) {
+      return 'reports';
+    }
+    if (path.includes('/maintenance') || path.includes('/workshop') || path.includes('/repairs')) {
+      return 'maintenance';
+    }
+    if (path.includes('/settings') || path.includes('/employees') || path.includes('/team')) {
+      return 'settings';
+    }
+    if (path.includes('/super-admin') || path.includes('/superadmin') || path.includes('/admin')) {
+      return 'super-admin';
     }
     if (path.includes('/app') || path.includes('/dashboard') || path.includes('/overview')) {
       return 'overview';
@@ -228,6 +250,23 @@ export default function App() {
     );
   }
 
+  if (currentTab === 'storefront') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+        <PublicStorefrontView
+          vehicles={store.vehicles}
+          drivers={store.drivers}
+          bookings={store.bookings}
+          currentTheme={store.currentTheme}
+          currentCompany={store.currentCompany}
+          companySettings={store.settings}
+          onCompleteClientBooking={store.addBooking}
+          onReturnToManager={(newId) => handleSelectTab(newId ? 'bookings' : 'overview')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans transition-colors antialiased">
       {/* 1. Left Sidebar Navigation Menu */}
@@ -271,6 +310,7 @@ export default function App() {
           onSwitchRole={store.switchRole}
           isFirebaseConnected={store.isFirebaseConnected}
           onLoginWithGoogle={store.loginWithGoogle}
+          onNavigateTab={handleSelectTab}
           onLogout={() => {
             store.logout();
             handleSelectTab('landing');
@@ -323,6 +363,19 @@ export default function App() {
               onOpenBookingForVehicle={(vehId) => handleOpenBooking(vehId)}
               onUpdateVehicle={store.updateVehicle}
               onDeleteVehicle={store.deleteVehicle}
+            />
+          )}
+
+          {currentTab === 'maintenance' && (
+            <MaintenanceView
+              maintenance={store.maintenance}
+              vehicles={store.vehicles}
+              currentTheme={store.currentTheme}
+              onAddMaintenance={store.addMaintenanceRecord}
+              onUpdateMaintenance={store.updateMaintenanceRecord}
+              onCompleteMaintenance={store.completeMaintenanceRecord}
+              onDeleteMaintenance={store.deleteMaintenanceRecord}
+              onNavigateToTab={handleSelectTab}
             />
           )}
 
@@ -393,6 +446,32 @@ export default function App() {
             />
           )}
 
+          {currentTab === 'payments' && (
+            <PaymentsView
+              payments={store.payments}
+              bookings={store.bookings}
+              customers={store.customers}
+              currentTheme={store.currentTheme}
+              currentCompany={store.currentCompany}
+              currentUser={store.currentUser}
+              onAddPayment={store.addPaymentRecord}
+              onUpdatePaymentStatus={store.updatePaymentStatus}
+              onGenerateEBM={store.generateEBMReceipt}
+            />
+          )}
+
+          {currentTab === 'reports' && (
+            <ReportsView
+              vehicles={store.vehicles}
+              drivers={store.drivers}
+              bookings={store.bookings}
+              payments={store.payments}
+              customers={store.customers}
+              currentTheme={store.currentTheme}
+              onNavigateToTab={handleSelectTab}
+            />
+          )}
+
           {currentTab === 'simulator' && (
             <AfricasTalkingSimulator
               bookings={store.bookings}
@@ -405,17 +484,6 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'storefront' && (
-            <PublicStorefrontView
-              vehicles={store.vehicles}
-              drivers={store.drivers}
-              bookings={store.bookings}
-              currentTheme={store.currentTheme}
-              onCompleteClientBooking={store.addBooking}
-              onReturnToManager={(newId) => handleSelectTab(newId ? 'bookings' : 'overview')}
-            />
-          )}
-
           {currentTab === 'pricing' && (
             <TiersView
               tiers={store.tiers}
@@ -423,6 +491,41 @@ export default function App() {
               vehiclesCount={store.vehicles.length}
               currentTheme={store.currentTheme}
               onSelectTier={store.setTier}
+            />
+          )}
+
+          {currentTab === 'settings' && (
+            <SettingsView
+              currentCompany={store.currentCompany}
+              settings={store.settings}
+              users={store.users}
+              currentUser={store.currentUser}
+              tiers={store.tiers}
+              currentTheme={store.currentTheme}
+              vehicles={store.vehicles}
+              onOpenStorefront={() => handleSelectTab('storefront')}
+              onUpdateCompanyProfile={store.updateCompanyProfile}
+              onUpdateCompanySettings={store.updateCompanySettings}
+              onInviteStaffMember={store.inviteStaffMember}
+              onUpdateStaffRole={store.updateStaffRole}
+              onUpdateStaffStatus={store.updateStaffStatus}
+              onDeleteStaffMember={store.deleteStaffMember}
+              onSelectTier={store.setTier}
+            />
+          )}
+
+          {currentTab === 'super-admin' && (
+            <SuperAdminView
+              companies={store.companies}
+              currentCompany={store.currentCompany}
+              tiers={store.tiers}
+              currentUser={store.currentUser}
+              currentTheme={store.currentTheme}
+              onUpdateCompanyStatus={store.updateCompanyStatus}
+              onUpdateCompanyPlan={store.updateCompanyPlan}
+              onSwitchCompanyContext={store.switchCompanyContext}
+              onAddTenantCompany={store.addTenantCompany}
+              onNavigateToTab={handleSelectTab}
             />
           )}
         </main>

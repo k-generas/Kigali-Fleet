@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Vehicle, Driver, Booking } from '../types';
 import { checkBookingCollision, calculateDays, formatRwf } from '../utils/collision';
-import { X, ShieldAlert, ShieldCheck, Plane, AlertCircle } from 'lucide-react';
+import { X, ShieldAlert, ShieldCheck, Plane, AlertCircle, Compass, Sparkles, Receipt } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
 interface NewBookingModalProps {
@@ -46,6 +46,27 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [notes, setNotes] = useState('');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
+  // Dynamic Pricing State (Part 9 Blueprint Item 5)
+  const isUpcountryAuto = /musanze|akagera|volcanoes|rubavu|nyungwe|kivu|gisenyi|karongi/i.test(destination);
+  const [isUpcountry, setIsUpcountry] = useState(isUpcountryAuto);
+  const [isSafariPeak, setIsSafariPeak] = useState(false);
+  const [includeVat, setIncludeVat] = useState(true);
+
+  // Auto-detect upcountry destination when destination changes
+  useEffect(() => {
+    setIsUpcountry(/musanze|akagera|volcanoes|rubavu|nyungwe|kivu|gisenyi|karongi/i.test(destination));
+  }, [destination]);
+
+  // Auto-detect safari peak season (June-Sept, Dec)
+  useEffect(() => {
+    if (startDate) {
+      const month = parseInt(startDate.split('-')[1], 10);
+      if ([6, 7, 8, 9, 12].includes(month)) {
+        setIsSafariPeak(true);
+      }
+    }
+  }, [startDate]);
+
   useEffect(() => {
     if (initialVehicleId) setVehicleId(initialVehicleId);
     if (initialDate) {
@@ -59,7 +80,14 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
   const days = calculateDays(startDate, endDate);
   const dailyRate = selectedVehicle?.daily_rate_rwf || 0;
-  const totalRwf = days * dailyRate;
+  const baseRental = days * dailyRate;
+
+  // Dynamic calculations
+  const safariSurge = isSafariPeak ? Math.round(baseRental * 0.15) : 0;
+  const upcountrySurge = isUpcountry ? days * 25000 : 0;
+  const subtotalRwf = baseRental + safariSurge + upcountrySurge;
+  const vatRwf = includeVat ? Math.round(subtotalRwf * 0.18) : 0;
+  const totalRwf = subtotalRwf + vatRwf;
 
   // Real-time Collision Guard Check
   const collisionResult = checkBookingCollision(
@@ -344,6 +372,96 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
               />
+            </div>
+          </div>
+
+          {/* Dynamic Pricing & Seasonal Surcharges (Blueprint Part 9, Item 5) */}
+          <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+                <Compass className="w-3.5 h-3.5 text-amber-400" />
+                <span>Dynamic Pricing & Seasonal Surcharges</span>
+              </span>
+              <span className="text-[10px] font-mono text-amber-400 font-semibold">
+                RRA EBM v2.0 READY
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <label className="flex items-start gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isSafariPeak}
+                  onChange={(e) => setIsSafariPeak(e.target.checked)}
+                  className="mt-0.5 rounded text-amber-400 focus:ring-0"
+                />
+                <div className="text-[11px]">
+                  <div className="font-semibold text-white flex items-center gap-1">
+                    <span>High Safari Season</span>
+                    <Sparkles className="w-3 h-3 text-amber-400" />
+                  </div>
+                  <div className="text-[10px] text-slate-400">+15% peak demand surge</div>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isUpcountry}
+                  onChange={(e) => setIsUpcountry(e.target.checked)}
+                  className="mt-0.5 rounded text-amber-400 focus:ring-0"
+                />
+                <div className="text-[11px]">
+                  <div className="font-semibold text-white">Upcountry Safari</div>
+                  <div className="text-[10px] text-slate-400">+25,000 RWF / day per-diem</div>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeVat}
+                  onChange={(e) => setIncludeVat(e.target.checked)}
+                  className="mt-0.5 rounded text-amber-400 focus:ring-0"
+                />
+                <div className="text-[11px]">
+                  <div className="font-semibold text-white flex items-center gap-1">
+                    <span>18% RRA VAT</span>
+                    <Receipt className="w-3 h-3 text-emerald-400" />
+                  </div>
+                  <div className="text-[10px] text-slate-400">EBM tax compliance invoice</div>
+                </div>
+              </label>
+            </div>
+
+            {/* Itemized Calculation Summary */}
+            <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-mono space-y-1">
+              <div className="flex justify-between text-slate-400">
+                <span>Base Rate ({days} days @ {formatRwf(dailyRate)}/day):</span>
+                <span className="text-white">{formatRwf(baseRental)}</span>
+              </div>
+              {isSafariPeak && (
+                <div className="flex justify-between text-amber-400">
+                  <span>+ High Safari Peak Surcharge (+15%):</span>
+                  <span>+{formatRwf(safariSurge)}</span>
+                </div>
+              )}
+              {isUpcountry && (
+                <div className="flex justify-between text-amber-400">
+                  <span>+ Upcountry Safari Distance Allowance ({days} days):</span>
+                  <span>+{formatRwf(upcountrySurge)}</span>
+                </div>
+              )}
+              {includeVat && (
+                <div className="flex justify-between text-emerald-400">
+                  <span>+ Rwanda Revenue Authority VAT (18%):</span>
+                  <span>+{formatRwf(vatRwf)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs font-bold text-white pt-1 border-t border-slate-800">
+                <span>Grand Total to Collect:</span>
+                <span className="text-amber-400 text-sm">{formatRwf(totalRwf)}</span>
+              </div>
             </div>
           </div>
 

@@ -10,8 +10,13 @@ import {
   DriverStatus,
   User,
   Company,
+  CompanyStatus,
   UserRole,
   Customer,
+  PaymentRecord,
+  PaymentRecordStatus,
+  MaintenanceRecord,
+  CompanySettings,
 } from '../types';
 import {
   INITIAL_VEHICLES,
@@ -20,8 +25,12 @@ import {
   INITIAL_LOGS,
   SUBSCRIPTION_TIERS,
   INITIAL_COMPANY,
+  INITIAL_COMPANIES,
   INITIAL_USERS,
   INITIAL_CUSTOMERS,
+  INITIAL_PAYMENTS,
+  INITIAL_MAINTENANCE,
+  DEFAULT_COMPANY_SETTINGS,
 } from '../data/seedData';
 import { checkBookingCollision, generateDriverSMS } from '../utils/collision';
 import { getThemeById, applyThemeCssVariables } from '../theme';
@@ -65,8 +74,12 @@ interface StoredState {
   accentColorId: string;
   currentUser: User;
   currentCompany: Company;
+  companies: Company[];
   users: User[];
   customers: Customer[];
+  payments: PaymentRecord[];
+  maintenance: MaintenanceRecord[];
+  settings: CompanySettings;
   isAuthenticated: boolean;
   isFirebaseConnected: boolean;
 }
@@ -82,8 +95,12 @@ function loadInitialState(): StoredState {
           accentColorId: parsed.accentColorId || 'amber',
           currentUser: parsed.currentUser || INITIAL_USERS[0],
           currentCompany: parsed.currentCompany || INITIAL_COMPANY,
+          companies: parsed.companies || INITIAL_COMPANIES,
           users: parsed.users || INITIAL_USERS,
           customers: parsed.customers || INITIAL_CUSTOMERS,
+          payments: parsed.payments || INITIAL_PAYMENTS,
+          maintenance: parsed.maintenance || INITIAL_MAINTENANCE,
+          settings: parsed.settings || DEFAULT_COMPANY_SETTINGS,
           isAuthenticated: parsed.isAuthenticated ?? true,
           isFirebaseConnected: false,
         };
@@ -98,11 +115,15 @@ function loadInitialState(): StoredState {
     bookings: INITIAL_BOOKINGS,
     logs: INITIAL_LOGS,
     customers: INITIAL_CUSTOMERS,
+    payments: INITIAL_PAYMENTS,
+    maintenance: INITIAL_MAINTENANCE,
+    settings: DEFAULT_COMPANY_SETTINGS,
     activeTierId: 'growth',
     theme: 'dark',
     accentColorId: 'amber',
     currentUser: INITIAL_USERS[0],
     currentCompany: INITIAL_COMPANY,
+    companies: INITIAL_COMPANIES,
     users: INITIAL_USERS,
     isAuthenticated: true,
     isFirebaseConnected: false,
@@ -141,6 +162,8 @@ export function useFleetStore() {
     let unsubscribeBookings: () => void = () => {};
     let unsubscribeLogs: () => void = () => {};
     let unsubscribeCustomers: () => void = () => {};
+    let unsubscribePayments: () => void = () => {};
+    let unsubscribeMaintenance: () => void = () => {};
     let unsubscribeAuth: () => void = () => {};
 
     const initFirestoreSync = async () => {
@@ -266,7 +289,55 @@ export function useFleetStore() {
           }
         );
 
-        // 6. Auth State Changed Listener
+        // 6. Payments Real-Time Listener
+        const payCol = collection(db, 'payments');
+        unsubscribePayments = onSnapshot(
+          payCol,
+          async (snapshot) => {
+            if (snapshot.empty && !isInitialSeedingDone.current) {
+              console.log('Seeding initial payments to Firestore...');
+              for (const p of INITIAL_PAYMENTS) {
+                await setDoc(doc(db, 'payments', p.id), cleanForFirestore(p));
+              }
+            } else if (!snapshot.empty) {
+              const livePayments: PaymentRecord[] = snapshot.docs.map((d) => d.data() as PaymentRecord);
+              setState((prev) => ({
+                ...prev,
+                payments: livePayments,
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (error) => {
+            console.warn('Firestore payments listener notice:', error.message);
+          }
+        );
+
+        // 7. Maintenance Work Orders Real-Time Listener
+        const maintCol = collection(db, 'maintenance');
+        unsubscribeMaintenance = onSnapshot(
+          maintCol,
+          async (snapshot) => {
+            if (snapshot.empty && !isInitialSeedingDone.current) {
+              console.log('Seeding initial maintenance records to Firestore...');
+              for (const m of INITIAL_MAINTENANCE) {
+                await setDoc(doc(db, 'maintenance', m.id), cleanForFirestore(m));
+              }
+            } else if (!snapshot.empty) {
+              const liveMaintenance: MaintenanceRecord[] = snapshot.docs.map((d) => d.data() as MaintenanceRecord);
+              setState((prev) => ({
+                ...prev,
+                maintenance: liveMaintenance,
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (error) => {
+            console.warn('Firestore maintenance listener notice:', error.message);
+          }
+        );
+
+        // 8. Auth State Changed Listener
         unsubscribeAuth = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
           if (fbUser) {
             setState((prev) => ({
@@ -294,6 +365,8 @@ export function useFleetStore() {
       unsubscribeBookings();
       unsubscribeLogs();
       unsubscribeCustomers();
+      unsubscribePayments();
+      unsubscribeMaintenance();
       unsubscribeAuth();
     };
   }, []);
@@ -1073,6 +1146,208 @@ export function useFleetStore() {
     }));
   };
 
+  const addPaymentRecord = (payment: Omit<PaymentRecord, 'id' | 'created_at'>) => {
+    const newPayment: PaymentRecord = {
+      ...payment,
+      id: `pay-${Date.now().toString().slice(-6)}`,
+      created_at: new Date().toISOString().split('T')[0],
+      ebm_receipt_number: payment.ebm_receipt_number || `EBM-2026-${Math.floor(10000 + Math.random() * 90000)}`,
+    };
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Payment Recorded',
+      details: `Logged ${newPayment.payment_method} transaction of ${newPayment.amount_rwf.toLocaleString()} RWF for ${newPayment.customer_name}.`,
+      category: 'booking',
+    };
+
+    try {
+      setDoc(doc(db, 'payments', newPayment.id), cleanForFirestore(newPayment)).catch((err) =>
+        handleFirestoreError(err, OperationType.CREATE, `payments/${newPayment.id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore addPayment notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      payments: [newPayment, ...prev.payments],
+      logs: [newLog, ...prev.logs],
+    }));
+    return newPayment;
+  };
+
+  const updatePaymentStatus = (id: string, status: PaymentRecordStatus, amountPaid?: number) => {
+    const target = state.payments.find((p) => p.id === id);
+    const updates: Partial<PaymentRecord> = { status };
+    if (amountPaid !== undefined) {
+      updates.amount_rwf = amountPaid;
+    }
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Payment Status Updated',
+      details: `Payment #${id} (${target?.customer_name}) marked as ${status}.`,
+      category: 'booking',
+    };
+
+    try {
+      updateDoc(doc(db, 'payments', id), cleanForFirestore(updates)).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `payments/${id}`)
+      );
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore updatePayment notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      payments: prev.payments.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const generateEBMReceipt = (paymentId: string) => {
+    const target = state.payments.find((p) => p.id === paymentId);
+    if (!target) return null;
+
+    const receiptNum = target.ebm_receipt_number || `EBM-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    try {
+      updateDoc(doc(db, 'payments', paymentId), { ebm_receipt_number: receiptNum }).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore EBM update notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      payments: prev.payments.map((p) => (p.id === paymentId ? { ...p, ebm_receipt_number: receiptNum } : p)),
+    }));
+    return receiptNum;
+  };
+
+  const addMaintenanceRecord = (record: Omit<MaintenanceRecord, 'id' | 'created_at'>) => {
+    const id = `mnt-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const newRecord: MaintenanceRecord = {
+      ...record,
+      id,
+      created_at: new Date().toISOString().slice(0, 10),
+    };
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Maintenance Scheduled',
+      details: `${record.vehicle_plate} sent to ${record.garage_name} for ${record.service_type}. Grounded.`,
+      category: 'fleet',
+    };
+
+    const shouldGroundVehicle = record.status === 'In Garage';
+    const vehicleUpdates = shouldGroundVehicle ? { status: 'Maintenance' as VehicleStatus } : {};
+
+    try {
+      setDoc(doc(db, 'maintenance', id), cleanForFirestore(newRecord)).catch((err) =>
+        handleFirestoreError(err, OperationType.CREATE, `maintenance/${id}`)
+      );
+      if (shouldGroundVehicle) {
+        updateDoc(doc(db, 'vehicles', record.vehicle_id), vehicleUpdates).catch(() => {});
+      }
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore addMaintenance notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      maintenance: [newRecord, ...prev.maintenance],
+      vehicles: shouldGroundVehicle
+        ? prev.vehicles.map((v) => (v.id === record.vehicle_id ? { ...v, status: 'Maintenance' } : v))
+        : prev.vehicles,
+      logs: [newLog, ...prev.logs],
+    }));
+
+    return newRecord;
+  };
+
+  const updateMaintenanceRecord = (record: MaintenanceRecord) => {
+    try {
+      updateDoc(doc(db, 'maintenance', record.id), cleanForFirestore(record)).catch((err) =>
+        handleFirestoreError(err, OperationType.UPDATE, `maintenance/${record.id}`)
+      );
+    } catch (err) {
+      console.warn('Firestore updateMaintenance notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      maintenance: prev.maintenance.map((m) => (m.id === record.id ? record : m)),
+    }));
+  };
+
+  const completeMaintenanceRecord = (
+    maintenanceId: string,
+    actualOdometer?: number,
+    finalCost?: number,
+    nextServiceKm?: number
+  ) => {
+    const target = state.maintenance.find((m) => m.id === maintenanceId);
+    if (!target) return;
+
+    const completionDate = new Date().toISOString().slice(0, 10);
+    const updatedRecord: MaintenanceRecord = {
+      ...target,
+      status: 'Completed',
+      actual_completion_date: completionDate,
+      cost_rwf: finalCost !== undefined ? finalCost : target.cost_rwf,
+    };
+
+    const vehicleUpdates: Partial<Vehicle> = {
+      status: 'Available',
+      last_service_date: completionDate,
+      last_service_notes: `${target.service_type} at ${target.garage_name}. Cost: ${updatedRecord.cost_rwf.toLocaleString()} RWF.`,
+      ...(actualOdometer ? { current_odometer_km: actualOdometer } : {}),
+      ...(nextServiceKm ? { next_service_km: nextServiceKm } : {}),
+    };
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Maintenance Completed',
+      details: `${target.vehicle_plate} released from ${target.garage_name}. Status: Available.`,
+      category: 'fleet',
+    };
+
+    try {
+      updateDoc(doc(db, 'maintenance', maintenanceId), cleanForFirestore(updatedRecord)).catch(() => {});
+      updateDoc(doc(db, 'vehicles', target.vehicle_id), cleanForFirestore(vehicleUpdates)).catch(() => {});
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore completeMaintenance notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      maintenance: prev.maintenance.map((m) => (m.id === maintenanceId ? updatedRecord : m)),
+      vehicles: prev.vehicles.map((v) => (v.id === target.vehicle_id ? { ...v, ...vehicleUpdates } : v)),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const deleteMaintenanceRecord = (maintenanceId: string) => {
+    try {
+      deleteDoc(doc(db, 'maintenance', maintenanceId)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore deleteMaintenance notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      maintenance: prev.maintenance.filter((m) => m.id !== maintenanceId),
+    }));
+  };
+
   const loginWithGoogle = async () => {
     try {
       const res = await signInWithPopup(auth, googleProvider);
@@ -1230,6 +1505,149 @@ export function useFleetStore() {
     }));
   };
 
+  const updateCompanyStatus = (companyId: string, status: CompanyStatus) => {
+    setState((prev) => {
+      const updatedCompanies = prev.companies.map((c) => (c.id === companyId ? { ...c, status } : c));
+      const updatedCurrentCompany =
+        prev.currentCompany.id === companyId ? { ...prev.currentCompany, status } : prev.currentCompany;
+      return {
+        ...prev,
+        companies: updatedCompanies,
+        currentCompany: updatedCurrentCompany,
+      };
+    });
+  };
+
+  const updateCompanyPlan = (companyId: string, tierId: 'starter' | 'growth' | 'enterprise') => {
+    const fee = tierId === 'enterprise' ? 150000 : tierId === 'growth' ? 75000 : 35000;
+    setState((prev) => {
+      const updatedCompanies = prev.companies.map((c) =>
+        c.id === companyId ? { ...c, tier_id: tierId, monthly_fee_rwf: fee } : c
+      );
+      const updatedCurrentCompany =
+        prev.currentCompany.id === companyId
+          ? { ...prev.currentCompany, tier_id: tierId, monthly_fee_rwf: fee }
+          : prev.currentCompany;
+      return {
+        ...prev,
+        companies: updatedCompanies,
+        currentCompany: updatedCurrentCompany,
+        activeTierId: prev.currentCompany.id === companyId ? tierId : prev.activeTierId,
+      };
+    });
+  };
+
+  const switchCompanyContext = (companyId: string) => {
+    const target = state.companies.find((c) => c.id === companyId);
+    if (!target) return;
+    setState((prev) => ({
+      ...prev,
+      currentCompany: target,
+      activeTierId: target.tier_id,
+    }));
+  };
+
+  const addTenantCompany = (
+    companyData: Omit<Company, 'id' | 'created_at'>,
+    ownerName: string,
+    ownerEmail: string,
+    ownerPhone: string
+  ) => {
+    const slug = companyData.slug || companyData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const id = `comp-${slug}`;
+    const monthlyFee =
+      companyData.tier_id === 'enterprise' ? 150000 : companyData.tier_id === 'growth' ? 75000 : 35000;
+
+    const newCompany: Company = {
+      ...companyData,
+      id,
+      slug,
+      status: companyData.status || 'Active',
+      monthly_fee_rwf: monthlyFee,
+      owner_name: ownerName,
+      created_at: new Date().toISOString(),
+    };
+
+    const newOwner: User = {
+      id: `usr-owner-${Date.now().toString().slice(-4)}`,
+      name: ownerName,
+      email: ownerEmail,
+      phone: ownerPhone,
+      role: 'owner',
+      company_id: id,
+    };
+
+    setState((prev) => ({
+      ...prev,
+      companies: [newCompany, ...prev.companies],
+      users: [newOwner, ...prev.users],
+    }));
+
+    return newCompany;
+  };
+
+  const updateCompanySettings = (newSettings: Partial<CompanySettings>) => {
+    setState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        ...newSettings,
+      },
+    }));
+  };
+
+  const updateCompanyProfile = (profileUpdates: Partial<Company>) => {
+    setState((prev) => {
+      const updatedCurrent = { ...prev.currentCompany, ...profileUpdates };
+      const updatedCompanies = prev.companies.map((c) =>
+        c.id === prev.currentCompany.id ? { ...c, ...profileUpdates } : c
+      );
+      return {
+        ...prev,
+        currentCompany: updatedCurrent,
+        companies: updatedCompanies,
+      };
+    });
+  };
+
+  const inviteStaffMember = (staff: Omit<User, 'id'>) => {
+    const newStaff: User = {
+      ...staff,
+      id: `usr-staff-${Date.now().toString().slice(-4)}`,
+      status: 'Active',
+      created_at: new Date().toISOString().slice(0, 10),
+    };
+
+    setState((prev) => ({
+      ...prev,
+      users: [newStaff, ...prev.users],
+    }));
+
+    return newStaff;
+  };
+
+  const updateStaffRole = (userId: string, role: UserRole) => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) => (u.id === userId ? { ...u, role } : u)),
+      currentUser: prev.currentUser.id === userId ? { ...prev.currentUser, role } : prev.currentUser,
+    }));
+  };
+
+  const updateStaffStatus = (userId: string, status: 'Active' | 'Invited' | 'Deactivated') => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) => (u.id === userId ? { ...u, status } : u)),
+    }));
+  };
+
+  const deleteStaffMember = (userId: string) => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.filter((u) => u.id !== userId),
+    }));
+  };
+
   const resetToDefaults = async () => {
     try {
       // Clean Firestore
@@ -1264,6 +1682,10 @@ export function useFleetStore() {
       bookings: INITIAL_BOOKINGS,
       logs: INITIAL_LOGS,
       customers: INITIAL_CUSTOMERS,
+      payments: INITIAL_PAYMENTS,
+      maintenance: INITIAL_MAINTENANCE,
+      companies: INITIAL_COMPANIES,
+      settings: DEFAULT_COMPANY_SETTINGS,
       activeTierId: 'growth',
       theme: 'dark',
       accentColorId: 'amber',
@@ -1292,6 +1714,7 @@ export function useFleetStore() {
     setAccentColor,
     currentUser: state.currentUser,
     currentCompany: state.currentCompany,
+    companies: state.companies,
     users: state.users,
     isAuthenticated: state.isAuthenticated,
     isFirebaseConnected: state.isFirebaseConnected,
@@ -1325,6 +1748,26 @@ export function useFleetStore() {
     updateCustomer,
     deleteCustomer,
     recordCustomerPayment,
+    payments: state.payments,
+    addPaymentRecord,
+    updatePaymentStatus,
+    generateEBMReceipt,
+    maintenance: state.maintenance,
+    addMaintenanceRecord,
+    updateMaintenanceRecord,
+    completeMaintenanceRecord,
+    deleteMaintenanceRecord,
+    updateCompanyStatus,
+    updateCompanyPlan,
+    switchCompanyContext,
+    addTenantCompany,
+    settings: state.settings,
+    updateCompanySettings,
+    updateCompanyProfile,
+    inviteStaffMember,
+    updateStaffRole,
+    updateStaffStatus,
+    deleteStaffMember,
     setTier,
     resetToDefaults,
   };

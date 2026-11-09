@@ -217,6 +217,25 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
     }
   };
 
+  // Auto-Escalate & Re-dispatch if chauffeur declines or fails to acknowledge (Blueprint Part 9, Item 8)
+  const handleAutoRedispatch = (booking: Booking) => {
+    const candidate = drivers.find(
+      (d) =>
+        d.id !== booking.driver_id &&
+        d.status === 'Available' &&
+        !checkDriverCollision(d.id, booking.start_date, booking.end_date, bookings, booking.id).hasCollision
+    ) || drivers.find((d) => d.id !== booking.driver_id);
+
+    if (candidate) {
+      const res = onAssignDriver(booking.id, candidate.id);
+      if (res.success) {
+        onDispatchSMS(booking.id, 'RW');
+        setSmsSendNotice(`Escalation triggered: Reassigned Trip #${booking.id} to ${candidate.name} (${candidate.phone}) with instant Africa's Talking SMS dispatch.`);
+        setTimeout(() => setSmsSendNotice(null), 4000);
+      }
+    }
+  };
+
   // Launch USSD interactive console for a booking
   const handleOpenUSSDForBooking = (bookingId: string) => {
     setUssdActiveBookingId(bookingId);
@@ -520,12 +539,23 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                       </button>
                     </div>
 
-                    <button
-                      onClick={() => onAdvanceCheckin(bk.id, 'Acknowledged by Driver')}
-                      className="w-full py-1 text-[10px] text-slate-400 hover:text-white underline text-center"
-                    >
-                      Quick mark as Acknowledged
-                    </button>
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                      <button
+                        onClick={() => onAdvanceCheckin(bk.id, 'Acknowledged by Driver')}
+                        className="text-[10px] text-slate-400 hover:text-white underline"
+                      >
+                        Quick mark Ack
+                      </button>
+
+                      <button
+                        onClick={() => handleAutoRedispatch(bk)}
+                        className="text-[10px] text-rose-400 hover:text-rose-300 font-mono font-semibold flex items-center gap-1 hover:underline"
+                        title="If chauffeur declined or timeout: Auto-reassign to next collision-free driver"
+                      >
+                        <AlertTriangle className="w-2.5 h-2.5 text-rose-400" />
+                        <span>Escalate / Re-dispatch</span>
+                      </button>
+                    </div>
                   </div>
                 );
               })

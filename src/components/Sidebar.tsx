@@ -18,6 +18,11 @@ import {
   X,
   Palette,
   Building2,
+  DollarSign,
+  BarChart3,
+  Wrench,
+  ShieldCheck,
+  Settings,
 } from 'lucide-react';
 import { ColorTheme, COLOR_THEMES } from '../theme';
 import { Vehicle, Driver, Booking, User, Company, Customer } from '../types';
@@ -95,6 +100,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
     },
     {
+      id: 'maintenance',
+      label: 'Workshop & Repairs',
+      icon: Wrench,
+      badge: vehicles.filter((v) => v.status === 'Maintenance').length > 0
+        ? `${vehicles.filter((v) => v.status === 'Maintenance').length} Grounded`
+        : undefined,
+      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
+    },
+    {
       id: 'drivers',
       label: userRole === 'driver' ? 'Driver Portal' : 'Drivers',
       icon: Users,
@@ -123,6 +137,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
     },
     {
+      id: 'payments',
+      label: 'Payments & EBM',
+      icon: DollarSign,
+      badge: 'MoMo',
+      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
+    },
+    {
+      id: 'reports',
+      label: 'Reports & Analytics',
+      icon: BarChart3,
+      badge: 'KPIs',
+      roles: ['owner', 'manager', 'superadmin'],
+    },
+    {
       id: 'simulator',
       label: "Africa's Talking Hub",
       icon: Globe,
@@ -142,6 +170,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Layers,
       badge: undefined,
       roles: ['owner', 'manager', 'superadmin'],
+    },
+    {
+      id: 'settings',
+      label: 'Settings & Staff',
+      icon: Settings,
+      badge: undefined,
+      roles: ['owner', 'manager', 'superadmin'],
+    },
+    {
+      id: 'super-admin',
+      label: 'Super Admin Portal',
+      icon: ShieldCheck,
+      badge: 'SaaS',
+      roles: ['owner', 'superadmin'],
     },
   ];
 

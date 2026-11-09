@@ -14,9 +14,26 @@ import {
   ChevronDown,
   ShieldCheck,
   Briefcase,
+  Bell,
+  BellRing,
+  Plane,
+  Wrench,
+  CreditCard,
+  CheckCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import { ColorTheme, COLOR_THEMES } from '../theme';
 import { User, Company, UserRole } from '../types';
+
+export interface InAppNotification {
+  id: string;
+  category: 'flight' | 'maintenance' | 'payment' | 'booking' | 'dispatch';
+  title: string;
+  description: string;
+  time: string;
+  read: boolean;
+  targetTab: string;
+}
 
 interface TopHeaderProps {
   currentTab: string;
@@ -35,6 +52,7 @@ interface TopHeaderProps {
   onLogout?: () => void;
   isFirebaseConnected?: boolean;
   onLoginWithGoogle?: () => void;
+  onNavigateTab?: (tab: string) => void;
 }
 
 const TAB_TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -52,7 +70,11 @@ const TAB_TITLES: Record<string, { title: string; subtitle: string }> = {
   },
   vehicles: {
     title: 'Vehicle Fleet Inventory',
-    subtitle: 'Manage daily rates in RWF, workshop service & category allocation',
+    subtitle: 'Manage daily rates in RWF, Contrôle Technique & category allocation',
+  },
+  maintenance: {
+    title: 'Workshop & Maintenance Management',
+    subtitle: 'CFAO & Akagera Motors work orders, vehicle grounding locks & safety compliance',
   },
   drivers: {
     title: 'Chauffeur & Driver Roster',
@@ -61,6 +83,30 @@ const TAB_TITLES: Record<string, { title: string; subtitle: string }> = {
   bookings: {
     title: 'Collision-Guarded Bookings',
     subtitle: 'Reservation ledger with zero-overlap protection & flight data',
+  },
+  dispatch: {
+    title: 'Dispatch & Operations Center',
+    subtitle: '5-stage mission Kanban, Rwanda Police Bon de Mission & SMS hub',
+  },
+  customers: {
+    title: 'Client CRM & Corporate Accounts',
+    subtitle: 'RRA TIN corporate profiles, Net-30 credit terms & balance dossiers',
+  },
+  payments: {
+    title: 'Payments & RRA EBM Tax Ledger',
+    subtitle: 'MTN Mobile Money, Bank of Kigali wires & EBM v2.0 18% VAT receipts',
+  },
+  reports: {
+    title: 'Reports & Fleet Analytics',
+    subtitle: 'Fleet utilization, RevPAV, vehicle ROI & monthly tax ledger',
+  },
+  settings: {
+    title: 'Company Settings & Staff Permissions',
+    subtitle: 'TIN registration, turnaround buffer rules, SMS telemetry & team access control',
+  },
+  'super-admin': {
+    title: 'Multi-Tenant Platform Administration',
+    subtitle: 'Global SaaS tenant oversight, MRR metrics in RWF & subscription management',
   },
   simulator: {
     title: "Africa's Talking & Flight Simulator",
@@ -93,9 +139,85 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onLogout,
   isFirebaseConnected,
   onLoginWithGoogle,
+  onNavigateTab,
 }) => {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationFilter, setNotificationFilter] = useState<'all' | 'flight' | 'maintenance' | 'payment' | 'dispatch'>('all');
+
+  const [notifications, setNotifications] = useState<InAppNotification[]>([
+    {
+      id: 'notif-1',
+      category: 'flight',
+      title: 'KIA Flight Delay: RwandAir WB204',
+      description: 'Entebbe -> Kigali is delayed +45 min (Est. 15:45 CAT). Pickup buffer auto-extended.',
+      time: '8m ago',
+      read: false,
+      targetTab: 'dispatch',
+    },
+    {
+      id: 'notif-2',
+      category: 'maintenance',
+      title: 'Contrôle Technique Inspection Due',
+      description: 'Land Cruiser V8 (RAD 782P) Rwanda Police safety certificate expires in 12 days.',
+      time: '25m ago',
+      read: false,
+      targetTab: 'maintenance',
+    },
+    {
+      id: 'notif-3',
+      category: 'payment',
+      title: 'MTN MoMo Payment Received',
+      description: 'RWF 240,000 confirmed for BK-7821. RRA EBM v2.0 receipt auto-generated.',
+      time: '1h ago',
+      read: false,
+      targetTab: 'payments',
+    },
+    {
+      id: 'notif-4',
+      category: 'dispatch',
+      title: 'Bon de Mission Signed by Police',
+      description: 'Driver Innocent Mugisha cleared for Inter-District Safari to Akagera NP.',
+      time: '2h ago',
+      read: true,
+      targetTab: 'dispatch',
+    },
+    {
+      id: 'notif-5',
+      category: 'booking',
+      title: 'Corporate Booking Confirmed',
+      description: 'BK-9912 created for Bank of Kigali HQ (4x4 Prado TXL). Zero collision detected.',
+      time: '3h ago',
+      read: true,
+      targetTab: 'bookings',
+    },
+  ]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleToggleRead = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
+    );
+  };
+
+  const handleNotificationClick = (targetTab: string, id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+    setIsNotificationsOpen(false);
+    onNavigateTab?.(targetTab);
+  };
+
+  const filteredNotifications = notifications.filter(
+    (n) => notificationFilter === 'all' || n.category === notificationFilter
+  );
 
   const currentTabInfo = TAB_TITLES[currentTab] || {
     title: 'KigaliFleet SaaS',
@@ -279,6 +401,154 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               </>
             )}
           </button>
+
+          {/* In-App Notifications Center (Blueprint Section 20) */}
+          <div className="relative">
+            <button
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className="relative p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors"
+              title="Operational Notifications & Dispatch Alerts"
+              aria-label="Notifications"
+            >
+              {unreadCount > 0 ? (
+                <BellRing className="w-4 h-4 text-amber-500 animate-pulse" />
+              ) : (
+                <Bell className="w-4 h-4" />
+              )}
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-amber-500 text-slate-950 font-extrabold text-[10px] rounded-full flex items-center justify-center shadow-xs">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {isNotificationsOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-black/30 backdrop-blur-2xs"
+                  onClick={() => setIsNotificationsOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 z-50 w-80 sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+                        <Bell className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                          Operational Alerts
+                        </h4>
+                        <div className="text-[10px] text-slate-400">
+                          {unreadCount} unread mission & fleet notices
+                        </div>
+                      </div>
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[11px] font-semibold text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        <span>Mark all read</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[10px]">
+                    {(
+                      [
+                        { id: 'all', label: 'All' },
+                        { id: 'flight', label: 'KIA Flights' },
+                        { id: 'maintenance', label: 'Workshop' },
+                        { id: 'payment', label: 'MoMo/EBM' },
+                        { id: 'dispatch', label: 'Dispatches' },
+                      ] as const
+                    ).map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setNotificationFilter(f.id)}
+                        className={`px-2 py-0.5 rounded-md font-semibold whitespace-nowrap transition-colors ${
+                          notificationFilter === f.id
+                            ? 'bg-amber-500 text-slate-950 font-bold'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Notification List */}
+                  <div className="space-y-1.5 max-h-80 overflow-y-auto pr-0.5">
+                    {filteredNotifications.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-slate-400">
+                        No notifications in this category.
+                      </div>
+                    ) : (
+                      filteredNotifications.map((notif) => {
+                        const getCategoryIcon = () => {
+                          switch (notif.category) {
+                            case 'flight':
+                              return <Plane className="w-3.5 h-3.5 text-sky-400" />;
+                            case 'maintenance':
+                              return <Wrench className="w-3.5 h-3.5 text-rose-400" />;
+                            case 'payment':
+                              return <CreditCard className="w-3.5 h-3.5 text-emerald-400" />;
+                            case 'dispatch':
+                              return <ShieldCheck className="w-3.5 h-3.5 text-violet-400" />;
+                            default:
+                              return <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />;
+                          }
+                        };
+
+                        return (
+                          <div
+                            key={notif.id}
+                            onClick={() => handleNotificationClick(notif.targetTab, notif.id)}
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-start gap-2.5 ${
+                              notif.read
+                                ? 'bg-slate-50/50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-800/80 opacity-75 hover:opacity-100'
+                                : 'bg-slate-100/90 dark:bg-slate-800 border-amber-500/40 shadow-xs'
+                            }`}
+                          >
+                            <div className="p-1.5 rounded-lg bg-slate-200/60 dark:bg-slate-900/80 shrink-0 mt-0.5">
+                              {getCategoryIcon()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h5 className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                                  {notif.title}
+                                </h5>
+                                <span className="text-[9px] font-mono text-slate-400 shrink-0">
+                                  {notif.time}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 leading-snug">
+                                {notif.description}
+                              </p>
+                              <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-200/50 dark:border-slate-700/40">
+                                <span className="text-[9px] font-mono text-amber-500 font-semibold hover:underline">
+                                  Open {notif.targetTab} →
+                                </span>
+                                <button
+                                  onClick={(e) => handleToggleRead(notif.id, e)}
+                                  className="text-[9px] text-slate-400 hover:text-slate-200 font-medium"
+                                >
+                                  {notif.read ? 'Mark unread' : 'Mark read'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Live Firestore DB Badge */}
           <div

@@ -305,8 +305,16 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           <div className="mt-2 text-2xl font-extrabold text-white font-mono truncate">
             {formatRwf(totalRevenueRwf)}
           </div>
-          <div className="mt-1 text-xs text-slate-400">
-            MoMo Collected: <span className="text-emerald-400 font-semibold">{formatRwf(depositPaidRwf)}</span>
+          <div className="mt-1 flex items-center justify-between text-xs text-slate-400">
+            <span>MoMo: <span className="text-emerald-400 font-semibold">{formatRwf(depositPaidRwf)}</span></span>
+            {onNavigateTab && (
+              <button
+                onClick={() => onNavigateTab('reports')}
+                className="text-[10px] text-amber-400 hover:text-amber-300 font-semibold hover:underline"
+              >
+                Analytics →
+              </button>
+            )}
           </div>
         </div>
 

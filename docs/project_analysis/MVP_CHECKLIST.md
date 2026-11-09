@@ -13,8 +13,10 @@ Use this checklist to track the audit and implementation progress across every a
 | **7. Calendar** | Day/month visual fleet scheduling grid, MyFleetOS dark styling, month navigation, continuous booking bars, turnaround buffer alerts, vehicle utilization badges, Block Vehicle maintenance modal | Implemented | `/calendar`, `tab=calendar` |
 | **8. Dispatch** | 5-stage Kanban board, Africa's Talking 2G SMS dispatch, zero-data *134# USSD terminal, KIA flight telemetry radar, official Rwanda Bon de Mission (Police clearance slip) | Implemented | `/dispatch`, `tab=dispatch` |
 | **9. Customers** | Client CRM directory, Corporate & NGO profiles with RRA TIN, Net-30 credit terms, customer dossier modal, mission history, payment balance settlement | Implemented | `/customers`, `tab=customers` |
-| **10. Payments** | MoMo / card tracking, deposit handling, EBM invoices | Partial | Payment records need ledger |
-| **11. Reports** | Fleet utilization, vehicle profitability, driver metrics | Missing | Need dedicated reports tab |
+| **10. Payments** | Payment records ledger, MTN MoMo & Bank of Kigali collections, RRA EBM v2.0 tax receipts (18% VAT), USSD push simulation, CSV ledger export | Implemented | `/payments`, `tab=payments` |
+| **11. Reports** | Fleet utilization rates, vehicle ROI & maintenance ledger, RevPAV, chauffeur mission scorecards, payment channel mix, booking conversion/cancellation funnel, CSV export | Implemented | `/reports`, `tab=reports` |
+| **Maintenance & Workshop** | Garage work orders (CFAO, Kigali Toyota, Akagera Motors), repair tracking, parts replacement, vehicle grounding locks, Contrôle Technique safety compliance, service release modal | Implemented | `/maintenance`, `tab=maintenance` |
 | **12. Storefront** | Dedicated public booking URL per company | In App | `/booking/:slug` |
 | **13. Driver Portal** | Mobile web chauffeur terminal, 4-step mission check-in, 2G SMS command fallback (*134#) | Implemented | `/driver`, `tab=drivers` (Portal mode) |
-| **14. Super Admin** | Platform SaaS dashboard, company billing, plan limits | Missing | Need SaaS owner portal |
+| **Company Settings & Staff** | Business profile (RRA TIN, city), collision turnaround buffers, Africa's Talking SMS rules, staff invitations & role permissions | Implemented | `/settings`, `tab=settings` |
+| **14. Super Admin** | Multi-tenant SaaS command center, tenant company directory, plan quota enforcement, platform MRR/ARR in RWF, tenant context switching, account suspension/activation controls | Implemented | `/super-admin`, `tab=super-admin` |

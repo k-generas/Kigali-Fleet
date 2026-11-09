@@ -84,6 +84,7 @@ export const DriversView: React.FC<DriversViewProps> = ({
   // Driver Portal State
   const [activePortalDriverId, setActivePortalDriverId] = useState<string>(drivers[0]?.id || '');
   const [driverReportNotice, setDriverReportNotice] = useState<string | null>(null);
+  const [isLowSignalMode, setIsLowSignalMode] = useState<boolean>(false);
 
   // Onboard Form state
   const [name, setName] = useState('');
@@ -469,12 +470,16 @@ export const DriversView: React.FC<DriversViewProps> = ({
                             ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
                             : driver.status === 'On Trip'
                             ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700/60'
+                            : driver.status === 'On Leave'
+                            ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700/60'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
                         }`}
                       >
                         <option value="Available">Available</option>
                         <option value="On Trip">On Trip</option>
                         <option value="Off Duty">Off Duty</option>
+                        <option value="Rest Day">Rest Day (Shift Limit)</option>
+                        <option value="On Leave">On Leave</option>
                       </select>
                     </div>
 
@@ -712,14 +717,37 @@ export const DriversView: React.FC<DriversViewProps> = ({
 
           {/* Mobile Phone Mockup Viewport */}
           <div className="max-w-md mx-auto bg-slate-950 border-4 border-slate-800 rounded-3xl p-5 shadow-2xl space-y-5 text-slate-100">
-            {/* Phone Top Notch & Status */}
+            {/* Phone Top Notch & Status with Safari Offline Mode */}
             <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono pb-2 border-b border-slate-800">
               <span className="font-bold text-white">KigaliFleet Driver</span>
-              <div className="flex items-center gap-1 text-emerald-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>MTN 4G / SMS Online</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsLowSignalMode(!isLowSignalMode)}
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                  isLowSignalMode
+                    ? 'bg-amber-950/80 text-amber-400 border-amber-600/50'
+                    : 'bg-emerald-950/80 text-emerald-400 border-emerald-600/50'
+                }`}
+                title="Toggle between MTN 4G and Safari Offline Caching (Akagera / Nyungwe)"
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isLowSignalMode ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'
+                  }`}
+                />
+                <span>{isLowSignalMode ? 'Akagera Offline Cache' : 'MTN 4G / SMS Online'}</span>
+              </button>
             </div>
+
+            {isLowSignalMode && (
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300 leading-snug flex items-start gap-2">
+                <Radio className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Safari Low-Signal Mode Active (Akagera / Nyungwe)</span>
+                  Check-ins and odometer updates are saved to device memory and will auto-sync via 2G *134# USSD or upon return to cellular coverage.
+                </div>
+              </div>
+            )}
 
             {/* Chauffeur Header Card */}
             <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
