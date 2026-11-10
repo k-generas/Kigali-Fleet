@@ -252,7 +252,7 @@ export default function App() {
 
   if (currentTab === 'storefront') {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-950 text-slate-100 font-sans antialiased">
         <PublicStorefrontView
           vehicles={store.vehicles}
           drivers={store.drivers}

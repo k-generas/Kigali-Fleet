@@ -1,0 +1,1137 @@
+Now we move to the **car rental and transport companies themselves** — the businesses that register on KigaliFleet and use it to manage their operations.
+
+The storefront is what their customers see. This specification covers the other side: what the company owner, manager and employees see, do, control, receive and expect from KigaliFleet.
+
+The important distinction is that we are not designing just an admin dashboard. We are designing a complete **Fleet Business Operating System**.
+
+# KigaliFleet — Company Platform Product Requirements Document
+
+Company-side experience · Version 1.0 · 9 November 2026
+
+(Target product specification)
+
+*This describes the proposed complete experience. It does not claim that every feature already exists in the current MVP.*
+
+\# KigaliFleet — Company Platform Product Requirements Document\
+\
+\## 1. Product definition\
+\
+KigaliFleet helps car rental and transport businesses manage their entire operation from one platform.\
+\
+A registered business should be able to:\
+\
+\- Manage its vehicles and fleet.\
+\- Receive and manage customer bookings.\
+\- Manage customers and their documents.\
+\- Assign drivers and vehicles.\
+\- Manage vehicle handovers and returns.\
+\- Track payments, expenses and revenue.\
+\- Schedule maintenance.\
+\- Manage employees and permissions.\
+\- Publish and manage its public storefront.\
+\- Communicate with customers.\
+\- Understand business performance.\
+\- Manage its subscription and account.\
+\
+The platform should reduce manual administration, prevent operational mistakes, improve customer service and help companies make better business decisions.\
+\
+\*\*Core promise:\*\* One system to manage the vehicles, people, bookings, money and customers of a transport business.\
+\
+\## 2. Company types\
+\
+KigaliFleet should support different types of businesses, not only traditional car rental companies.\
+\
+\### A. Car rental companies\
+\- Self-drive rentals.\
+\- Short-term and long-term rentals.\
+\- Daily, weekly and monthly rentals.\
+\- Vehicle deposits and rental agreements.\
+\
+\### B. Chauffeur and transport companies\
+\- Driver-managed vehicle bookings.\
+\- Airport transfers.\
+\- Corporate transportation.\
+\- Hourly and distance-based transport.\
+\
+\### C. Tour and travel companies\
+\- Tourist transportation.\
+\- Multi-day journeys.\
+\- Group transportation.\
+\- Custom itineraries.\
+\
+\### D. Fleet operators\
+\- Multiple vehicles.\
+\- Multiple branches.\
+\- Different operational teams.\
+\- Fleet utilization and performance tracking.\
+\
+A business should enable the services it actually provides. KigaliFleet should not force every business to use every module.\
+\
+\## 3. Company users and roles\
+\
+A company may have one person doing everything or a team with different responsibilities.\
+\
+\### Owner\
+Full business control:\
+\- Business settings.\
+\- Employees and permissions.\
+\- Vehicles.\
+\- Bookings.\
+\- Customers.\
+\- Finance.\
+\- Reports.\
+\- Storefront.\
+\- Subscription and billing.\
+\
+\### General manager\
+Operational management:\
+\- Monitor operations.\
+\- Manage bookings.\
+\- Assign employees.\
+\- Review vehicle availability.\
+\- Manage customer issues.\
+\- View permitted reports.\
+\
+\### Dispatcher / Operations officer\
+\- View upcoming bookings.\
+\- Assign vehicles.\
+\- Assign drivers.\
+\- Manage pickup and return schedules.\
+\- Handle operational changes.\
+\- Track active journeys.\
+\
+\### Accountant / Finance officer\
+\- View financial transactions.\
+\- Record payments.\
+\- Track expenses.\
+\- Manage invoices and receipts.\
+\- Monitor outstanding balances.\
+\- Prepare financial reports.\
+\
+\### Fleet manager\
+\- Manage vehicle records.\
+\- Monitor vehicle status.\
+\- Schedule maintenance.\
+\- Track vehicle documents.\
+\- Review vehicle utilization.\
+\
+\### Mechanic\
+\- View assigned maintenance work.\
+\- Update repair progress.\
+\- Record parts and service costs.\
+\- Report completed work.\
+\
+\### Driver\
+\- View assigned trips.\
+\- See pickup instructions.\
+\- Update trip status.\
+\- Report issues.\
+\- Submit permitted expense receipts.\
+\
+\### Front desk / Receptionist\
+\- Register customers.\
+\- Receive booking requests.\
+\- Manage customer communication.\
+\- Complete vehicle handovers and returns.\
+\
+\### Role and permission requirements\
+\
+Permissions must be configurable and enforced on the backend.\
+\
+A driver must not automatically see company revenue. A mechanic must not automatically access customer financial records. An accountant should not automatically change fleet maintenance records.\
+\
+The owner should be able to decide which employees can view, create, edit, approve, delete or export particular records.\
+\
+\## 4. Company dashboard structure\
+\
+The company dashboard should contain these main sections:\
+\
+1\. Overview\
+2\. Bookings\
+3\. Calendar\
+4\. Fleet / Vehicles\
+5\. Customers\
+6\. Drivers\
+7\. Employees\
+8\. Dispatch\
+9\. Vehicle handovers\
+10\. Maintenance\
+11\. Payments\
+12\. Expenses\
+13\. Invoices and agreements\
+14\. Reports and analytics\
+15\. Storefront management\
+16\. Notifications\
+17\. Support\
+18\. Business settings\
+19\. Subscription and billing\
+\
+The navigation should adapt to user permissions and enabled business services.\
+\
+\## 5. Overview dashboard\
+\
+The overview is the company's operational command center.\
+\
+\### Information displayed\
+\
+\- Total vehicles.\
+\- Available vehicles.\
+\- Vehicles currently rented.\
+\- Vehicles under maintenance.\
+\- Upcoming pickups.\
+\- Upcoming returns.\
+\- Pending booking requests.\
+\- Confirmed bookings.\
+\- Active trips.\
+\- Outstanding payments.\
+\- Revenue summary.\
+\- Upcoming maintenance.\
+\- Important document expirations.\
+\
+\### Operational alerts\
+\
+Examples:\
+\
+\- A booking request requires approval.\
+\- A vehicle is due for maintenance.\
+\- A rental is overdue.\
+\- A payment remains outstanding.\
+\- A driver has not confirmed an assignment.\
+\- A vehicle document is approaching expiry.\
+\- A customer has submitted a support request.\
+\
+\### Dashboard widgets\
+\
+The owner should be able to understand the business quickly without opening ten different pages.\
+\
+Possible widgets:\
+\
+\- Today's schedule.\
+\- Booking performance.\
+\- Fleet availability.\
+\- Revenue overview.\
+\- Recent transactions.\
+\- Pending tasks.\
+\- Maintenance alerts.\
+\- Customer activity.\
+\
+All dashboard statistics must be calculated from real stored records, not hardcoded demonstration numbers.\
+\
+\## 6. Vehicle and fleet management\
+\
+This is one of the most important modules.\
+\
+\### Vehicle registration\
+\
+The company should be able to register a vehicle with:\
+\
+\- Vehicle name.\
+\- Registration number.\
+\- Make.\
+\- Model.\
+\- Year.\
+\- Color.\
+\- Vehicle category.\
+\- Transmission.\
+\- Fuel type.\
+\- Passenger capacity.\
+\- Luggage capacity.\
+\- Mileage.\
+\- Fuel level.\
+\- Photos.\
+\- Description.\
+\- Daily rental price.\
+\- Weekly and monthly rates, if applicable.\
+\- Service types.\
+\- Branch or location.\
+\- Insurance information.\
+\- Inspection information.\
+\- Registration and other document details.\
+\
+\### Vehicle status\
+\
+Suggested statuses:\
+\
+\- Available.\
+\- Reserved.\
+\- Rented.\
+\- On a trip.\
+\- Under maintenance.\
+\- Temporarily unavailable.\
+\- Retired.\
+\
+\### Vehicle actions\
+\
+Authorized staff should be able to:\
+\
+\- Add a vehicle.\
+\- Edit vehicle details.\
+\- Upload photos.\
+\- Update mileage.\
+\- Change operational status.\
+\- View booking history.\
+\- View maintenance history.\
+\- View expenses.\
+\- View revenue generated.\
+\- Publish or hide it from the storefront.\
+\- Archive or retire it.\
+\
+\### Vehicle performance\
+\
+Each vehicle should have an individual performance page showing:\
+\
+\- Total bookings.\
+\- Rental days.\
+\- Revenue generated.\
+\- Maintenance expenses.\
+\- Other recorded expenses.\
+\- Utilization.\
+\- Outstanding issues.\
+\- Service history.\
+\
+The company should eventually understand which vehicles generate value and which ones consume too much money.\
+\
+\## 7. Booking management\
+\
+The booking module manages the complete customer booking lifecycle.\
+\
+\### Booking sources\
+\
+A company may receive bookings through:\
+\
+\- Public storefront.\
+\- Manual staff entry.\
+\- Phone calls.\
+\- WhatsApp.\
+\- Corporate requests.\
+\- Partner or agency referrals.\
+\- Other configured integrations.\
+\
+The system should record the booking source.\
+\
+\### Booking information\
+\
+Each booking should contain:\
+\
+\- Booking reference.\
+\- Customer.\
+\- Selected vehicle or service.\
+\- Booking type.\
+\- Pickup date and time.\
+\- Return date and time.\
+\- Pickup location.\
+\- Return location.\
+\- Price breakdown.\
+\- Deposit.\
+\- Payment status.\
+\- Booking status.\
+\- Assigned driver, if applicable.\
+\- Internal notes.\
+\- Customer instructions.\
+\- Created date.\
+\- Created by.\
+\
+\### Booking statuses\
+\
+\- Draft.\
+\- Request received.\
+\- Under review.\
+\- Awaiting payment.\
+\- Confirmed.\
+\- Driver assigned.\
+\- Ready for pickup.\
+\- Active.\
+\- Completed.\
+\- Cancellation requested.\
+\- Cancelled.\
+\- Rejected.\
+\
+\### Booking actions\
+\
+Authorized staff should be able to:\
+\
+\- View booking details.\
+\- Approve or reject requests.\
+\- Edit permitted booking information.\
+\- Assign vehicles.\
+\- Assign drivers.\
+\- Record payments.\
+\- Generate agreements.\
+\- Record pickup.\
+\- Record return.\
+\- Request or process cancellation.\
+\- Record refunds.\
+\- Communicate with customers.\
+\
+Important: booking status transitions must be controlled. Staff should not be able to mark a booking completed when the vehicle has not been returned, unless an authorized override is recorded.\
+\
+\## 8. Calendar and scheduling\
+\
+The company needs a visual overview of fleet operations.\
+\
+\### Calendar views\
+\
+\- Daily.\
+\- Weekly.\
+\- Monthly.\
+\- Vehicle-based.\
+\- Driver-based.\
+\- Branch-based.\
+\
+\### Calendar information\
+\
+\- Pickup schedules.\
+\- Return schedules.\
+\- Active rentals.\
+\- Driver assignments.\
+\- Maintenance periods.\
+\- Vehicle availability.\
+\- Booking holds.\
+\
+\### Calendar actions\
+\
+\- Open booking details.\
+\- Create manual booking.\
+\- Reschedule bookings.\
+\- Assign vehicles.\
+\- Assign drivers.\
+\- Create maintenance blocks.\
+\
+The calendar must not allow conflicting vehicle assignments without a clear warning and appropriate authorization.\
+\
+\## 9. Customer management\
+\
+Each business needs its own customer database.\
+\
+\### Customer profiles\
+\
+\- Full name.\
+\- Phone number.\
+\- Email.\
+\- Country, if relevant.\
+\- Address, if needed.\
+\- Customer type.\
+\- Identification details, where necessary.\
+\- Driving licence details, where necessary.\
+\- Customer notes.\
+\- Booking history.\
+\- Payment history.\
+\- Outstanding balances.\
+\- Support history.\
+\
+\### Customer categories\
+\
+\- Individual.\
+\- Corporate.\
+\- Travel agency.\
+\- Returning customer.\
+\- Other configurable categories.\
+\
+\### Customer actions\
+\
+\- Create customer.\
+\- Edit permitted information.\
+\- Search customers.\
+\- View booking history.\
+\- View outstanding balances.\
+\- Record communication.\
+\- Add internal notes.\
+\- Manage permitted documents.\
+\- Handle customer requests.\
+\
+\### Customer privacy\
+\
+A company's employees should only access the customer information their roles require.\
+\
+Documents must be protected. Do not expose identity documents through public links.\
+\
+\## 10. Driver management\
+\
+The company should be able to manage its drivers.\
+\
+\### Driver profile\
+\
+\- Name.\
+\- Phone.\
+\- Email, if available.\
+\- Licence information.\
+\- Licence expiry.\
+\- Employment or contractor status.\
+\- Assigned branch.\
+\- Availability.\
+\- Emergency contact, where appropriate.\
+\- Documents.\
+\- Current assignments.\
+\
+\### Driver operations\
+\
+\- Assign driver to booking.\
+\- Reassign driver.\
+\- View driver schedule.\
+\- Track assignment status.\
+\- Record trip completion.\
+\- Record reported issues.\
+\- Review trip history.\
+\
+\### Driver portal\
+\
+A lightweight mobile experience should eventually allow drivers to:\
+\
+\- Log in securely.\
+\- View assigned trips.\
+\- See pickup and destination details.\
+\- View customer contact information required for the trip.\
+\- Confirm assignment.\
+\- Update trip status.\
+\- Report delays or problems.\
+\- Upload permitted receipts.\
+\- Submit trip expenses.\
+\
+Drivers should only access information necessary for their assignments.\
+\
+\## 11. Dispatch and operations\
+\
+Dispatch coordinates the real-world movement of vehicles and drivers.\
+\
+\### Dispatch board\
+\
+It should show:\
+\
+\- Today's bookings.\
+\- Vehicles available.\
+\- Vehicles assigned.\
+\- Drivers available.\
+\- Upcoming pickups.\
+\- Active trips.\
+\- Delayed returns.\
+\- Unassigned bookings.\
+\
+\### Dispatcher actions\
+\
+\- Assign vehicle.\
+\- Assign driver.\
+\- Change assignment.\
+\- Update pickup instructions.\
+\- Contact customer.\
+\- Notify driver.\
+\- Record operational issues.\
+\
+\### Operational scenarios\
+\
+The system should support:\
+\
+\- Driver unavailable.\
+\- Vehicle unavailable.\
+\- Customer changes pickup time.\
+\- Booking delayed.\
+\- Customer fails to arrive.\
+\- Vehicle returned late.\
+\- Trip extended.\
+\
+The system should record who made important changes and when.\
+\
+\## 12. Vehicle handover and return inspections\
+\
+This module is essential for businesses offering self-drive rentals.\
+\
+\### Vehicle pickup\
+\
+Staff should record:\
+\
+\- Booking reference.\
+\- Vehicle.\
+\- Customer.\
+\- Pickup date and time.\
+\- Starting mileage.\
+\- Fuel level.\
+\- Vehicle condition.\
+\- Existing damage.\
+\- Photos.\
+\- Required documents checked.\
+\- Staff member completing handover.\
+\- Customer acknowledgment.\
+\
+\### Vehicle return\
+\
+Staff should record:\
+\
+\- Return date and time.\
+\- Final mileage.\
+\- Fuel level.\
+\- Vehicle condition.\
+\- New damage or reported issues.\
+\- Photos.\
+\- Additional charges, if applicable.\
+\- Staff member completing return.\
+\
+\### Inspection reports\
+\
+The system should preserve pickup and return records separately.\
+\
+This helps the company investigate disputes and understand vehicle condition over time.\
+\
+A customer or staff member should not be able to silently rewrite an already completed inspection.\
+\
+\## 13. Maintenance management\
+\
+Vehicles need planned and unplanned maintenance.\
+\
+\### Maintenance categories\
+\
+\- Routine servicing.\
+\- Oil changes.\
+\- Tyres.\
+\- Brakes.\
+\- Mechanical repairs.\
+\- Electrical repairs.\
+\- Inspection.\
+\- Other repairs.\
+\
+\### Maintenance records\
+\
+\- Vehicle.\
+\- Maintenance type.\
+\- Mileage.\
+\- Date.\
+\- Description.\
+\- Garage or mechanic.\
+\- Parts used.\
+\- Labour cost.\
+\- Total cost.\
+\- Next service date.\
+\- Next service mileage.\
+\- Supporting documents.\
+\
+\### Maintenance statuses\
+\
+\- Scheduled.\
+\- Pending.\
+\- In progress.\
+\- Completed.\
+\- Cancelled.\
+\
+\### Alerts\
+\
+\- Service due soon.\
+\- Service overdue.\
+\- Vehicle unavailable.\
+\- Repair not completed.\
+\- Repeated mechanical problems.\
+\
+A vehicle under maintenance should not appear as bookable for overlapping periods.\
+\
+\## 14. Payments and financial management\
+\
+The financial module must show the actual money position of the business.\
+\
+\### Payment methods\
+\
+Depending on business configuration:\
+\
+\- MTN Mobile Money.\
+\- Airtel Money.\
+\- Bank transfer.\
+\- Card.\
+\- Cash.\
+\- Other recorded payment methods.\
+\
+\### Payment records\
+\
+\- Payment reference.\
+\- Booking.\
+\- Customer.\
+\- Amount.\
+\- Currency.\
+\- Payment method.\
+\- Payment status.\
+\- Transaction date.\
+\- Provider reference, where applicable.\
+\- Recorded by.\
+\
+\### Payment statuses\
+\
+\- Pending.\
+\- Successful.\
+\- Failed.\
+\- Cancelled.\
+\- Refunded.\
+\- Partially refunded.\
+\
+\### Financial actions\
+\
+\- Record manual payment.\
+\- View payment history.\
+\- Track unpaid bookings.\
+\- Record deposits.\
+\- Track outstanding balances.\
+\- Process or record refunds.\
+\- Export permitted financial records.\
+\
+Manual payment records must be distinguishable from independently verified digital transactions.\
+\
+\## 15. Expenses and business costs\
+\
+Revenue alone does not show whether a company is profitable.\
+\
+\### Expense categories\
+\
+\- Fuel.\
+\- Maintenance.\
+\- Repairs.\
+\- Insurance.\
+\- Vehicle registration.\
+\- Driver allowances.\
+\- Parking.\
+\- Cleaning.\
+\- Office costs.\
+\- Marketing.\
+\- Other operating costs.\
+\
+\### Expense records\
+\
+\- Expense title.\
+\- Category.\
+\- Amount.\
+\- Currency.\
+\- Date.\
+\- Related vehicle.\
+\- Related booking, if applicable.\
+\- Supplier.\
+\- Description.\
+\- Receipt or attachment.\
+\- Recorded by.\
+\- Approval status.\
+\
+\### Expense approvals\
+\
+The owner should be able to configure which expenses require approval.\
+\
+\## 16. Invoices, agreements and documents\
+\
+The company should be able to generate and manage:\
+\
+\- Rental agreements.\
+\- Booking confirmations.\
+\- Customer invoices.\
+\- Payment receipts.\
+\- Deposit receipts.\
+\- Refund receipts.\
+\- Vehicle inspection reports.\
+\- Maintenance reports.\
+\- Quotations.\
+\
+Documents should include the correct business identity, booking details, pricing and relevant policy terms.\
+\
+Document generation should use saved records, not values supplied only by the browser.\
+\
+RRA EBM integration should be treated as a separate compliance project. Do not claim that a normal KigaliFleet invoice is an officially issued EBM fiscal invoice unless the required integration and authorization are in place.\
+\
+\## 17. Reports and analytics\
+\
+Owners need useful business information, not decorative charts.\
+\
+\### Booking reports\
+\
+\- Bookings by period.\
+\- Bookings by source.\
+\- Confirmed versus rejected.\
+\- Cancelled bookings.\
+\- Average booking duration.\
+\- Repeat customers.\
+\
+\### Fleet reports\
+\
+\- Vehicle utilization.\
+\- Available days.\
+\- Rental days.\
+\- Revenue by vehicle.\
+\- Maintenance expenses by vehicle.\
+\- Vehicle performance.\
+\
+\### Financial reports\
+\
+\- Revenue.\
+\- Expenses.\
+\- Outstanding payments.\
+\- Deposits.\
+\- Refunds.\
+\- Net operating result based on recorded categories.\
+\
+\### Driver reports\
+\
+\- Trips completed.\
+\- Assigned trips.\
+\- Reported issues.\
+\- Recorded trip expenses.\
+\
+\### Business reports\
+\
+\- Revenue by month.\
+\- Booking trends.\
+\- Popular services.\
+\- Customer retention.\
+\- Booking conversion.\
+\
+Reports must clearly identify the period, currency and calculation method.\
+\
+Do not call revenue minus a few recorded expenses "net profit" if important costs, taxes or liabilities are missing.\
+\
+\## 18. Storefront management\
+\
+The company should manage its public website from its dashboard.\
+\
+\### Controls\
+\
+\- Company logo.\
+\- Business name.\
+\- Description.\
+\- Contact information.\
+\- Operating locations.\
+\- Vehicle publication.\
+\- Service publication.\
+\- Pricing.\
+\- Policies.\
+\- Reviews.\
+\- FAQs.\
+\- Languages.\
+\- Currency display.\
+\- Storefront URL.\
+\- Search-engine information.\
+\
+\### Publishing states\
+\
+\- Draft.\
+\- Published.\
+\- Hidden.\
+\- Temporarily unavailable.\
+\
+Changes to published vehicle information should update the public storefront according to the business's configuration.\
+\
+\## 19. Notifications and internal tasks\
+\
+Employees should receive relevant operational alerts.\
+\
+Examples:\
+\
+\- New booking request.\
+\- Booking approved.\
+\- Payment received.\
+\- Vehicle assigned.\
+\- Driver assignment accepted.\
+\- Upcoming pickup.\
+\- Overdue return.\
+\- Maintenance due.\
+\- New support ticket.\
+\- Document expiry.\
+\
+\### Internal task management\
+\
+Employees should be able to:\
+\
+\- Create a task.\
+\- Assign a responsible person.\
+\- Set a due date.\
+\- Add instructions.\
+\- Update status.\
+\- Record completion.\
+\
+Task statuses:\
+\
+\- Open.\
+\- In progress.\
+\- Waiting.\
+\- Completed.\
+\- Cancelled.\
+\
+\## 20. Business settings\
+\
+Every company needs its own configuration.\
+\
+\### Business profile\
+\
+\- Legal or registered business name.\
+\- Trading name.\
+\- Logo.\
+\- Contact details.\
+\- Address.\
+\- Branches.\
+\- Operating hours.\
+\- Timezone.\
+\
+\### Operational settings\
+\
+\- Enabled services.\
+\- Booking approval mode.\
+\- Booking lead time.\
+\- Minimum rental period.\
+\- Maximum rental period.\
+\- Pickup and return buffers.\
+\- Deposit rules.\
+\- Cancellation rules.\
+\- Pricing configuration.\
+\- Currency.\
+\- Payment methods.\
+\
+\### Team settings\
+\
+\- Employee accounts.\
+\- Roles.\
+\- Permissions.\
+\- Account status.\
+\- Activity history.\
+\
+\### Security settings\
+\
+\- Password and authentication controls.\
+\- Active sessions.\
+\- Account recovery.\
+\- Login activity.\
+\- Audit logs.\
+\
+\## 21. Branch management\
+\
+Multi-branch support is important for companies operating in multiple locations.\
+\
+A branch may have:\
+\
+\- Address.\
+\- Contact number.\
+\- Assigned employees.\
+\- Assigned vehicles.\
+\- Operating hours.\
+\- Availability.\
+\- Local operational settings.\
+\
+Owners should be able to view the whole company while branch managers see only their permitted branch data.\
+\
+This should be designed into the data model even if advanced branch functionality is released later.\
+\
+\## 22. Subscription and billing\
+\
+KigaliFleet should provide a clear subscription management experience.\
+\
+The company should see:\
+\
+\- Current plan.\
+\- Subscription status.\
+\- Plan features.\
+\- Usage limits.\
+\- Renewal date.\
+\- Payment history.\
+\- Upgrade or downgrade options.\
+\- Billing contact.\
+\- Account restrictions, if applicable.\
+\
+Subscription expiry must not silently destroy business data.\
+\
+Define exactly what becomes unavailable after expiry and what remains accessible, especially booking history, invoices and customer records.\
+\
+\## 23. Support for company users\
+\
+The company should be able to contact KigaliFleet support.\
+\
+\### Support channels\
+\
+\- Support tickets.\
+\- Email.\
+\- Help center.\
+\- Tutorials.\
+\- Product documentation.\
+\- Optional live support, if staffed.\
+\
+\### Support ticket fields\
+\
+\- Issue category.\
+\- Subject.\
+\- Description.\
+\- Attachment.\
+\- Priority.\
+\- Related booking or transaction.\
+\- Ticket reference.\
+\
+\### Help center topics\
+\
+\- Getting started.\
+\- Registering vehicles.\
+\- Managing bookings.\
+\- Assigning drivers.\
+\- Recording payments.\
+\- Managing maintenance.\
+\- Publishing the storefront.\
+\- Managing employees.\
+\- Subscription and billing.\
+\- Security and account recovery.\
+\
+\## 24. Security and data ownership\
+\
+These are fundamental platform requirements.\
+\
+\- Every business must have isolated data.\
+\- Employees must have role-based permissions.\
+\- Customers must only access their own records.\
+\- Backend authorization must enforce permissions.\
+\- Sensitive documents must be protected.\
+\- Financial records must have traceable changes.\
+\- Important actions must be recorded.\
+\- Payment status must be verified securely.\
+\- Backups and recovery procedures must exist.\
+\- Data export and deletion procedures must be defined.\
+\- Account termination must not cause accidental loss of legally required records.\
+\
+\## 25. Important edge cases\
+\
+The platform must handle:\
+\
+\- Two staff members editing the same booking.\
+\- A vehicle being double-booked.\
+\- Driver cancellation after assignment.\
+\- Vehicle breakdown during a rental.\
+\- Customer returning a vehicle late.\
+\- Payment provider delay.\
+\- Duplicate payment callback.\
+\- Refund failure.\
+\- Employee leaving the company.\
+\- Owner losing account access.\
+\- Branch closure.\
+\- Subscription expiry.\
+\- Incorrect vehicle mileage.\
+\- Missing inspection photos.\
+\- Network interruption during handover.\
+\- Customer dispute.\
+\- Accidental deletion of important records.\
+\
+\## 26. Recommended release plan\
+\
+\### Release 1 — Core business operations\
+\
+\- Business registration and setup.\
+\- Owner account.\
+\- Employee roles.\
+\- Overview dashboard.\
+\- Vehicle management.\
+\- Booking management.\
+\- Customer management.\
+\- Calendar.\
+\- Manual payment records.\
+\- Basic expenses.\
+\- Basic storefront management.\
+\- Booking notifications.\
+\- Persistent backend.\
+\- Tenant isolation.\
+\
+\### Release 2 — Operational control\
+\
+\- Driver management.\
+\- Dispatch.\
+\- Vehicle handover and return.\
+\- Inspection reports.\
+\- Maintenance.\
+\- PDF agreements.\
+\- Invoices and receipts.\
+\- Payment integrations.\
+\- Customer support.\
+\- Reports and analytics.\
+\
+\### Release 3 — Advanced business management\
+\
+\- Multi-branch management.\
+\- Driver mobile portal.\
+\- Advanced fleet analytics.\
+\- Corporate accounts.\
+\- EBM integration, subject to compliance requirements.\
+\- GPS and telematics.\
+\- Flight integration.\
+\- Advanced financial reporting.\
+\- Automated operational workflows.\
+\- Partner integrations.\
+\
+\## 27. Acceptance criteria\
+\
+The company platform is not ready for launch until:\
+\
+\- A business can register and configure its account.\
+\- The owner can create and manage vehicles.\
+\- Employees can be invited with controlled permissions.\
+\- A booking can be received and managed.\
+\- The booking appears in the correct company's dashboard.\
+\- Vehicle availability is checked on the server.\
+\- Conflicting bookings are prevented.\
+\- Customers are isolated between businesses.\
+\- Payments and manual records are distinguishable.\
+\- Vehicle handovers and returns can be recorded.\
+\- Maintenance blocks affect availability.\
+\- Important changes have an audit trail.\
+\- Storefront information reflects the business's saved settings.\
+\- Company users can contact support.\
+\- The core dashboard works on mobile and desktop.\
+\
+\## 28. Final product principle\
+\
+KigaliFleet should help a transport business operate more reliably and make better decisions.\
+\
+It should not become a collection of disconnected CRUD pages.\
+\
+Every module should connect to the others:\
+\
+\- A new booking affects vehicle availability.\
+\- Vehicle assignment affects dispatch.\
+\- Dispatch affects driver schedules.\
+\- Pickup affects rental status.\
+\- Return affects vehicle availability and inspection.\
+\- Maintenance affects future bookings.\
+\- Payments affect outstanding balances.\
+\- Expenses affect business performance.\
+\- Storefront settings affect what customers see.\
+\- Customer communication reflects the real booking status.\
+\
+The platform's value comes from these connections, not from the number of menu items.\
+
+---
+
+## 3. The most important company journey
+
+This is the operational cycle KigaliFleet must support:
+
+## 4. My biggest product warnings
+
+There are several things that can make this product fail even if the dashboard looks professional.
+
+1. **Too many modules before the core works.** A company needs reliable booking, vehicle availability, handover and payments before it needs advanced analytics.
+2. **Weak permissions.** A driver, mechanic and accountant should not all have owner-level access.
+3. **Fake financial intelligence.** If the company does not record fuel, maintenance and other costs, the platform cannot honestly calculate its actual profitability.
+4. **Disconnected operations.** A vehicle marked under maintenance must automatically become unavailable for relevant bookings.
+5. **No operational accountability.** You need to know who approved a booking, changed a price, assigned a driver or recorded a payment.
+6. **Ignoring real-world workflows.** Some businesses receive bookings by phone, use cash, have unreliable internet and manage vehicles across different locations. The product must accommodate those workflows without compromising records.
+
+## 5. What we should validate with real companies
+
+Before finalizing the company platform, we should investigate these areas:
+
+- How do Rwandan rental companies currently receive bookings?
+- How do they calculate rental prices?
+- Who approves bookings?
+- How do they handle deposits?
+- How do they verify customers?
+- How do they record vehicle condition?
+- How do they manage late returns?
+- How do they assign drivers?
+- How do they record fuel and maintenance?
+- How do they handle cash and Mobile Money?
+- How many employees use their current system?
+- What information do owners want to see daily?
+- What problems cost them the most money?
+- What would make them pay for KigaliFleet?
+
+**Hard truth:** A company will not pay just because KigaliFleet has 19 dashboard sections. It will pay if the platform prevents costly mistakes, saves staff time, increases bookings or improves financial control.
+
+## 6. What comes next
+
+We should now do the same rigorous gap analysis as we planned for the storefront, but from the company's side:
+
+**KEEP** — existing functionality that works.
+
+**FIX** — existing functionality that is broken or incomplete.
+
+**BUILD** — missing functionality needed to deliver the target product.
+
+The next useful step is to inspect the current KigaliFleet dashboard and map every existing page and action against this specification.

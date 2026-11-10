@@ -506,27 +506,27 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased flex flex-col selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-950 text-slate-100 font-sans antialiased flex flex-col selection:bg-amber-500 selection:text-slate-950">
       {/* =========================================================================
           1. CUSTOMER-FACING HELPLINE & LOCALIZATION BAR
       ========================================================================= */}
-      <div className="bg-slate-900/90 border-b border-slate-800/80 px-4 py-2 text-xs">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-slate-900/90 border-b border-slate-800/80 px-3 sm:px-6 py-1.5 sm:py-2 text-xs w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 sm:gap-3">
           {/* 24/7 Operations Contact & Terminal Info */}
-          <div className="flex items-center gap-3 text-slate-400 text-xs">
-            <div className="flex items-center gap-1.5 text-slate-300 font-medium">
+          <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs min-w-0">
+            <div className="flex items-center gap-1.5 text-slate-300 font-medium truncate">
               <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>24/7 Dispatch: <strong className="text-white font-mono">{companyPhone}</strong></span>
             </div>
-            <span aria-hidden="true" className="hidden sm:inline text-slate-600">·</span>
-            <div className="hidden sm:flex items-center gap-1.5 text-slate-400">
+            <span aria-hidden="true" className="hidden md:inline text-slate-600">·</span>
+            <div className="hidden md:flex items-center gap-1.5 text-slate-400 truncate">
               <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-              <span>Kigali International Airport (KIA) Hub & Remera HQ</span>
+              <span>Kigali Airport Hub & Remera HQ</span>
             </div>
           </div>
 
           {/* Currency Switcher, Language Switcher & Subtle Operator Exit */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Currency Switcher */}
             <div className="flex items-center bg-slate-950 rounded-md p-0.5 border border-slate-800">
               <button
@@ -571,11 +571,11 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
             {/* Subtle Operator Hub Backlink */}
             <button
               onClick={() => onReturnToManager(confirmedBooking?.id)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white text-[11px] font-medium border border-slate-700/60 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white text-[11px] font-medium border border-slate-700/60 transition-colors"
               title="Return to Management Dashboard"
             >
               <ArrowLeft className="w-3 h-3" />
-              <span className="hidden md:inline">Operator Hub</span>
+              <span>Operator Hub</span>
             </button>
           </div>
         </div>
@@ -584,29 +584,29 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
       {/* =========================================================================
           2. STRICT TOP BAR CONTRACT (Zone 1: Wordmark — Zone 2: Links — Zone 3: Action)
       ========================================================================= */}
-      <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 sm:px-8 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
-          {/* Zone 1: Brand Wordmark (Single text element) */}
+      <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3 w-full">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+          {/* Zone 1: Brand Wordmark (Flexible, never pushes actions off-screen) */}
           <button
             onClick={() => setCurrentView('home')}
-            className="flex items-center gap-2.5 text-left text-white whitespace-nowrap shrink-0 group"
+            className="flex items-center gap-2 text-left text-white min-w-0 shrink group"
           >
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-950 shadow-sm"
+              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-950 shadow-sm shrink-0"
               style={{ backgroundColor: activeThemeColor }}
             >
               <Car className="w-5 h-5 stroke-[2.2]" />
             </div>
-            <span className="text-base sm:text-lg font-extrabold tracking-tight group-hover:text-amber-400 transition-colors">
+            <span className="text-sm sm:text-base font-extrabold tracking-tight group-hover:text-amber-400 transition-colors truncate max-w-[150px] sm:max-w-[220px] md:max-w-xs lg:max-w-[260px] xl:max-w-none">
               {companyDisplayName}
             </span>
           </button>
 
-          {/* Zone 2: Navigation Links (4-5 single-line clean text links) */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-300">
+          {/* Zone 2: Navigation Links (Clean, compact, no horizontal blowout) */}
+          <nav className="hidden lg:flex items-center gap-2 xl:gap-4 2xl:gap-5 text-xs font-semibold text-slate-300">
             <button
               onClick={() => setCurrentView('home')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap shrink-0 ${
+              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
                 currentView === 'home' ? 'text-amber-400 font-bold' : ''
               }`}
             >
@@ -614,7 +614,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
             </button>
             <button
               onClick={() => setCurrentView('vehicles')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap shrink-0 ${
+              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
                 currentView === 'vehicles' ? 'text-amber-400 font-bold' : ''
               }`}
             >
@@ -625,22 +625,22 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setServiceType('airport');
                 setCurrentView('home');
               }}
-              className="hover:text-amber-400 transition-colors whitespace-nowrap shrink-0"
+              className="hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1"
             >
-              Airport Transfer (KIA)
+              Airport Transfer
             </button>
             <button
               onClick={() => {
                 setServiceType('safari');
                 setCurrentView('home');
               }}
-              className="hover:text-amber-400 transition-colors whitespace-nowrap shrink-0"
+              className="hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1"
             >
               Safari Expeditions
             </button>
             <button
               onClick={() => setCurrentView('track')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap shrink-0 ${
+              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
                 currentView === 'track' ? 'text-amber-400 font-bold' : ''
               }`}
             >
@@ -648,7 +648,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
             </button>
             <button
               onClick={() => setCurrentView('quote')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap shrink-0 ${
+              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
                 currentView === 'quote' ? 'text-amber-400 font-bold' : ''
               }`}
             >
@@ -656,7 +656,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
             </button>
             <button
               onClick={() => setCurrentView('contact')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap shrink-0 ${
+              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
                 currentView === 'contact' ? 'text-amber-400 font-bold' : ''
               }`}
             >
@@ -664,18 +664,18 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
             </button>
           </nav>
 
-          {/* Zone 3: Primary Action & WhatsApp Shortcut */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Zone 3: Primary Action & WhatsApp Shortcut - Always 100% visible on any screen! */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <a
               href={`https://wa.me/250788312000?text=${encodeURIComponent(
                 `Muraho! I would like to inquire about booking a vehicle with ${companyDisplayName}.`
               )}`}
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-500/30 text-xs font-semibold transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-950/70 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-500/30 text-xs font-semibold transition-colors"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>WhatsApp</span>
+              <span className="hidden xl:inline">WhatsApp</span>
             </a>
 
             <button
@@ -687,16 +687,18 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                   setCurrentView('vehicles');
                 }
               }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap transition-transform active:scale-95 ${activeBtnText}`}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap transition-transform active:scale-95 ${activeBtnText}`}
               style={{ backgroundColor: activeThemeColor }}
             >
-              Book a Vehicle
+              <span className="inline sm:hidden">Book</span>
+              <span className="hidden sm:inline">Book a Vehicle</span>
             </button>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - visible on screens < lg */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white lg:hidden"
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 lg:hidden transition-colors shrink-0"
+              aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -705,13 +707,15 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden mt-3 pt-3 border-t border-slate-800 flex flex-col gap-2.5 text-xs font-semibold text-slate-300 pb-2">
+          <div className="lg:hidden mt-3 pt-3 border-t border-slate-800 flex flex-col gap-2 text-xs font-semibold text-slate-300 pb-2 animate-in fade-in duration-150">
             <button
               onClick={() => {
                 setCurrentView('home');
                 setMobileMenuOpen(false);
               }}
-              className="text-left py-1 hover:text-amber-400"
+              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
+                currentView === 'home' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
+              }`}
             >
               Home
             </button>
@@ -720,7 +724,9 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setCurrentView('vehicles');
                 setMobileMenuOpen(false);
               }}
-              className="text-left py-1 hover:text-amber-400"
+              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
+                currentView === 'vehicles' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
+              }`}
             >
               Fleet & Rates ({vehicles.length} Vehicles)
             </button>
@@ -730,7 +736,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setCurrentView('home');
                 setMobileMenuOpen(false);
               }}
-              className="text-left py-1 hover:text-amber-400"
+              className="text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400"
             >
               Airport Transfer (KIA Arrivals)
             </button>
@@ -740,7 +746,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setCurrentView('home');
                 setMobileMenuOpen(false);
               }}
-              className="text-left py-1 hover:text-amber-400"
+              className="text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400"
             >
               Safari Expeditions (Akagera & Volcanoes)
             </button>
@@ -749,7 +755,9 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setCurrentView('track');
                 setMobileMenuOpen(false);
               }}
-              className="text-left py-1 hover:text-amber-400"
+              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
+                currentView === 'track' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
+              }`}
             >
               Track Reservation Status
             </button>
@@ -758,7 +766,9 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setCurrentView('quote');
                 setMobileMenuOpen(false);
               }}
-              className="text-left py-1 hover:text-amber-400"
+              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
+                currentView === 'quote' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
+              }`}
             >
               Corporate Multi-Vehicle RFP
             </button>
@@ -767,7 +777,9 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setCurrentView('contact');
                 setMobileMenuOpen(false);
               }}
-              className="text-left py-1 hover:text-amber-400"
+              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
+                currentView === 'contact' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
+              }`}
             >
               Customer Support Desk
             </button>
@@ -776,10 +788,33 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setCurrentView('faq');
                 setMobileMenuOpen(false);
               }}
-              className="text-left py-1 hover:text-amber-400"
+              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
+                currentView === 'faq' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
+              }`}
             >
               Frequently Asked Questions
             </button>
+
+            {/* Mobile Operator & WhatsApp links */}
+            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-1">
+              <a
+                href="https://wa.me/250788312000"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-emerald-400 font-semibold py-1 px-2 rounded-md bg-emerald-950/40 border border-emerald-500/20 text-xs"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>WhatsApp Dispatch</span>
+              </a>
+
+              <button
+                onClick={() => onReturnToManager(confirmedBooking?.id)}
+                className="inline-flex items-center gap-1 text-slate-400 hover:text-white py-1 px-2 rounded-md bg-slate-800/60 text-xs"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                <span>Operator Hub</span>
+              </button>
+            </div>
           </div>
         )}
       </header>
@@ -1560,44 +1595,43 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
         {/* =====================================================================
             VIEW 2: VEHICLE LISTING / SEARCH RESULTS (/booking/:slug/vehicles)
         ===================================================================== */}
-        {/* =====================================================================
-            VIEW 2: VEHICLE LISTING / SEARCH RESULTS (/booking/:slug/vehicles)
-        ===================================================================== */}
         {currentView === 'vehicles' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 w-full max-w-full overflow-hidden">
             {/* 1. TOP ITINERARY STEPPER (CarTrawler & Avax Style) */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
-              <div className="flex items-center gap-2 sm:gap-4 text-xs font-semibold overflow-x-auto py-1">
-                <span className="flex items-center gap-2 text-amber-400 font-bold shrink-0">
-                  <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[10px] font-black">
-                    1
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm w-full max-w-full overflow-hidden">
+              <div className="w-full md:w-auto overflow-x-auto py-1 min-w-0">
+                <div className="flex items-center gap-2 sm:gap-4 text-xs font-semibold whitespace-nowrap min-w-max">
+                  <span className="flex items-center gap-2 text-amber-400 font-bold shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[10px] font-black">
+                      1
+                    </span>
+                    <span>1. Vehicles & Rates</span>
                   </span>
-                  <span>1. Vehicles & Rates</span>
-                </span>
-                <span className="text-slate-600 shrink-0">→</span>
-                <span className="flex items-center gap-2 text-slate-500 shrink-0">
-                  <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
-                    2
+                  <span className="text-slate-600 shrink-0">→</span>
+                  <span className="flex items-center gap-2 text-slate-500 shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
+                      2
+                    </span>
+                    <span>2. Extras & Coverage</span>
                   </span>
-                  <span>2. Extras & Coverage</span>
-                </span>
-                <span className="text-slate-600 shrink-0">→</span>
-                <span className="flex items-center gap-2 text-slate-500 shrink-0">
-                  <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
-                    3
+                  <span className="text-slate-600 shrink-0">→</span>
+                  <span className="flex items-center gap-2 text-slate-500 shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
+                      3
+                    </span>
+                    <span>3. Passenger & Docs</span>
                   </span>
-                  <span>3. Passenger & Docs</span>
-                </span>
-                <span className="text-slate-600 shrink-0">→</span>
-                <span className="flex items-center gap-2 text-slate-500 shrink-0">
-                  <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
-                    4
+                  <span className="text-slate-600 shrink-0">→</span>
+                  <span className="flex items-center gap-2 text-slate-500 shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
+                      4
+                    </span>
+                    <span>4. Payment & Voucher</span>
                   </span>
-                  <span>4. Payment & Voucher</span>
-                </span>
+                </div>
               </div>
 
-              <div className="text-xs font-medium text-slate-400 flex items-center gap-2 shrink-0">
+              <div className="text-xs font-medium text-slate-400 flex items-center gap-2 shrink-0 pt-1 md:pt-0 border-t md:border-t-0 border-slate-800/60">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>Verified Physical Fleet in Kigali</span>
               </div>
@@ -2652,7 +2686,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
         ===================================================================== */}
         {currentView === 'book' && selectedVehicle && (
           <div className="max-w-3xl mx-auto px-4 sm:px-8 py-10 space-y-8">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
               <div>
                 <button
                   onClick={() => setCurrentView('vehicles')}
@@ -2661,22 +2695,24 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Change Vehicle</span>
                 </button>
-                <h1 className="text-xl font-extrabold text-white">
+                <h1 className="text-lg sm:text-xl font-extrabold text-white">
                   Reserve {selectedVehicle.model_name}
                 </h1>
               </div>
 
               {/* Steps Progress */}
-              <div className="flex items-center gap-2 text-xs font-semibold">
-                <span className={bookingStep >= 1 ? 'text-amber-400' : 'text-slate-600'}>1. Service</span>
-                <span className="text-slate-600">→</span>
-                <span className={bookingStep >= 2 ? 'text-amber-400' : 'text-slate-600'}>2. Extras</span>
-                <span className="text-slate-600">→</span>
-                <span className={bookingStep >= 3 ? 'text-amber-400' : 'text-slate-600'}>3. Passenger</span>
-                <span className="text-slate-600">→</span>
-                <span className={bookingStep >= 4 ? 'text-amber-400' : 'text-slate-600'}>4. Verification</span>
-                <span className="text-slate-600">→</span>
-                <span className={bookingStep >= 5 ? 'text-amber-400' : 'text-slate-600'}>5. Review</span>
+              <div className="overflow-x-auto w-full sm:w-auto py-1">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold whitespace-nowrap min-w-max">
+                  <span className={bookingStep >= 1 ? 'text-amber-400 font-bold' : 'text-slate-600'}>1. Service</span>
+                  <span className="text-slate-600">→</span>
+                  <span className={bookingStep >= 2 ? 'text-amber-400 font-bold' : 'text-slate-600'}>2. Extras</span>
+                  <span className="text-slate-600">→</span>
+                  <span className={bookingStep >= 3 ? 'text-amber-400 font-bold' : 'text-slate-600'}>3. Passenger</span>
+                  <span className="text-slate-600">→</span>
+                  <span className={bookingStep >= 4 ? 'text-amber-400 font-bold' : 'text-slate-600'}>4. Verification</span>
+                  <span className="text-slate-600">→</span>
+                  <span className={bookingStep >= 5 ? 'text-amber-400 font-bold' : 'text-slate-600'}>5. Review</span>
+                </div>
               </div>
             </div>
 
