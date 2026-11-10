@@ -58,6 +58,9 @@ import {
   Filter,
   ChevronRight,
   Menu,
+  LayoutGrid,
+  List,
+  RotateCcw,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -121,7 +124,13 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   // Active Service in Search Widget
   const [serviceType, setServiceType] = useState<ServiceType>('self-drive');
 
-  // Search & Filter Parameters
+  // View Mode Switcher: Grid vs Horizontal List Row View (Avax, SIXT & CarTrawler)
+  const [catalogViewMode, setCatalogViewMode] = useState<'grid' | 'list'>('grid');
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [isSearchEditOpen, setIsSearchEditOpen] = useState(false);
+  const [quickDetailVehicle, setQuickDetailVehicle] = useState<Vehicle | null>(null);
+
+  // Search & Filter Parameters (Left-Hand Sidebar)
   const [startDate, setStartDate] = useState('2026-11-15');
   const [endDate, setEndDate] = useState('2026-11-18');
   const [pickupLocation, setPickupLocation] = useState('Kigali International Airport (KIA)');
@@ -129,7 +138,13 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [filterTransmission, setFilterTransmission] = useState<string>('All');
   const [filterFuel, setFilterFuel] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'capacity'>('price-asc');
+  const [filterAutomaticOnly, setFilterAutomaticOnly] = useState<boolean>(false);
+  const [filterMinPassengers, setFilterMinPassengers] = useState<number>(0);
+  const [filterMinLuggage, setFilterMinLuggage] = useState<number>(0);
+  const [filterMaxPrice, setFilterMaxPrice] = useState<number>(300000);
+  const [filter4WDOnly, setFilter4WDOnly] = useState<boolean>(false);
+  const [filterPopUpRoofOnly, setFilterPopUpRoofOnly] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'capacity' | 'rating'>('price-asc');
 
   // Airport Transfer specific fields (Section 24)
   const [flightNumber, setFlightNumber] = useState('WB 402');
@@ -288,22 +303,66 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
       ? Math.round(grandTotalRwf * (depositPercent / 100))
       : grandTotalRwf;
 
-  // Vehicle inventory filtered by category, transmission, fuel, and published settings
+  // Category counts for filter badges
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { All: vehicles.length };
+    vehicles.forEach((v) => {
+      counts[v.category] = (counts[v.category] || 0) + 1;
+    });
+    return counts;
+  }, [vehicles]);
+
+  // Vehicle inventory filtered by category, transmission, fuel, price, and features
   const filteredVehicles = useMemo(() => {
     return vehicles
       .filter((v) => {
         if (selectedCategory !== 'All' && v.category !== selectedCategory) return false;
+        if (filterAutomaticOnly && v.transmission !== 'Automatic') return false;
         if (filterTransmission !== 'All' && v.transmission !== filterTransmission) return false;
         if (filterFuel !== 'All' && v.fuel_type !== filterFuel) return false;
+        if (filterMinPassengers > 0 && v.seating_capacity < filterMinPassengers) return false;
+        if (filterMinLuggage > 0) {
+          const estimatedLuggage = v.seating_capacity >= 7 ? 4 : v.seating_capacity >= 5 ? 3 : 2;
+          if (estimatedLuggage < filterMinLuggage) return false;
+        }
+        if (filterMaxPrice && v.daily_rate_rwf > filterMaxPrice) return false;
+        if (filter4WDOnly && !/4x4|awd|4wd|prado|land cruiser/i.test(v.model_name)) return false;
+        if (filterPopUpRoofOnly && !/safari|pop-top|photographic/i.test(v.model_name)) return false;
         return true;
       })
       .sort((a, b) => {
         if (sortBy === 'price-asc') return a.daily_rate_rwf - b.daily_rate_rwf;
         if (sortBy === 'price-desc') return b.daily_rate_rwf - a.daily_rate_rwf;
         if (sortBy === 'capacity') return b.seating_capacity - a.seating_capacity;
+        if (sortBy === 'rating') return (b.year || 2022) - (a.year || 2022);
         return 0;
       });
-  }, [vehicles, selectedCategory, filterTransmission, filterFuel, sortBy]);
+  }, [
+    vehicles,
+    selectedCategory,
+    filterAutomaticOnly,
+    filterTransmission,
+    filterFuel,
+    filterMinPassengers,
+    filterMinLuggage,
+    filterMaxPrice,
+    filter4WDOnly,
+    filterPopUpRoofOnly,
+    sortBy,
+  ]);
+
+  const handleResetFilters = () => {
+    setSelectedCategory('All');
+    setFilterAutomaticOnly(false);
+    setFilterTransmission('All');
+    setFilterFuel('All');
+    setFilterMinPassengers(0);
+    setFilterMinLuggage(0);
+    setFilterMaxPrice(300000);
+    setFilter4WDOnly(false);
+    setFilterPopUpRoofOnly(false);
+    setSortBy('price-asc');
+  };
 
   // Navigate to book vehicle
   const handleStartBookingVehicle = (v: Vehicle) => {
@@ -1158,14 +1217,23 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                             </span>
                           </div>
 
-                          {/* Graphical Asset Silhouette */}
-                          <div className="flex items-center justify-center my-auto text-slate-700 group-hover:text-amber-400/30 transition-colors">
-                            <Car className="w-20 h-20 stroke-[1.2]" />
-                          </div>
+                          {/* Automotive Studio Photo or Fallback Silhouette */}
+                          {vehicle.image_url ? (
+                            <img
+                              src={vehicle.image_url}
+                              alt={vehicle.model_name}
+                              className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center my-auto text-slate-700 group-hover:text-amber-400/30 transition-colors">
+                              <Car className="w-20 h-20 stroke-[1.2]" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none" />
 
                           {/* Category and Year Unboxed Metadata */}
-                          <div className="flex items-center gap-2 text-xs text-slate-400 z-10">
-                            <span>{vehicle.category}</span>
+                          <div className="flex items-center gap-2 text-xs text-slate-300 font-medium z-10 drop-shadow">
+                            <span className="bg-slate-900/80 px-2 py-0.5 rounded text-[11px] border border-slate-700/60">{vehicle.category}</span>
                             <span aria-hidden="true">·</span>
                             <span>Model {vehicle.year}</span>
                           </div>
@@ -1492,207 +1560,932 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
         {/* =====================================================================
             VIEW 2: VEHICLE LISTING / SEARCH RESULTS (/booking/:slug/vehicles)
         ===================================================================== */}
+        {/* =====================================================================
+            VIEW 2: VEHICLE LISTING / SEARCH RESULTS (/booking/:slug/vehicles)
+        ===================================================================== */}
         {currentView === 'vehicles' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 space-y-8">
-            {/* Search Summary Strip with Modify Action */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <span className="text-[11px] font-semibold text-amber-400">
-                  Search Parameters
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+            {/* 1. TOP ITINERARY STEPPER (CarTrawler & Avax Style) */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-2 sm:gap-4 text-xs font-semibold overflow-x-auto py-1">
+                <span className="flex items-center gap-2 text-amber-400 font-bold shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[10px] font-black">
+                    1
+                  </span>
+                  <span>1. Vehicles & Rates</span>
                 </span>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-200">
-                  <span>Pickup: <strong>{pickupLocation}</strong></span>
-                  <span aria-hidden="true">·</span>
-                  <span>Dates: <strong className="font-mono">{startDate} to {endDate} ({days} days)</strong></span>
-                  <span aria-hidden="true">·</span>
-                  <span>Service: <strong className="capitalize">{serviceType}</strong></span>
+                <span className="text-slate-600 shrink-0">→</span>
+                <span className="flex items-center gap-2 text-slate-500 shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
+                    2
+                  </span>
+                  <span>2. Extras & Coverage</span>
+                </span>
+                <span className="text-slate-600 shrink-0">→</span>
+                <span className="flex items-center gap-2 text-slate-500 shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
+                    3
+                  </span>
+                  <span>3. Passenger & Docs</span>
+                </span>
+                <span className="text-slate-600 shrink-0">→</span>
+                <span className="flex items-center gap-2 text-slate-500 shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
+                    4
+                  </span>
+                  <span>4. Payment & Voucher</span>
+                </span>
+              </div>
+
+              <div className="text-xs font-medium text-slate-400 flex items-center gap-2 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Verified Physical Fleet in Kigali</span>
+              </div>
+            </div>
+
+            {/* 2. SEARCH SUMMARY STRIP WITH INLINE EDIT DRAWER */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Pickup & Return</span>
+                  <span className="text-white font-medium flex items-center gap-1.5 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>{pickupLocation}</span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Rental Dates</span>
+                  <span className="text-white font-medium flex items-center gap-1.5 mt-0.5">
+                    <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="font-mono">{startDate} to {endDate} ({days} days)</span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Service Mode</span>
+                  <span className="text-amber-400 font-semibold capitalize flex items-center gap-1.5 mt-0.5">
+                    <Car className="w-3.5 h-3.5 shrink-0" />
+                    <span>{serviceType}</span>
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setCurrentView('home')}
-                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+                  onClick={() => setIsSearchEditOpen(!isSearchEditOpen)}
+                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
-                  Modify Dates & Location
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{isSearchEditOpen ? 'Hide Editor' : 'Modify Dates & Location'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Filter Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
-              {/* Category Filter Tabs */}
-              <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                {['All', 'SUV', 'Safari 4x4', 'Sedan', 'Minibus', 'Pickup'].map((cat) => (
+            {/* INLINE QUICK SEARCH EDITOR */}
+            {isSearchEditOpen && (
+              <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 space-y-4 shadow-xl animate-in fade-in duration-200">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <span className="text-xs font-bold text-white flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+                    <span>Quick Update Rental Parameters</span>
+                  </span>
                   <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                      selectedCategory === cat
-                        ? 'bg-amber-500 text-slate-950 font-bold'
-                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
+                    onClick={() => setIsSearchEditOpen(false)}
+                    className="text-slate-400 hover:text-white text-xs font-bold"
                   >
-                    {cat}
+                    ✕ Close
                   </button>
-                ))}
-              </div>
-
-              {/* Sorting & Secondary Filters */}
-              <div className="flex items-center gap-3 text-xs">
-                <label className="text-slate-400 flex items-center gap-1.5">
-                  <span>Sort by:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-white font-medium outline-none"
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Pickup Location</label>
+                    <input
+                      type="text"
+                      value={pickupLocation}
+                      onChange={(e) => setPickupLocation(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Return Location</label>
+                    <input
+                      type="text"
+                      value={returnLocation}
+                      onChange={(e) => setReturnLocation(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Pickup Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Return Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                  <span className="text-xs text-slate-400 font-mono">
+                    Calculated Duration: <strong className="text-amber-400">{days} Days</strong>
+                  </span>
+                  <button
+                    onClick={() => setIsSearchEditOpen(false)}
+                    className="px-4 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs shadow-sm hover:brightness-105"
                   >
-                    <option value="price-asc">Lowest Price First</option>
-                    <option value="price-desc">Highest Price First</option>
-                    <option value="capacity">Passenger Capacity</option>
-                  </select>
-                </label>
+                    Apply New Parameters
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 3. TRUST & VERIFIED RATINGS BAR (Avax & SIXT Style) */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-amber-400 font-bold">
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <span>4.9 / 5.0</span>
+                <span className="text-slate-400 font-normal">(1,240+ verified client bookings in Rwanda)</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-slate-300 text-[11px]">
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <Check className="w-3.5 h-3.5" /> Free 72h Cancellation
+                </span>
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <Check className="w-3.5 h-3.5" /> Full-to-Full Fuel Policy
+                </span>
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <Check className="w-3.5 h-3.5" /> Zero Hidden Fees
+                </span>
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <Check className="w-3.5 h-3.5" /> 100% Physical Inventory Lock
+                </span>
               </div>
             </div>
 
-            {/* Vehicle Grid */}
-            {filteredVehicles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {filteredVehicles.map((vehicle) => {
-                  const collision = checkBookingCollision(
-                    vehicle.id,
-                    startDate,
-                    endDate,
-                    bookings
-                  );
-                  const isAvailable = !collision.hasCollision;
+            {/* MOBILE FILTER TRIGGER BAR */}
+            <div className="lg:hidden flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3">
+              <button
+                onClick={() => setMobileFiltersOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs"
+              >
+                <Filter className="w-3.5 h-3.5" />
+                <span>Filters & Options ({filteredVehicles.length})</span>
+              </button>
 
-                  return (
-                    <div
-                      key={vehicle.id}
-                      className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between transition-all hover:border-slate-700 shadow-md group"
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCatalogViewMode('grid')}
+                  className={`p-2 rounded-lg text-xs font-semibold ${
+                    catalogViewMode === 'grid'
+                      ? 'bg-amber-500 text-slate-950'
+                      : 'bg-slate-800 text-slate-400'
+                  }`}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCatalogViewMode('list')}
+                  className={`p-2 rounded-lg text-xs font-semibold ${
+                    catalogViewMode === 'list'
+                      ? 'bg-amber-500 text-slate-950'
+                      : 'bg-slate-800 text-slate-400'
+                  }`}
+                  title="Horizontal List Row View"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* 4. MAIN STOREFRONT WORKSPACE (LEFT FILTER SIDEBAR + RIGHT FLEET CATALOG) */}
+            <div className="flex flex-col lg:flex-row items-start gap-8">
+              {/* LEFT-HAND COMPREHENSIVE FILTER SIDEBAR (SIXT, CarTrawler & Rentura Style) */}
+              <aside className="w-72 shrink-0 hidden lg:block space-y-6 sticky top-24">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-6 shadow-md">
+                  {/* Sidebar Header with Reset */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span className="text-sm font-bold text-white flex items-center gap-2">
+                      <Filter className="w-4 h-4 text-amber-400" />
+                      <span>Filter Results</span>
+                    </span>
+                    <button
+                      onClick={handleResetFilters}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-amber-400 transition-colors"
+                      title="Reset all filters to defaults"
                     >
-                      <div>
-                        {/* Photo Slot */}
-                        <div className="h-44 bg-slate-950 flex flex-col justify-between p-4 relative overflow-hidden">
-                          <div className="flex items-center justify-between z-10">
-                            <span className="text-xs font-mono font-semibold text-slate-400">
-                              {vehicle.plate_number}
-                            </span>
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset all</span>
+                    </button>
+                  </div>
+
+                  {/* 1. Automatic Only Switch (SIXT Style) */}
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-white block">Automatic Only</span>
+                      <span className="text-[10px] text-slate-400">Exclude manual gearboxes</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFilterAutomaticOnly(!filterAutomaticOnly)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        filterAutomaticOnly ? 'bg-amber-500' : 'bg-slate-800'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${
+                          filterAutomaticOnly ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* 2. Vehicle Categories with live counts */}
+                  <div className="space-y-2.5">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Vehicle Category
+                    </label>
+                    <div className="space-y-1.5">
+                      {[
+                        { id: 'All', label: 'All Categories' },
+                        { id: 'LandCruiser', label: 'Land Cruiser 4x4' },
+                        { id: 'RAV4', label: 'Toyota RAV4 AWD' },
+                        { id: 'Safari Van', label: 'HiAce Safari Pop-Top' },
+                        { id: 'Coaster', label: 'Toyota Coaster Bus' },
+                        { id: 'Luxury Sedan', label: 'Luxury VIP Sedan' },
+                      ].map((cat) => {
+                        const count = categoryCounts[cat.id] ?? 0;
+                        const isSelected = selectedCategory === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={`w-full flex items-center justify-between p-2 rounded-lg text-xs font-medium transition-colors ${
+                              isSelected
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/40 font-bold'
+                                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                            }`}
+                          >
+                            <span>{cat.label}</span>
                             <span
-                              className={`text-[11px] font-semibold flex items-center gap-1 ${
-                                isAvailable ? 'text-emerald-400' : 'text-rose-400'
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                                isSelected
+                                  ? 'bg-amber-500 text-slate-950 font-bold'
+                                  : 'bg-slate-800 text-slate-400'
                               }`}
                             >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  isAvailable ? 'bg-emerald-400' : 'bg-rose-400'
-                                }`}
-                              />
-                              <span>{isAvailable ? 'Available' : 'Conflict'}</span>
+                              {count}
                             </span>
-                          </div>
-
-                          <div className="flex items-center justify-center my-auto text-slate-700 group-hover:text-amber-400/30 transition-colors">
-                            <Car className="w-20 h-20 stroke-[1.2]" />
-                          </div>
-
-                          <div className="flex items-center gap-2 text-xs text-slate-400 z-10">
-                            <span>{vehicle.category}</span>
-                            <span aria-hidden="true">·</span>
-                            <span>Model {vehicle.year}</span>
-                          </div>
-                        </div>
-
-                        {/* Title & Specs */}
-                        <div className="p-5 space-y-4">
-                          <div>
-                            <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors">
-                              {vehicle.model_name}
-                            </h3>
-                            <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                              <span>{vehicle.seating_capacity} Seats</span>
-                              <span aria-hidden="true">·</span>
-                              <span>{vehicle.transmission || 'Automatic'}</span>
-                              <span aria-hidden="true">·</span>
-                              <span>{vehicle.fuel_type || 'Diesel'}</span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1 text-xs text-slate-300">
-                            <div className="flex items-center gap-2">
-                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <span>Full-to-Full Fuel Policy</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <span>Contrôle Technique Safety Inspected</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Footer */}
-                      <div className="p-5 pt-0 border-t border-slate-800/80 mt-2 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] text-slate-400 block">Daily Rate:</span>
-                          <span className="font-mono font-extrabold text-white text-base">
-                            {formatMoney(vehicle.daily_rate_rwf)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleViewVehicleDetails(vehicle)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
-                          >
-                            Details
                           </button>
-                          <button
-                            onClick={() => handleStartBookingVehicle(vehicle)}
-                            disabled={!isAvailable}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                              isAvailable
-                                ? `${activeBtnText} hover:brightness-105 active:scale-95`
-                                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                            }`}
-                            style={isAvailable ? { backgroundColor: activeThemeColor } : undefined}
-                          >
-                            Book
-                          </button>
-                        </div>
-                      </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+
+                  {/* 3. Passenger Capacity Filter */}
+                  <div className="space-y-2.5">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Passenger Seats
+                    </label>
+                    <div className="grid grid-cols-5 gap-1 text-xs">
+                      {[
+                        { label: 'Any', value: 0 },
+                        { label: '2+', value: 2 },
+                        { label: '4+', value: 4 },
+                        { label: '5+', value: 5 },
+                        { label: '7+', value: 7 },
+                      ].map((opt) => (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => setFilterMinPassengers(opt.value)}
+                          className={`py-1.5 rounded-lg font-semibold text-center transition-colors ${
+                            filterMinPassengers === opt.value
+                              ? 'bg-amber-500 text-slate-950 font-bold'
+                              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 4. Luggage / Bags Filter */}
+                  <div className="space-y-2.5">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Luggage Capacity
+                    </label>
+                    <div className="grid grid-cols-4 gap-1 text-xs">
+                      {[
+                        { label: 'Any', value: 0 },
+                        { label: '2+ Bags', value: 2 },
+                        { label: '3+ Bags', value: 3 },
+                        { label: '4+ Bags', value: 4 },
+                      ].map((opt) => (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => setFilterMinLuggage(opt.value)}
+                          className={`py-1.5 rounded-lg font-semibold text-center text-[11px] transition-colors ${
+                            filterMinLuggage === opt.value
+                              ? 'bg-amber-500 text-slate-950 font-bold'
+                              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 5. Max Daily Rate Price Slider */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        Max Daily Rate
+                      </label>
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {formatMoney(filterMaxPrice)}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={50000}
+                      max={300000}
+                      step={10000}
+                      value={filterMaxPrice}
+                      onChange={(e) => setFilterMaxPrice(Number(e.target.value))}
+                      className="w-full accent-amber-500 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                      <span>{formatMoney(50000)}</span>
+                      <span>{formatMoney(300000)}</span>
+                    </div>
+                  </div>
+
+                  {/* 6. Fuel Type Filter */}
+                  <div className="space-y-2.5">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Fuel Type
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+                      {['All', 'Diesel', 'Petrol'].map((fuel) => (
+                        <button
+                          key={fuel}
+                          type="button"
+                          onClick={() => setFilterFuel(fuel)}
+                          className={`py-1.5 rounded-lg font-semibold text-center transition-colors ${
+                            filterFuel === fuel
+                              ? 'bg-amber-500 text-slate-950 font-bold'
+                              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                          }`}
+                        >
+                          {fuel}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 7. Equipment & Inclusions Checkboxes */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                      Equipment & Features
+                    </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-slate-300 hover:text-white">
+                      <input
+                        type="checkbox"
+                        checked={filter4WDOnly}
+                        onChange={(e) => setFilter4WDOnly(e.target.checked)}
+                        className="rounded text-amber-500 focus:ring-0 bg-slate-950 border-slate-700"
+                      />
+                      <span>Full-Time 4WD / AWD</span>
+                    </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-slate-300 hover:text-white">
+                      <input
+                        type="checkbox"
+                        checked={filterPopUpRoofOnly}
+                        onChange={(e) => setFilterPopUpRoofOnly(e.target.checked)}
+                        className="rounded text-amber-500 focus:ring-0 bg-slate-950 border-slate-700"
+                      />
+                      <span>Safari Pop-Up Photography Roof</span>
+                    </label>
+                  </div>
+                </div>
+              </aside>
+
+              {/* RIGHT-HAND FLEET CATALOG (GRID VS HORIZONTAL LIST ROW) */}
+              <div className="flex-1 min-w-0 space-y-6">
+                {/* Catalog Control Bar: Result Count, View Switcher & Sorting */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 text-xs text-slate-300">
+                    <span className="font-semibold text-white">
+                      Showing {filteredVehicles.length} of {vehicles.length}
+                    </span>
+                    <span>available vehicles for your dates</span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* View Switcher: Grid vs Horizontal List Row */}
+                    <div className="hidden sm:flex items-center bg-slate-950 rounded-lg p-0.5 border border-slate-800">
+                      <button
+                        onClick={() => setCatalogViewMode('grid')}
+                        className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                          catalogViewMode === 'grid'
+                            ? 'bg-amber-500 text-slate-950 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="3-Column Grid View"
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                        <span className="hidden md:inline text-[11px]">Grid</span>
+                      </button>
+                      <button
+                        onClick={() => setCatalogViewMode('list')}
+                        className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                          catalogViewMode === 'list'
+                            ? 'bg-amber-500 text-slate-950 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Horizontal List Row View (CarTrawler & SIXT)"
+                      >
+                        <List className="w-3.5 h-3.5" />
+                        <span className="hidden md:inline text-[11px]">List</span>
+                      </button>
+                    </div>
+
+                    {/* Sorting Dropdown */}
+                    <label className="text-xs text-slate-400 flex items-center gap-2">
+                      <span className="hidden sm:inline">Sort:</span>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-white font-medium outline-none"
+                      >
+                        <option value="price-asc">Lowest Price First</option>
+                        <option value="price-desc">Highest Price First</option>
+                        <option value="capacity">Passenger Capacity</option>
+                        <option value="rating">Newest Model / Year</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+
+                {/* VEHICLES RESULTS */}
+                {filteredVehicles.length > 0 ? (
+                  catalogViewMode === 'grid' ? (
+                    /* 1. GRID VIEW (3 Columns with real photography) */
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {filteredVehicles.map((vehicle) => {
+                        const collision = checkBookingCollision(
+                          vehicle.id,
+                          startDate,
+                          endDate,
+                          bookings
+                        );
+                        const isAvailable = !collision.hasCollision;
+                        const tripTotalRwf = vehicle.daily_rate_rwf * days;
+
+                        return (
+                          <div
+                            key={vehicle.id}
+                            className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between transition-all hover:border-slate-700 shadow-md group"
+                          >
+                            <div>
+                              {/* Vehicle Image Slot */}
+                              <div className="h-48 bg-slate-950 flex flex-col justify-between p-4 relative overflow-hidden">
+                                <div className="flex items-center justify-between z-10">
+                                  <span className="text-xs font-mono font-bold bg-slate-950/80 px-2 py-0.5 rounded text-slate-300 border border-slate-700/60">
+                                    {vehicle.plate_number}
+                                  </span>
+                                  <span
+                                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5 backdrop-blur-md ${
+                                      isAvailable
+                                        ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
+                                        : 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full ${
+                                        isAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+                                      }`}
+                                    />
+                                    <span>{isAvailable ? 'Available' : 'Reserved'}</span>
+                                  </span>
+                                </div>
+
+                                {/* Vehicle Studio Photo or Silhouette */}
+                                {vehicle.image_url ? (
+                                  <img
+                                    src={vehicle.image_url}
+                                    alt={vehicle.model_name}
+                                    className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100"
+                                  />
+                                ) : (
+                                  <div className="flex items-center justify-center my-auto text-slate-700 group-hover:text-amber-400/30 transition-colors">
+                                    <Car className="w-20 h-20 stroke-[1.2]" />
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none" />
+
+                                {/* Category and Year Unboxed Metadata */}
+                                <div className="flex items-center gap-2 text-xs text-slate-300 font-medium z-10 drop-shadow">
+                                  <span className="bg-slate-900/80 px-2 py-0.5 rounded text-[11px] border border-slate-700/60">
+                                    {vehicle.category}
+                                  </span>
+                                  <span aria-hidden="true">·</span>
+                                  <span>Model {vehicle.year}</span>
+                                </div>
+                              </div>
+
+                              {/* Title & Specs */}
+                              <div className="p-5 space-y-4">
+                                <div>
+                                  <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors">
+                                    {vehicle.model_name}
+                                  </h3>
+                                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 mt-3 pt-3 border-t border-slate-800/80">
+                                    <div className="flex items-center gap-1.5">
+                                      <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                      <span>{vehicle.seating_capacity} Passengers</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <Luggage className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                      <span>{vehicle.seating_capacity >= 7 ? '4' : '3'} Large Bags</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                      <span>{vehicle.transmission || 'Automatic'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <Fuel className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                      <span>{vehicle.fuel_type || 'Diesel'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Inclusions Checkmarks (Avax & CarTrawler) */}
+                                <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-slate-800/60">
+                                  <div className="flex items-center gap-2">
+                                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    <span>Free 72h Cancellation</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    <span>Full-to-Full Fuel Policy</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    <span>Rwanda Contrôle Technique Safety Certified</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Footer: Price Box and Action CTAs */}
+                            <div className="p-5 pt-0 border-t border-slate-800/80 mt-2 space-y-3">
+                              <div className="flex items-baseline justify-between pt-3">
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block font-medium">Daily Rate:</span>
+                                  <span className="font-mono font-extrabold text-white text-base">
+                                    {formatMoney(vehicle.daily_rate_rwf)}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-[10px] text-slate-400 block font-medium">
+                                    {days} Days Total:
+                                  </span>
+                                  <span className="font-mono font-bold text-amber-400 text-sm">
+                                    {formatMoney(tripTotalRwf)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  onClick={() => setQuickDetailVehicle(vehicle)}
+                                  className="w-1/3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+                                >
+                                  Specs
+                                </button>
+                                <button
+                                  onClick={() => handleStartBookingVehicle(vehicle)}
+                                  disabled={!isAvailable}
+                                  className={`w-2/3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                    isAvailable
+                                      ? `${activeBtnText} hover:brightness-105 active:scale-95 shadow-md`
+                                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                  }`}
+                                  style={isAvailable ? { backgroundColor: activeThemeColor } : undefined}
+                                >
+                                  Select & Book →
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* 2. HORIZONTAL LIST ROW VIEW (CarTrawler & SIXT Style) */
+                    <div className="space-y-4">
+                      {filteredVehicles.map((vehicle) => {
+                        const collision = checkBookingCollision(
+                          vehicle.id,
+                          startDate,
+                          endDate,
+                          bookings
+                        );
+                        const isAvailable = !collision.hasCollision;
+                        const tripTotalRwf = vehicle.daily_rate_rwf * days;
+
+                        return (
+                          <div
+                            key={vehicle.id}
+                            className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col md:flex-row hover:border-slate-700 transition-all shadow-md group"
+                          >
+                            {/* Left Image Section */}
+                            <div className="md:w-80 h-52 md:h-auto relative shrink-0 bg-slate-950 overflow-hidden">
+                              {vehicle.image_url ? (
+                                <img
+                                  src={vehicle.image_url}
+                                  alt={vehicle.model_name}
+                                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-slate-700 group-hover:text-amber-400/30 transition-colors">
+                                  <Car className="w-24 h-24 stroke-[1.2]" />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-slate-950/70 via-transparent to-transparent pointer-events-none" />
+
+                              <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+                                <span className="text-xs font-mono font-bold bg-slate-950/90 px-2 py-0.5 rounded text-slate-300 border border-slate-700/60">
+                                  {vehicle.plate_number}
+                                </span>
+                              </div>
+
+                              <div className="absolute bottom-3 left-3 z-10">
+                                <span
+                                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5 backdrop-blur-md ${
+                                    isAvailable
+                                      ? 'bg-emerald-950/90 text-emerald-400 border border-emerald-500/40'
+                                      : 'bg-rose-950/90 text-rose-400 border border-rose-500/40'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      isAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+                                    }`}
+                                  />
+                                  <span>{isAvailable ? 'Available for Dates' : 'Reserved'}</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Middle Specs Section */}
+                            <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between space-y-4">
+                              <div>
+                                <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+                                  <span className="bg-slate-800 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-200">
+                                    {vehicle.category}
+                                  </span>
+                                  <span>·</span>
+                                  <span>Model Year {vehicle.year}</span>
+                                </div>
+
+                                <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">
+                                  {vehicle.model_name}
+                                </h3>
+
+                                {/* Key Features Row with Icons */}
+                                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300 mt-3 pt-3 border-t border-slate-800">
+                                  <div className="flex items-center gap-1.5">
+                                    <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span>{vehicle.seating_capacity} Seats</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Luggage className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span>{vehicle.seating_capacity >= 7 ? '4' : '3'} Bags</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span>{vehicle.transmission || 'Automatic'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Fuel className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span>{vehicle.fuel_type || 'Diesel'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Inclusions Checklist */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2 border-t border-slate-800/80">
+                                <div className="flex items-center gap-1.5">
+                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                  <span>Free 72h Cancellation</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                  <span>100% Guaranteed Physical Lock</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                  <span>Full-to-Full Fuel Policy</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                  <span>Contrôle Technique Safety Certified</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Price & Actions Box */}
+                            <div className="md:w-64 bg-slate-950/60 border-t md:border-t-0 md:border-l border-slate-800 p-5 sm:p-6 flex flex-col justify-between text-right shrink-0 space-y-4">
+                              <div className="space-y-1">
+                                <span className="text-xs text-slate-400 block font-medium">Daily Rate:</span>
+                                <div className="font-mono font-extrabold text-white text-xl">
+                                  {formatMoney(vehicle.daily_rate_rwf)}
+                                </div>
+                                <div className="text-xs font-mono font-semibold text-amber-400">
+                                  {formatMoney(tripTotalRwf)} for {days} days
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-medium pt-1">
+                                  +{formatMoney(150000)} refundable deposit
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <button
+                                  onClick={() => handleStartBookingVehicle(vehicle)}
+                                  disabled={!isAvailable}
+                                  className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md ${
+                                    isAvailable
+                                      ? `${activeBtnText} hover:brightness-105 active:scale-95`
+                                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                  }`}
+                                  style={isAvailable ? { backgroundColor: activeThemeColor } : undefined}
+                                >
+                                  Select Vehicle →
+                                </button>
+                                <button
+                                  onClick={() => setQuickDetailVehicle(vehicle)}
+                                  className="w-full py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                                >
+                                  View Detailed Specs
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  /* Fallback when no vehicles match filters */
+                  <div className="p-12 text-center rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                    <AlertCircle className="w-12 h-12 text-amber-400 mx-auto" />
+                    <h3 className="text-lg font-bold text-white">
+                      No vehicles match your selected filter criteria
+                    </h3>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      Try broadening your passenger or price filter, clearing selected categories, or contacting our Kigali dispatch desk.
+                    </p>
+                    <div className="flex items-center justify-center gap-3 pt-2">
+                      <button
+                        onClick={handleResetFilters}
+                        className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs"
+                      >
+                        Reset All Filters
+                      </button>
+                      <button
+                        onClick={() => setCurrentView('contact')}
+                        className="px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold text-xs border border-slate-700"
+                      >
+                        Contact Dispatch Desk
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              /* Fallback when no vehicles match (Section 5) */
-              <div className="p-12 text-center rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                <AlertCircle className="w-10 h-10 text-amber-400 mx-auto" />
-                <h3 className="text-lg font-bold text-white">
-                  No vehicles match your selected category or filters
-                </h3>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Try clearing your category filter, adjusting your rental dates, or contact our dispatch desk directly on WhatsApp.
-                </p>
-                <div className="flex items-center justify-center gap-3 pt-2">
-                  <button
-                    onClick={() => {
-                      setSelectedCategory('All');
-                      setFilterTransmission('All');
-                      setFilterFuel('All');
-                    }}
-                    className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs"
-                  >
-                    Reset Filters
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('contact')}
-                    className="px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold text-xs border border-slate-700"
-                  >
-                    Contact Dispatch Desk
-                  </button>
+            </div>
+
+            {/* QUICK VEHICLE DETAILS MODAL (Avax & CarTrawler Style) */}
+            {quickDetailVehicle && (
+              <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                      <span className="text-xs font-semibold text-amber-400">
+                        {quickDetailVehicle.category} · Model {quickDetailVehicle.year}
+                      </span>
+                      <h2 className="text-xl font-bold text-white">
+                        {quickDetailVehicle.model_name}
+                      </h2>
+                    </div>
+                    <button
+                      onClick={() => setQuickDetailVehicle(null)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Photo Preview */}
+                  <div className="h-56 bg-slate-950 rounded-xl overflow-hidden relative">
+                    {quickDetailVehicle.image_url ? (
+                      <img
+                        src={quickDetailVehicle.image_url}
+                        alt={quickDetailVehicle.model_name}
+                        className="w-full h-full object-cover object-center"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-700">
+                        <Car className="w-24 h-24 stroke-[1.2]" />
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3 bg-slate-950/80 px-2.5 py-1 rounded-md text-xs font-mono font-bold text-white border border-slate-700/60">
+                      {quickDetailVehicle.plate_number}
+                    </div>
+                  </div>
+
+                  {/* Specifications Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <span className="text-slate-400 text-[10px] uppercase font-semibold block">Seating</span>
+                      <strong className="text-white">{quickDetailVehicle.seating_capacity} Passengers</strong>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <span className="text-slate-400 text-[10px] uppercase font-semibold block">Transmission</span>
+                      <strong className="text-white">{quickDetailVehicle.transmission || 'Automatic'}</strong>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <span className="text-slate-400 text-[10px] uppercase font-semibold block">Fuel Type</span>
+                      <strong className="text-white">{quickDetailVehicle.fuel_type || 'Diesel'}</strong>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <span className="text-slate-400 text-[10px] uppercase font-semibold block">Location</span>
+                      <strong className="text-white truncate block">{quickDetailVehicle.location}</strong>
+                    </div>
+                  </div>
+
+                  {/* Rental Conditions & Transparent Pricing */}
+                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-300">
+                      <span>Daily Rate:</span>
+                      <span className="font-mono font-bold text-white">{formatMoney(quickDetailVehicle.daily_rate_rwf)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-300">
+                      <span>Rental Duration:</span>
+                      <span className="font-mono text-white">{days} Days ({startDate} to {endDate})</span>
+                    </div>
+                    <div className="flex justify-between text-slate-300">
+                      <span>Subtotal Base Rental:</span>
+                      <span className="font-mono text-white">{formatMoney(quickDetailVehicle.daily_rate_rwf * days)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>Refundable Security Deposit:</span>
+                      <span className="font-mono text-slate-300">{formatMoney(150000)}</span>
+                    </div>
+                    <div className="flex justify-between text-white font-bold pt-2 border-t border-slate-800 text-sm">
+                      <span>Total Estimated ({days} days):</span>
+                      <span className="font-mono text-amber-400 text-base">
+                        {formatMoney(quickDetailVehicle.daily_rate_rwf * days)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      onClick={() => setQuickDetailVehicle(null)}
+                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => {
+                        setQuickDetailVehicle(null);
+                        handleStartBookingVehicle(quickDetailVehicle);
+                      }}
+                      className={`px-6 py-2 rounded-lg text-xs font-bold shadow-md ${activeBtnText}`}
+                      style={{ backgroundColor: activeThemeColor }}
+                    >
+                      Proceed to Book This Vehicle →
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

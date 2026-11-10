@@ -90,8 +90,16 @@ function loadInitialState(): StoredState {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.vehicles && parsed.drivers && parsed.bookings) {
+        const hydratedVehicles = parsed.vehicles.map((v: Vehicle) => {
+          const initV = INITIAL_VEHICLES.find((iv) => iv.id === v.id);
+          return {
+            ...v,
+            image_url: v.image_url || initV?.image_url,
+          };
+        });
         return {
           ...parsed,
+          vehicles: hydratedVehicles,
           accentColorId: parsed.accentColorId || 'amber',
           currentUser: parsed.currentUser || INITIAL_USERS[0],
           currentCompany: parsed.currentCompany || INITIAL_COMPANY,
