@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { ColorTheme, COLOR_THEMES } from '../theme';
 import { User, Company, UserRole } from '../types';
+import { ThemeAppearanceMenu } from './ThemeAppearanceMenu';
+import { isSuperAdminUser } from '../utils/auth';
 
 export interface InAppNotification {
   id: string;
@@ -116,6 +118,18 @@ const TAB_TITLES: Record<string, { title: string; subtitle: string }> = {
     title: 'Public B2B & Tourist Storefront',
     subtitle: 'Mobile-first client reservation portal with MoMo checkout preview',
   },
+  handovers: {
+    title: 'Vehicle Handover & Return Audits',
+    subtitle: 'Digital check-outs, return reconciliations, fuel eighths & damage logging',
+  },
+  expenses: {
+    title: 'Fleet Operating Expenses & Cost Center',
+    subtitle: 'Direct vehicle operating costs, fuel logs, driver per-diems & net margin ROI',
+  },
+  tasks: {
+    title: 'Operational Tasks & Duty Queue',
+    subtitle: 'Contrôle Technique prep, airport arrivals tracking & fleet duty queue',
+  },
   pricing: {
     title: 'SaaS Subscription Plans',
     subtitle: 'Starter, Growth & Enterprise tiers tailored for Kigali operators',
@@ -141,7 +155,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onLoginWithGoogle,
   onNavigateTab,
 }) => {
-  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'flight' | 'maintenance' | 'payment' | 'dispatch'>('all');
@@ -264,143 +277,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         {/* Right: Actions and Color Theme Picker */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          {/* Dedicated 12-Color Theme Switcher Button */}
-          <div className="relative">
-            <button
-              onClick={() => setIsPaletteOpen(!isPaletteOpen)}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 transition-all shadow-xs"
-              title="Change System Color Theme (12 Rwandan palettes available)"
-            >
-              <Palette className="w-4 h-4" style={{ color: currentTheme.hex }} />
-              <span className="hidden sm:inline">Theme Color</span>
-              <span
-                className="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-slate-600 shadow-xs shrink-0"
-                style={{ backgroundColor: currentTheme.hex }}
-              />
-            </button>
-
-            {/* 12-Color Modal / Popover */}
-            {isPaletteOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40 bg-black/40 backdrop-blur-2xs"
-                  onClick={() => setIsPaletteOpen(false)}
-                />
-                <div className="absolute right-0 mt-2 z-50 w-80 sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-4.5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <Palette className="w-4 h-4" style={{ color: currentTheme.hex }} />
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                        System Color Palette (12 Themes)
-                      </h4>
-                    </div>
-                    <button
-                      onClick={() => setIsPaletteOpen(false)}
-                      className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
-                    Select a Rwandan regional accent. Changes buttons, status badges, timelines, navigation, and live storefront highlights across the entire app.
-                  </p>
-
-                  {/* 12 Colors Grid */}
-                  <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-                    {COLOR_THEMES.map((t) => {
-                      const isSelected = t.id === accentColorId;
-                      return (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                            onSelectAccentColor(t.id);
-                          }}
-                          className={`flex items-center gap-2.5 p-2 rounded-xl text-left transition-all border ${
-                            isSelected
-                              ? 'bg-slate-100 dark:bg-slate-800 border-slate-400 dark:border-slate-600 shadow-xs'
-                              : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                          }`}
-                        >
-                          <span
-                            className="w-6 h-6 rounded-lg shrink-0 flex items-center justify-center shadow-xs"
-                            style={{ backgroundColor: t.hex }}
-                          >
-                            {isSelected && (
-                              <Check
-                                className={`w-3.5 h-3.5 stroke-[3] ${
-                                  t.btnText === 'text-white' ? 'text-white' : 'text-slate-950'
-                                }`}
-                              />
-                            )}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
-                              {t.name}
-                            </div>
-                            <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
-                              {t.badge}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Live Mini Preview */}
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5">
-                    <div className="text-[10px] uppercase font-bold text-slate-400">
-                      Live Color Preview
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="px-2.5 py-1 rounded-md text-[11px] font-bold shadow-xs"
-                        style={{
-                          backgroundColor: currentTheme.hex,
-                          color: currentTheme.btnText === 'text-white' ? '#fff' : '#020617',
-                        }}
-                      >
-                        Primary Action
-                      </span>
-                      <span
-                        className="px-2 py-0.5 rounded text-[10px] font-semibold font-mono"
-                        style={{
-                          backgroundColor: `${currentTheme.hex}20`,
-                          color: currentTheme.hex,
-                        }}
-                      >
-                        Status Badge
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="text-[10px] text-slate-400 text-center border-t border-slate-100 dark:border-slate-800 pt-2">
-                    Looking to toggle Dark/Light mode? Use the Sun/Moon button next to this palette.
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Separate Appearance Mode: Light / Dark Toggle */}
-          <button
-            onClick={onToggleThemeMode}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors"
-            title={`Switch to ${themeMode === 'dark' ? 'Light' : 'Dark'} mode`}
-            aria-label="Toggle dark and light background mode"
-          >
-            {themeMode === 'dark' ? (
-              <>
-                <Sun className="w-4 h-4 text-amber-400" />
-                <span className="hidden md:inline">Light</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-4 h-4 text-slate-700" />
-                <span className="hidden md:inline">Dark</span>
-              </>
-            )}
-          </button>
+          {/* Unified Appearance Menu: Palette Color Themes + Dark/Light Mode in ONE compact button */}
+          <ThemeAppearanceMenu
+            currentTheme={currentTheme}
+            accentColorId={accentColorId}
+            onSelectAccentColor={onSelectAccentColor}
+            themeMode={themeMode}
+            onToggleThemeMode={onToggleThemeMode}
+          />
 
           {/* In-App Notifications Center (Blueprint Section 20) */}
           <div className="relative">
@@ -634,11 +518,25 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                       )}
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
                       <div className="text-[10px] uppercase font-bold text-slate-400">
-                        Switch Role (Part 2 Testing)
+                        Switch Active Role (RBAC Testing)
                       </div>
-                      {(['owner', 'manager', 'dispatcher', 'driver', 'superadmin'] as UserRole[]).map((r) => (
+                      {(
+                        [
+                          { role: 'owner', label: '👑 Owner / Director' },
+                          { role: 'manager', label: '👔 General Manager' },
+                          { role: 'dispatcher', label: '📻 Lead Dispatcher' },
+                          { role: 'accountant', label: '📊 Lead Accountant' },
+                          { role: 'fleet_manager', label: '🚙 Fleet Manager' },
+                          { role: 'mechanic', label: '🔧 Workshop Mechanic' },
+                          { role: 'driver', label: '🚐 VIP Chauffeur' },
+                          { role: 'receptionist', label: '📋 Front Desk / Reception' },
+                          ...(isSuperAdminUser(currentUser)
+                            ? [{ role: 'superadmin' as UserRole, label: '⚡ Super Admin' }]
+                            : []),
+                        ] as { role: UserRole; label: string }[]
+                      ).map(({ role: r, label }) => (
                         <button
                           key={r}
                           onClick={() => {
@@ -651,7 +549,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                               : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                           }`}
                         >
-                          <span className="capitalize">{r === 'superadmin' ? 'Super Admin' : r}</span>
+                          <span>{label}</span>
                           {currentUser.role === r && <Check className="w-3.5 h-3.5" />}
                         </button>
                       ))}

@@ -29,7 +29,13 @@ import { ReportsView } from './components/ReportsView';
 import { MaintenanceView } from './components/MaintenanceView';
 import { SuperAdminView } from './components/SuperAdminView';
 import { SettingsView } from './components/SettingsView';
-import { RotateCcw } from 'lucide-react';
+import { HandoversView } from './components/HandoversView';
+import { ExpensesView } from './components/ExpensesView';
+import { TasksView } from './components/TasksView';
+import { RentalAgreementModal } from './components/RentalAgreementModal';
+import { Booking, Vehicle } from './types';
+import { RotateCcw, ShieldAlert, Lock } from 'lucide-react';
+import { isSuperAdminUser } from './utils/auth';
 
 const VALID_TABS = [
   'landing',
@@ -42,6 +48,9 @@ const VALID_TABS = [
   'drivers',
   'bookings',
   'dispatch',
+  'handovers',
+  'expenses',
+  'tasks',
   'customers',
   'payments',
   'reports',
@@ -106,6 +115,15 @@ export default function App() {
   const [isStorefrontOpen, setIsStorefrontOpen] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [smsDispatchBookingId, setSmsDispatchBookingId] = useState<string | null>(null);
+  const [isRentalAgreementOpen, setIsRentalAgreementOpen] = useState(false);
+  const [agreementBooking, setAgreementBooking] = useState<Booking | null>(null);
+  const [agreementVehicle, setAgreementVehicle] = useState<Vehicle | null>(null);
+
+  const handleOpenRentalAgreement = (booking: Booking, vehicle: Vehicle) => {
+    setAgreementBooking(booking);
+    setAgreementVehicle(vehicle);
+    setIsRentalAgreementOpen(true);
+  };
 
   // Sync tab changes to URL search params so browser address bar can be copied/shared
   const handleSelectTab = useCallback((tab: string) => {
@@ -159,7 +177,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
         <LoginView
-          onLoginSuccess={() => handleSelectTab('overview')}
+          onLoginSuccess={(isSuper) => handleSelectTab(isSuper ? 'super-admin' : 'overview')}
           onNavigateToRegister={() => handleSelectTab('register')}
           onNavigateToLanding={() => handleSelectTab('landing')}
           onOpenForgotPassword={() => setIsForgotPasswordOpen(true)}
@@ -167,6 +185,8 @@ export default function App() {
           users={store.users}
           onSelectUser={store.login}
           onLoginWithGoogle={store.loginWithGoogle}
+          onLoginWithCredentials={store.loginWithCredentials}
+          onCreateUserAccount={store.createUserAccount}
         />
 
         <ForgotPasswordModal
@@ -430,6 +450,32 @@ export default function App() {
             />
           )}
 
+          {currentTab === 'handovers' && (
+            <HandoversView
+              handovers={store.handovers}
+              bookings={store.bookings}
+              vehicles={store.vehicles}
+              currentUser={store.currentUser}
+              currentTheme={store.currentTheme}
+              onAddHandover={store.addHandoverInspection}
+              onOpenAgreement={handleOpenRentalAgreement}
+            />
+          )}
+
+          {currentTab === 'tasks' && (
+            <TasksView
+              tasks={store.tasks}
+              users={store.users}
+              vehicles={store.vehicles}
+              bookings={store.bookings}
+              currentUser={store.currentUser}
+              currentTheme={store.currentTheme}
+              onAddTask={store.addOperationalTask}
+              onUpdateStatus={store.updateTaskStatus}
+              onDeleteTask={store.deleteOperationalTask}
+            />
+          )}
+
           {currentTab === 'customers' && (
             <CustomersView
               customers={store.customers}
@@ -457,6 +503,20 @@ export default function App() {
               onAddPayment={store.addPaymentRecord}
               onUpdatePaymentStatus={store.updatePaymentStatus}
               onGenerateEBM={store.generateEBMReceipt}
+            />
+          )}
+
+          {currentTab === 'expenses' && (
+            <ExpensesView
+              expenses={store.expenses}
+              vehicles={store.vehicles}
+              bookings={store.bookings}
+              payments={store.payments}
+              currentUser={store.currentUser}
+              currentTheme={store.currentTheme}
+              onAddExpense={store.addExpenseRecord}
+              onUpdateExpenseStatus={store.updateExpenseStatus}
+              onDeleteExpense={store.deleteExpenseRecord}
             />
           )}
 
@@ -515,18 +575,46 @@ export default function App() {
           )}
 
           {currentTab === 'super-admin' && (
-            <SuperAdminView
-              companies={store.companies}
-              currentCompany={store.currentCompany}
-              tiers={store.tiers}
-              currentUser={store.currentUser}
-              currentTheme={store.currentTheme}
-              onUpdateCompanyStatus={store.updateCompanyStatus}
-              onUpdateCompanyPlan={store.updateCompanyPlan}
-              onSwitchCompanyContext={store.switchCompanyContext}
-              onAddTenantCompany={store.addTenantCompany}
-              onNavigateToTab={handleSelectTab}
-            />
+            isSuperAdminUser(store.currentUser) ? (
+              <SuperAdminView
+                companies={store.companies}
+                currentCompany={store.currentCompany}
+                tiers={store.tiers}
+                currentUser={store.currentUser}
+                currentTheme={store.currentTheme}
+                onUpdateCompanyStatus={store.updateCompanyStatus}
+                onUpdateCompanyPlan={store.updateCompanyPlan}
+                onSwitchCompanyContext={store.switchCompanyContext}
+                onAddTenantCompany={store.addTenantCompany}
+                onNavigateToTab={handleSelectTab}
+              />
+            ) : (
+              <div className="max-w-xl mx-auto my-16 p-8 rounded-2xl bg-slate-900 border border-rose-800/80 text-center space-y-4 shadow-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-rose-950/80 border border-rose-800 flex items-center justify-center mx-auto text-rose-400">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Row-Level Security: Access Restricted</h3>
+                  <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                    Super Admin privileges are strictly restricted to designated platform administrators. Your account (<code className="text-amber-400 font-mono">{store.currentUser.email}</code>, role: <code className="text-white font-mono">{store.currentUser.role}</code>) does not hold cross-tenant administrative permissions.
+                  </p>
+                </div>
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <button
+                    onClick={() => handleSelectTab('overview')}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition-colors"
+                  >
+                    Return to Workspace
+                  </button>
+                  <button
+                    onClick={() => handleSelectTab('login')}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-sm transition-colors"
+                  >
+                    Authenticate with Admin Key
+                  </button>
+                </div>
+              </div>
+            )
           )}
         </main>
 
@@ -603,6 +691,21 @@ export default function App() {
       <ForgotPasswordModal
         isOpen={isForgotPasswordOpen}
         onClose={() => setIsForgotPasswordOpen(false)}
+        currentTheme={store.currentTheme}
+      />
+
+      {/* Official Legal Rental Agreement Contract Modal */}
+      <RentalAgreementModal
+        isOpen={isRentalAgreementOpen}
+        onClose={() => {
+          setIsRentalAgreementOpen(false);
+          setAgreementBooking(null);
+          setAgreementVehicle(null);
+        }}
+        booking={agreementBooking}
+        vehicle={agreementVehicle}
+        currentCompany={store.currentCompany}
+        currentUser={store.currentUser}
         currentTheme={store.currentTheme}
       />
     </div>

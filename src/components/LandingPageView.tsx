@@ -29,10 +29,13 @@ import {
   Clock,
   DollarSign,
   Palette,
+  Menu,
+  X,
 } from 'lucide-react';
 import { ColorTheme, COLOR_THEMES } from '../theme';
 import { Vehicle, Driver, Booking } from '../types';
 import { formatRwf, checkBookingCollision, generateDriverSMS } from '../utils/collision';
+import { ThemeAppearanceMenu } from './ThemeAppearanceMenu';
 
 interface LandingPageViewProps {
   onEnterApp: () => void;
@@ -81,6 +84,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
   // FAQ accordion state
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Check collision for demo
   const sampleVehicle = vehicles.find((v) => v.category === demoVehicleCategory) || vehicles[0];
@@ -159,108 +163,144 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
-      {/* 1. Global Navigation Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-slate-950/85 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      {/* 1. Global Navigation Header (Clean, Professional, SaaS Standard) */}
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-slate-800/70">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 shrink-0">
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold shadow-lg transition-transform hover:scale-105 ${activeBtnText}`}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center font-extrabold shadow-sm ${activeBtnText}`}
               style={{ backgroundColor: activeColor }}
             >
-              <Car className="w-5 h-5" />
+              <Car className="w-4 h-4 stroke-[2.2]" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-extrabold tracking-tight text-white font-mono">
-                  Kigali<span style={{ color: activeColor }}>Fleet</span>
-                </span>
-                <span className="hidden sm:inline-block text-[11px] font-semibold uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
-                  SaaS Platform
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium hidden md:block">
-                Fleet Management & Dispatch for Rwanda
-              </p>
-            </div>
+            <span className="text-lg font-bold tracking-tight text-white font-mono">
+              Kigali<span style={{ color: activeColor }}>Fleet</span>
+            </span>
           </div>
 
-          {/* Center Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-8 text-sm font-semibold text-slate-300">
+          {/* Center Navigation Links (Clean, SaaS Standard) */}
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-xs sm:text-sm font-medium text-slate-400">
             <a href="#platforms" className="hover:text-white transition-colors">
-              Connected Platforms
+              Platform
             </a>
             <a href="#features" className="hover:text-white transition-colors">
-              Core Capabilities
+              Features
             </a>
             <a href="#demo" className="hover:text-white transition-colors">
-              Interactive Demo
+              Live Demo
             </a>
             <a href="#pricing" className="hover:text-white transition-colors">
-              Pricing (RWF)
+              Pricing
             </a>
             <a href="#faq" className="hover:text-white transition-colors">
               FAQ
             </a>
           </nav>
 
-          {/* Right Action Controls */}
-          <div className="flex items-center gap-3">
-            {/* Theme & Accent Switcher */}
-            <div className="hidden sm:flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-lg">
-              {COLOR_THEMES.slice(0, 4).map((theme) => (
-                <button
-                  key={theme.id}
-                  onClick={() => onSelectAccentColor(theme.id)}
-                  className={`w-5 h-5 rounded-full transition-transform ${
-                    accentColorId === theme.id ? 'scale-125 ring-2 ring-white/50' : 'opacity-70 hover:opacity-100'
-                  }`}
-                  style={{ backgroundColor: theme.hex }}
-                  title={theme.name}
-                />
-              ))}
-              <div className="w-px h-4 bg-slate-700 mx-1" />
-              <button
-                onClick={onToggleThemeMode}
-                className="p-1 text-slate-400 hover:text-white transition-colors"
-                title={`Toggle theme mode`}
-              >
-                {themeMode === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              </button>
-            </div>
+          {/* Right Action Controls: Unified Appearance Menu + Clean Sign In + Primary CTA + Mobile Toggle */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Unified Appearance Button (Palette + Dark/Light Mode in ONE compact icon) */}
+            <ThemeAppearanceMenu
+              currentTheme={currentTheme}
+              accentColorId={accentColorId}
+              onSelectAccentColor={onSelectAccentColor}
+              themeMode={themeMode}
+              onToggleThemeMode={onToggleThemeMode}
+            />
 
-            {/* Direct Storefront Link */}
-            <button
-              onClick={onOpenStorefront}
-              className="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 transition-colors"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Public Storefront</span>
-            </button>
-
-            {/* Sign in button */}
             <button
               onClick={() => onSelectTab('login')}
-              className="text-xs font-semibold text-slate-300 hover:text-white px-2.5 py-1.5 transition-colors"
+              className="text-xs sm:text-sm font-semibold text-slate-300 hover:text-white px-2 py-1 transition-colors"
             >
               Sign In
             </button>
 
-            {/* Launch Operator Workspace */}
             <button
               onClick={onEnterApp}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold shadow-md transition-all hover:brightness-110 active:scale-95 ${activeBtnText}`}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold shadow-sm transition-all hover:brightness-105 active:scale-95 ${activeBtnText}`}
               style={{ backgroundColor: activeColor }}
             >
-              <span>Launch Platform</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Get Started</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 md:hidden transition-colors"
+              aria-label="Toggle navigation"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-800/80 bg-slate-950/95 px-4 py-3 space-y-2 text-xs font-semibold text-slate-300">
+            <a
+              href="#platforms"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
+            >
+              Platform Ecosystem
+            </a>
+            <a
+              href="#features"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
+            >
+              Features & Collision Guard
+            </a>
+            <a
+              href="#demo"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
+            >
+              Live Interactive Demo
+            </a>
+            <a
+              href="#pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
+            >
+              Pricing in RWF
+            </a>
+            <a
+              href="#faq"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
+            >
+              Frequently Asked Questions
+            </a>
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  onSelectTab('login');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-1/2 py-2 text-center rounded-lg border border-slate-700 text-slate-200"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => {
+                  onEnterApp();
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-1/2 py-2 text-center rounded-lg font-bold ${activeBtnText}`}
+                style={{ backgroundColor: activeColor }}
+              >
+                Launch
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* 2. Hero Section */}
-      <section className="relative pt-16 pb-24 lg:pt-24 lg:pb-32 overflow-hidden border-b border-slate-800/80">
+      <section className="relative pt-16 pb-20 lg:pt-20 lg:pb-28 overflow-hidden border-b border-slate-800/80">
         {/* Subtle background glow */}
         <div
           className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[350px] rounded-full blur-[140px] pointer-events-none opacity-20"
@@ -293,31 +333,23 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               Talking SMS, and share branded live booking storefronts.
             </p>
 
-            {/* Action buttons */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            {/* Focused 2-Button Hero CTA */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
               <button
                 onClick={onEnterApp}
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl font-bold text-base shadow-xl transition-all hover:brightness-110 active:scale-95 ${activeBtnText}`}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm sm:text-base shadow-lg transition-all hover:brightness-105 active:scale-95 ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
-                <Laptop className="w-5 h-5" />
-                <span>Open Operator Workspace</span>
-              </button>
-
-              <button
-                onClick={() => onSelectTab('register')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-bold text-base text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 transition-colors shadow-sm"
-              >
-                <Building2 className="w-5 h-5 text-amber-400" />
-                <span>Register Company</span>
+                <Laptop className="w-4 h-4" />
+                <span>Launch Operator Platform</span>
               </button>
 
               <button
                 onClick={onOpenStorefront}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl font-semibold text-sm text-slate-300 hover:text-white hover:bg-slate-900/60 transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm sm:text-base text-slate-200 bg-slate-900 hover:bg-slate-850 hover:text-white border border-slate-700/80 transition-colors shadow-sm"
               >
                 <Globe className="w-4 h-4 text-emerald-400" />
-                <span>Guest Storefront</span>
+                <span>View Guest Storefront</span>
               </button>
             </div>
 

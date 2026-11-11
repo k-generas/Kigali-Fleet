@@ -510,22 +510,25 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
       {/* =========================================================================
           1. CUSTOMER-FACING HELPLINE & LOCALIZATION BAR
       ========================================================================= */}
-      <div className="bg-slate-900/90 border-b border-slate-800/80 px-3 sm:px-6 py-1.5 sm:py-2 text-xs w-full overflow-hidden">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+      {/* =========================================================================
+          1. CUSTOMER-FACING HELPLINE & LOCALIZATION BAR (Mobile-First, Zero Blowout)
+      ========================================================================= */}
+      <div className="bg-slate-900/90 border-b border-slate-800/80 px-3 sm:px-6 py-1.5 sm:py-2 text-xs w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3 w-full">
           {/* 24/7 Operations Contact & Terminal Info */}
           <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs min-w-0">
             <div className="flex items-center gap-1.5 text-slate-300 font-medium truncate">
               <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>24/7 Dispatch: <strong className="text-white font-mono">{companyPhone}</strong></span>
+              <span className="truncate">24/7 Dispatch: <strong className="text-white font-mono">{companyPhone}</strong></span>
             </div>
-            <span aria-hidden="true" className="hidden md:inline text-slate-600">·</span>
-            <div className="hidden md:flex items-center gap-1.5 text-slate-400 truncate">
+            <span aria-hidden="true" className="hidden lg:inline text-slate-600">·</span>
+            <div className="hidden lg:flex items-center gap-1.5 text-slate-400 truncate">
               <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               <span>Kigali Airport Hub & Remera HQ</span>
             </div>
           </div>
 
-          {/* Currency Switcher, Language Switcher & Subtle Operator Exit */}
+          {/* Currency Switcher, Language Switcher & Operator Exit */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Currency Switcher */}
             <div className="flex items-center bg-slate-950 rounded-md p-0.5 border border-slate-800">
@@ -567,16 +570,6 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 </button>
               ))}
             </div>
-
-            {/* Subtle Operator Hub Backlink */}
-            <button
-              onClick={() => onReturnToManager(confirmedBooking?.id)}
-              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white text-[11px] font-medium border border-slate-700/60 transition-colors"
-              title="Return to Management Dashboard"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              <span>Operator Hub</span>
-            </button>
           </div>
         </div>
       </div>
@@ -584,9 +577,9 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
       {/* =========================================================================
           2. STRICT TOP BAR CONTRACT (Zone 1: Wordmark — Zone 2: Links — Zone 3: Action)
       ========================================================================= */}
-      <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3 w-full">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
-          {/* Zone 1: Brand Wordmark (Flexible, never pushes actions off-screen) */}
+      <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3 w-full max-w-full">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full">
+          {/* Zone 1: Brand Wordmark (Capped width, never pushes actions off-screen) */}
           <button
             onClick={() => setCurrentView('home')}
             className="flex items-center gap-2 text-left text-white min-w-0 shrink group"
@@ -597,25 +590,17 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
             >
               <Car className="w-5 h-5 stroke-[2.2]" />
             </div>
-            <span className="text-sm sm:text-base font-extrabold tracking-tight group-hover:text-amber-400 transition-colors truncate max-w-[150px] sm:max-w-[220px] md:max-w-xs lg:max-w-[260px] xl:max-w-none">
+            <span className="text-sm sm:text-base font-extrabold tracking-tight group-hover:text-amber-400 transition-colors truncate max-w-[130px] xs:max-w-[160px] sm:max-w-[200px] md:max-w-[240px] xl:max-w-[270px]">
               {companyDisplayName}
             </span>
           </button>
 
-          {/* Zone 2: Navigation Links (Clean, compact, no horizontal blowout) */}
-          <nav className="hidden lg:flex items-center gap-2 xl:gap-4 2xl:gap-5 text-xs font-semibold text-slate-300">
-            <button
-              onClick={() => setCurrentView('home')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
-                currentView === 'home' ? 'text-amber-400 font-bold' : ''
-              }`}
-            >
-              Home
-            </button>
+          {/* Zone 2: Navigation Links (Clean, streamlined, strictly hidden on < xl to protect mobile & laptop viewports) */}
+          <nav className="hidden xl:flex items-center gap-1 xl:gap-2.5 2xl:gap-4 text-xs font-semibold text-slate-300 min-w-0 shrink">
             <button
               onClick={() => setCurrentView('vehicles')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
-                currentView === 'vehicles' ? 'text-amber-400 font-bold' : ''
+              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md ${
+                currentView === 'vehicles' ? 'text-amber-400 font-bold bg-slate-800/60' : ''
               }`}
             >
               Fleet & Rates
@@ -625,57 +610,50 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 setServiceType('airport');
                 setCurrentView('home');
               }}
-              className="hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1"
+              className="hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md"
             >
-              Airport Transfer
+              Airport Transfers
             </button>
             <button
               onClick={() => {
                 setServiceType('safari');
                 setCurrentView('home');
               }}
-              className="hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1"
+              className="hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md"
             >
               Safari Expeditions
             </button>
             <button
               onClick={() => setCurrentView('track')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
-                currentView === 'track' ? 'text-amber-400 font-bold' : ''
+              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md ${
+                currentView === 'track' ? 'text-amber-400 font-bold bg-slate-800/60' : ''
               }`}
             >
               Track Reservation
             </button>
             <button
-              onClick={() => setCurrentView('quote')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
-                currentView === 'quote' ? 'text-amber-400 font-bold' : ''
-              }`}
-            >
-              Corporate RFP
-            </button>
-            <button
               onClick={() => setCurrentView('contact')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-1.5 py-1 ${
-                currentView === 'contact' ? 'text-amber-400 font-bold' : ''
+              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md ${
+                currentView === 'contact' ? 'text-amber-400 font-bold bg-slate-800/60' : ''
               }`}
             >
               Support Desk
             </button>
           </nav>
 
-          {/* Zone 3: Primary Action & WhatsApp Shortcut - Always 100% visible on any screen! */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Zone 3: Primary Action & WhatsApp Shortcut - Guaranteed 100% visible without horizontal scroll! */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 z-10">
             <a
               href={`https://wa.me/250788312000?text=${encodeURIComponent(
                 `Muraho! I would like to inquire about booking a vehicle with ${companyDisplayName}.`
               )}`}
               target="_blank"
               rel="noreferrer"
-              className="hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-950/70 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-500/30 text-xs font-semibold transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-950/70 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-500/30 text-xs font-semibold transition-colors shrink-0"
+              title="Chat on WhatsApp"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">WhatsApp</span>
+              <span className="hidden 2xl:inline">WhatsApp</span>
             </a>
 
             <button
@@ -687,17 +665,17 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                   setCurrentView('vehicles');
                 }
               }}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap transition-transform active:scale-95 ${activeBtnText}`}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap transition-transform active:scale-95 shrink-0 ${activeBtnText}`}
               style={{ backgroundColor: activeThemeColor }}
             >
               <span className="inline sm:hidden">Book</span>
               <span className="hidden sm:inline">Book a Vehicle</span>
             </button>
 
-            {/* Mobile Menu Button - visible on screens < lg */}
+            {/* Menu Button - visible on screens < xl */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 lg:hidden transition-colors shrink-0"
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 xl:hidden transition-colors shrink-0"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -707,7 +685,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden mt-3 pt-3 border-t border-slate-800 flex flex-col gap-2 text-xs font-semibold text-slate-300 pb-2 animate-in fade-in duration-150">
+          <div className="xl:hidden mt-3 pt-3 border-t border-slate-800 flex flex-col gap-2 text-xs font-semibold text-slate-300 pb-2 animate-in fade-in duration-150">
             <button
               onClick={() => {
                 setCurrentView('home');
@@ -806,14 +784,6 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>WhatsApp Dispatch</span>
               </a>
-
-              <button
-                onClick={() => onReturnToManager(confirmedBooking?.id)}
-                className="inline-flex items-center gap-1 text-slate-400 hover:text-white py-1 px-2 rounded-md bg-slate-800/60 text-xs"
-              >
-                <ArrowLeft className="w-3 h-3" />
-                <span>Operator Hub</span>
-              </button>
             </div>
           </div>
         )}

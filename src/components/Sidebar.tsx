@@ -23,9 +23,12 @@ import {
   Wrench,
   ShieldCheck,
   Settings,
+  ClipboardCheck,
+  CheckSquare,
 } from 'lucide-react';
 import { ColorTheme, COLOR_THEMES } from '../theme';
 import { Vehicle, Driver, Booking, User, Company, Customer } from '../types';
+import { ThemeAppearanceMenu } from './ThemeAppearanceMenu';
 
 interface SidebarProps {
   currentTab: string;
@@ -80,47 +83,73 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'overview',
-      label: userRole === 'driver' ? 'My Missions' : 'Overview',
+      label: userRole === 'driver' ? 'My Missions' : userRole === 'mechanic' ? 'Workshop Desk' : 'Overview',
       icon: LayoutDashboard,
       badge: undefined,
-      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
+      roles: [
+        'owner',
+        'manager',
+        'dispatcher',
+        'accountant',
+        'fleet_manager',
+        'mechanic',
+        'driver',
+        'receptionist',
+        'superadmin',
+      ],
     },
     {
       id: 'calendar',
       label: userRole === 'driver' ? 'My Schedule' : 'Fleet Timeline',
       icon: CalendarDays,
       badge: 'Live',
-      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
+      roles: ['owner', 'manager', 'dispatcher', 'fleet_manager', 'driver', 'superadmin'],
     },
     {
       id: 'vehicles',
       label: 'Vehicles',
       icon: Car,
       badge: vehicles.length.toString(),
-      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
+      roles: ['owner', 'manager', 'dispatcher', 'fleet_manager', 'mechanic', 'superadmin'],
     },
     {
       id: 'maintenance',
       label: 'Workshop & Repairs',
       icon: Wrench,
-      badge: vehicles.filter((v) => v.status === 'Maintenance').length > 0
-        ? `${vehicles.filter((v) => v.status === 'Maintenance').length} Grounded`
-        : undefined,
-      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
+      badge:
+        vehicles.filter((v) => v.status === 'Maintenance').length > 0
+          ? `${vehicles.filter((v) => v.status === 'Maintenance').length} Grounded`
+          : undefined,
+      roles: ['owner', 'manager', 'fleet_manager', 'mechanic', 'superadmin'],
+    },
+    {
+      id: 'handovers',
+      label: 'Handovers & Audits',
+      icon: ClipboardCheck,
+      badge: 'Checklist',
+      roles: ['owner', 'manager', 'dispatcher', 'fleet_manager', 'receptionist', 'superadmin'],
     },
     {
       id: 'drivers',
       label: userRole === 'driver' ? 'Driver Portal' : 'Drivers',
       icon: Users,
       badge: drivers.length.toString(),
-      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
+      roles: ['owner', 'manager', 'dispatcher', 'fleet_manager', 'driver', 'superadmin'],
     },
     {
       id: 'bookings',
       label: userRole === 'driver' ? 'Assigned Trips' : 'Bookings & Invoices',
       icon: ClipboardList,
       badge: bookings.length.toString(),
-      roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
+      roles: [
+        'owner',
+        'manager',
+        'dispatcher',
+        'accountant',
+        'receptionist',
+        'driver',
+        'superadmin',
+      ],
     },
     {
       id: 'dispatch',
@@ -130,25 +159,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
       roles: ['owner', 'manager', 'dispatcher', 'driver', 'superadmin'],
     },
     {
+      id: 'tasks',
+      label: 'Operational Tasks',
+      icon: CheckSquare,
+      badge: 'Queue',
+      roles: [
+        'owner',
+        'manager',
+        'dispatcher',
+        'fleet_manager',
+        'mechanic',
+        'receptionist',
+        'superadmin',
+      ],
+    },
+    {
       id: 'customers',
       label: 'Clients & CRM',
       icon: Building2,
       badge: customers?.length ? customers.length.toString() : undefined,
-      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
+      roles: ['owner', 'manager', 'dispatcher', 'accountant', 'receptionist', 'superadmin'],
     },
     {
       id: 'payments',
       label: 'Payments & EBM',
       icon: DollarSign,
       badge: 'MoMo',
-      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
+      roles: ['owner', 'manager', 'accountant', 'superadmin'],
+    },
+    {
+      id: 'expenses',
+      label: 'Expenses & Costs',
+      icon: DollarSign,
+      badge: 'ROI',
+      roles: ['owner', 'manager', 'accountant', 'fleet_manager', 'driver', 'superadmin'],
     },
     {
       id: 'reports',
       label: 'Reports & Analytics',
       icon: BarChart3,
       badge: 'KPIs',
-      roles: ['owner', 'manager', 'superadmin'],
+      roles: ['owner', 'manager', 'accountant', 'superadmin'],
     },
     {
       id: 'simulator',
@@ -162,7 +213,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Public Storefront',
       icon: Globe,
       badge: 'B2B',
-      roles: ['owner', 'manager', 'dispatcher', 'superadmin'],
+      roles: ['owner', 'manager', 'dispatcher', 'receptionist', 'superadmin'],
     },
     {
       id: 'pricing',
@@ -183,7 +234,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Super Admin Portal',
       icon: ShieldCheck,
       badge: 'SaaS',
-      roles: ['owner', 'superadmin'],
+      roles: ['superadmin'],
     },
   ];
 
@@ -343,91 +394,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* 12-Color Theme Palette Switcher Section */}
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              <Palette className="w-3.5 h-3.5" style={{ color: activeThemeObj.hex }} />
-              <span>12 System Colors</span>
-            </div>
-            <span
-              className="text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold truncate max-w-[110px]"
-              style={{
-                backgroundColor: `${activeThemeObj.hex}22`,
-                color: activeThemeObj.hex,
-              }}
-              title={activeThemeObj.badge}
-            >
-              {activeThemeObj.badge}
-            </span>
-          </div>
-
-          {/* 12 Swatches Grid */}
-          <div className="grid grid-cols-6 gap-1.5 mb-2.5" role="radiogroup" aria-label="12 Color Themes">
-            {COLOR_THEMES.map((t) => {
-              const isSelected = t.id === accentColorId;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => onSelectAccentColor(t.id)}
-                  title={`${t.name} • ${t.badge}`}
-                  aria-label={t.name}
-                  aria-checked={isSelected}
-                  role="radio"
-                  className={`group relative w-7 h-7 rounded-md transition-all duration-150 flex items-center justify-center cursor-pointer shadow-xs ${
-                    isSelected
-                      ? 'ring-2 ring-offset-2 ring-slate-900 dark:ring-white scale-110 z-10'
-                      : 'hover:scale-110 opacity-85 hover:opacity-100'
-                  }`}
-                  style={{ backgroundColor: t.hex }}
-                >
-                  {isSelected && (
-                    <Check
-                      className={`w-3.5 h-3.5 stroke-[3] ${
-                        t.btnText === 'text-white' ? 'text-white' : 'text-slate-950'
-                      }`}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300 flex items-center justify-between">
-            <span className="truncate">{activeThemeObj.name}</span>
-            <span className="font-mono text-[10px] shrink-0 text-slate-400">{activeThemeObj.hex}</span>
-          </div>
-        </div>
-
-        {/* Distinct Appearance Controls: Dark/Light Mode & Reset Data */}
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={onToggleThemeMode}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-800"
-              title={`Switch background to ${themeMode === 'dark' ? 'Light' : 'Dark'} mode`}
-            >
-              {themeMode === 'dark' ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Mode: Light</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-slate-600" />
-                  <span>Mode: Dark</span>
-                </>
-              )}
-            </button>
-          </div>
+        {/* Unified Appearance & Quick Demo Controls */}
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 flex items-center justify-between text-xs">
+          <ThemeAppearanceMenu
+            currentTheme={currentTheme}
+            accentColorId={accentColorId}
+            onSelectAccentColor={onSelectAccentColor}
+            themeMode={themeMode}
+            onToggleThemeMode={onToggleThemeMode}
+            align="left"
+          />
 
           <button
             onClick={onResetDemoData}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-300 dark:hover:border-slate-700"
             title="Reset sample vehicles, drivers and bookings to initial state"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset</span>
+            <span className="text-[11px] font-medium">Reset Demo</span>
           </button>
         </div>
       </aside>

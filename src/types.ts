@@ -139,6 +139,93 @@ export interface Booking {
   payment_status: PaymentStatus;
   payment_method: 'MTN Mobile Money' | 'Airtel Money' | 'Bank Transfer' | 'Credit Card';
   notes?: string;
+  source?: 'Storefront' | 'Phone Call' | 'WhatsApp' | 'Walk-in' | 'Corporate RFP';
+  handover_pickup_id?: string;
+  handover_return_id?: string;
+  created_at: string;
+}
+
+export type InspectionType = 'pickup' | 'return';
+export type VehicleCleanliness = 'Clean' | 'Moderate' | 'Dirty';
+
+export interface VehicleHandoverInspection {
+  id: string;
+  booking_id: string;
+  vehicle_id: string;
+  vehicle_plate: string;
+  vehicle_model: string;
+  client_name: string;
+  client_phone: string;
+  inspection_type: InspectionType;
+  odometer_km: number;
+  fuel_level_eighths: number; // 1 to 8 (e.g., 8 = 100% full, 4 = 1/2)
+  cleanliness: VehicleCleanliness;
+  condition_checklist: {
+    body_scratches_dents: boolean;
+    windshield_windows: boolean;
+    headlights_taillights: boolean;
+    tires_wheels: boolean;
+    spare_tire_jack: boolean;
+    ac_climate_control: boolean;
+    triangle_fire_extinguisher: boolean;
+    interior_clean: boolean;
+    documents_in_glovebox: boolean;
+  };
+  damage_notes?: string;
+  inspector_name: string;
+  client_signature_confirmed: boolean;
+  additional_charges_rwf?: number;
+  additional_charges_reason?: string;
+  created_at: string;
+}
+
+export type ExpenseCategory =
+  | 'Fuel & Gas'
+  | 'Routine Service'
+  | 'Repairs & Parts'
+  | 'Insurance (Yellow Card)'
+  | 'Contrôle Technique Prep'
+  | 'Driver Per-Diem'
+  | 'Parking & Airport Fees'
+  | 'Vehicle Wash & Detail'
+  | 'Office & Admin'
+  | 'Taxes & Licenses'
+  | 'Other';
+
+export type ExpenseStatus = 'Pending' | 'Approved' | 'Paid' | 'Rejected';
+
+export interface ExpenseRecord {
+  id: string;
+  title: string;
+  category: ExpenseCategory;
+  amount_rwf: number;
+  date: string;
+  vehicle_id?: string;
+  vehicle_plate?: string;
+  booking_id?: string;
+  supplier_name?: string;
+  description?: string;
+  status: ExpenseStatus;
+  recorded_by: string;
+  approved_by?: string;
+  receipt_ref?: string;
+  created_at: string;
+}
+
+export type TaskPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
+export type TaskStatus = 'Open' | 'In Progress' | 'Completed' | 'Cancelled';
+
+export interface OperationalTask {
+  id: string;
+  title: string;
+  description?: string;
+  assigned_to_name: string;
+  assigned_to_role?: UserRole;
+  due_date: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  related_vehicle_id?: string;
+  related_booking_id?: string;
   created_at: string;
 }
 
@@ -172,7 +259,7 @@ export interface ActivityLog {
   timestamp: string;
   action: string;
   details: string;
-  category: 'booking' | 'dispatch' | 'fleet' | 'driver';
+  category: 'booking' | 'dispatch' | 'fleet' | 'driver' | 'handover' | 'expense';
 }
 
 export interface SubscriptionTier {
@@ -184,7 +271,16 @@ export interface SubscriptionTier {
   features: string[];
 }
 
-export type UserRole = 'owner' | 'manager' | 'dispatcher' | 'driver' | 'superadmin';
+export type UserRole =
+  | 'owner'
+  | 'manager'
+  | 'dispatcher'
+  | 'accountant'
+  | 'fleet_manager'
+  | 'mechanic'
+  | 'driver'
+  | 'receptionist'
+  | 'superadmin';
 
 export interface User {
   id: string;

@@ -96,11 +96,43 @@
         "name": { "type": "string", "maxLength": 200 },
         "email": { "type": "string", "maxLength": 200 },
         "phone": { "type": "string", "maxLength": 50 },
-        "role": { "type": "string", "enum": ["owner", "manager", "dispatcher", "driver", "superadmin"] },
+        "role": { "type": "string", "enum": ["owner", "manager", "dispatcher", "driver", "accountant", "mechanic", "receptionist", "superadmin"] },
         "company_id": { "type": "string", "maxLength": 128 },
         "driver_id": { "type": "string", "maxLength": 128 }
       },
       "required": ["name", "email", "role", "company_id"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Vehicle and operational direct expense record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "vehicle_id": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "enum": ["Fuel", "Controle Technique", "Insurance", "Tire Replacement", "Routine Service", "Chauffeur Daily Per Diem", "Airport Terminal Toll", "Emergency Roadside Repair"] },
+        "amount_rwf": { "type": "number" },
+        "date": { "type": "string", "maxLength": 20 },
+        "recorded_by_name": { "type": "string", "maxLength": 200 },
+        "status": { "type": "string", "enum": ["Pending Approval", "Approved", "Paid"] },
+        "description": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["category", "amount_rwf", "date", "status"]
+    },
+    "Handover": {
+      "title": "Handover",
+      "description": "Check-out and check-in vehicle inspection audit",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "booking_id": { "type": "string", "maxLength": 128 },
+        "vehicle_id": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["Checkout", "Checkin"] },
+        "odometer_km": { "type": "number" },
+        "fuel_fraction": { "type": "string", "enum": ["1/8", "1/4", "3/8", "1/2", "5/8", "3/4", "7/8", "Full"] },
+        "performed_by_name": { "type": "string", "maxLength": 200 },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["booking_id", "vehicle_id", "type", "odometer_km", "fuel_fraction"]
     },
     "ActivityLog": {
       "title": "ActivityLog",
@@ -136,6 +168,14 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "App users and employees"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Fleet direct operating expenses"
+    },
+    "/handovers/{handoverId}": {
+      "schema": "Handover",
+      "description": "Vehicle check-out & check-in inspections"
     },
     "/activity_logs/{logId}": {
       "schema": "ActivityLog",

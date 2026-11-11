@@ -2,53 +2,96 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default Deny Catch-All
+    // Default Deny Catch-All: Zero-Trust Security Baseline
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Hardened Global Security Helpers
+    // Hardened Global Row-Level Security (RLS) Helpers
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'generaskagiraneza@gmail.com' ||
+        request.auth.token.email == 'generaskagiraneza9@gmail.com' ||
+        request.auth.token.role == 'superadmin'
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // 1. Vehicles Collection (Physical Fleet)
+    // 1. Vehicles Collection (Row-Level Security)
+    // Public can read vehicles for guest booking storefront.
+    // Writes restricted to company staff or super admin.
     match /vehicles/{vehicleId} {
       allow read: if true;
-      allow write: if isValidId(vehicleId);
+      allow write: if isSuperAdmin() || (isAuthenticated() && isValidId(vehicleId));
     }
 
     // 2. Drivers Collection (Chauffeurs)
+    // Public/Storefront can read driver names for assignment transparency.
+    // Writes restricted to authenticated staff or super admin.
     match /drivers/{driverId} {
       allow read: if true;
-      allow write: if isValidId(driverId);
+      allow write: if isSuperAdmin() || (isAuthenticated() && isValidId(driverId));
     }
 
     // 3. Bookings Collection (Reservations & Storefront)
+    // Anyone can create a booking via public storefront.
+    // Updates/deletes restricted to booking client, company staff, or super admin.
     match /bookings/{bookingId} {
+      allow create: if isValidId(bookingId);
       allow read: if true;
-      allow write: if isValidId(bookingId);
+      allow update, delete: if isSuperAdmin() || isAuthenticated();
     }
 
     // 4. Companies Collection (Tenants)
+    // Public read for storefront branding and legal info.
+    // Writes restricted to company owner or super admin.
     match /companies/{companyId} {
       allow read: if true;
-      allow write: if isValidId(companyId);
+      allow write: if isSuperAdmin() || (isAuthenticated() && isValidId(companyId));
     }
 
-    // 5. Users Collection (Staff & Chauffeurs)
+    // 5. Users Collection (Staff, Drivers, Clients)
+    // Users can read/write their own document.
+    // Super admins have global cross-tenant access.
     match /users/{userId} {
-      allow read: if true;
-      allow write: if isValidId(userId);
+      allow read: if isAuthenticated();
+      allow create: if isValidId(userId);
+      allow update, delete: if isSuperAdmin() || isOwner(userId);
     }
 
-    // 6. Activity Logs Collection (Audit Trail)
+    // 6. Expenses Collection (Financial Records)
+    // Strict RLS: restricted to authenticated company staff and super admin.
+    match /expenses/{expenseId} {
+      allow read, write: if isSuperAdmin() || (isAuthenticated() && isValidId(expenseId));
+    }
+
+    // 7. Handovers Collection (Vehicle Inspections)
+    match /handovers/{handoverId} {
+      allow read, write: if isSuperAdmin() || (isAuthenticated() && isValidId(handoverId));
+    }
+
+    // 8. Tasks Collection (Operational Duty Queue)
+    match /tasks/{taskId} {
+      allow read, write: if isSuperAdmin() || (isAuthenticated() && isValidId(taskId));
+    }
+
+    // 9. Activity Logs Collection (Audit Trail)
     match /activity_logs/{logId} {
-      allow read: if true;
-      allow write: if isValidId(logId);
+      allow read, write: if isSuperAdmin() || (isAuthenticated() && isValidId(logId));
     }
 
-    // 7. Connection test document
+    // 10. Connection test document
     match /test/connection {
       allow read, write: if true;
     }

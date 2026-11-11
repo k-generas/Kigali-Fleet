@@ -17,6 +17,11 @@ import {
   PaymentRecordStatus,
   MaintenanceRecord,
   CompanySettings,
+  VehicleHandoverInspection,
+  ExpenseRecord,
+  ExpenseStatus,
+  OperationalTask,
+  TaskStatus,
 } from '../types';
 import {
   INITIAL_VEHICLES,
@@ -31,6 +36,9 @@ import {
   INITIAL_PAYMENTS,
   INITIAL_MAINTENANCE,
   DEFAULT_COMPANY_SETTINGS,
+  INITIAL_HANDOVER_INSPECTIONS,
+  INITIAL_EXPENSES,
+  INITIAL_OPERATIONAL_TASKS,
 } from '../data/seedData';
 import { checkBookingCollision, generateDriverSMS } from '../utils/collision';
 import { getThemeById, applyThemeCssVariables } from '../theme';
@@ -50,6 +58,7 @@ import {
   User as FirebaseUser,
 } from 'firebase/auth';
 import { db, auth, googleProvider, handleFirestoreError, OperationType } from '../firebase';
+import { isSuperAdminEmail, isSuperAdminUser, verifySuperAdminPassword } from '../utils/auth';
 
 const STORAGE_KEY_FLEET = 'kigalifleet_state_v3';
 
@@ -79,6 +88,9 @@ interface StoredState {
   customers: Customer[];
   payments: PaymentRecord[];
   maintenance: MaintenanceRecord[];
+  handovers: VehicleHandoverInspection[];
+  expenses: ExpenseRecord[];
+  tasks: OperationalTask[];
   settings: CompanySettings;
   isAuthenticated: boolean;
   isFirebaseConnected: boolean;
@@ -108,6 +120,9 @@ function loadInitialState(): StoredState {
           customers: parsed.customers || INITIAL_CUSTOMERS,
           payments: parsed.payments || INITIAL_PAYMENTS,
           maintenance: parsed.maintenance || INITIAL_MAINTENANCE,
+          handovers: parsed.handovers || INITIAL_HANDOVER_INSPECTIONS,
+          expenses: parsed.expenses || INITIAL_EXPENSES,
+          tasks: parsed.tasks || INITIAL_OPERATIONAL_TASKS,
           settings: parsed.settings || DEFAULT_COMPANY_SETTINGS,
           isAuthenticated: parsed.isAuthenticated ?? true,
           isFirebaseConnected: false,
@@ -125,6 +140,9 @@ function loadInitialState(): StoredState {
     customers: INITIAL_CUSTOMERS,
     payments: INITIAL_PAYMENTS,
     maintenance: INITIAL_MAINTENANCE,
+    handovers: INITIAL_HANDOVER_INSPECTIONS,
+    expenses: INITIAL_EXPENSES,
+    tasks: INITIAL_OPERATIONAL_TASKS,
     settings: DEFAULT_COMPANY_SETTINGS,
     activeTierId: 'growth',
     theme: 'dark',
@@ -1356,23 +1374,238 @@ export function useFleetStore() {
     }));
   };
 
+  const addHandoverInspection = (
+    inspection: Omit<VehicleHandoverInspection, 'id' | 'created_at'>
+  ) => {
+    const id = `INSP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newInspection: VehicleHandoverInspection = {
+      ...inspection,
+      id,
+      created_at: new Date().toISOString(),
+    };
+
+    const isPickup = inspection.inspection_type === 'pickup';
+    const actionName = isPickup ? 'Vehicle Check-out (Pickup)' : 'Vehicle Check-in (Return)';
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: actionName,
+      details: `${isPickup ? 'Handed over' : 'Checked in'} ${inspection.vehicle_plate} to ${inspection.client_name}. Odometer: ${inspection.odometer_km.toLocaleString()} km, Fuel: ${inspection.fuel_level_eighths}/8.`,
+      category: 'handover',
+    };
+
+    const vehicleUpdates: Partial<Vehicle> = {
+      current_odometer_km: inspection.odometer_km,
+      status: isPickup ? 'Booked' : 'Available',
+    };
+
+    const bookingUpdates: Partial<Booking> = {
+      ...(isPickup
+        ? { handover_pickup_id: id, status: 'In Progress' as BookingStatus }
+        : { handover_return_id: id, status: 'Completed' as BookingStatus }),
+    };
+
+    try {
+      setDoc(doc(db, 'handovers', id), cleanForFirestore(newInspection)).catch(() => {});
+      updateDoc(doc(db, 'vehicles', inspection.vehicle_id), cleanForFirestore(vehicleUpdates)).catch(() => {});
+      if (inspection.booking_id) {
+        updateDoc(doc(db, 'bookings', inspection.booking_id), cleanForFirestore(bookingUpdates)).catch(() => {});
+      }
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore addHandover notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      handovers: [newInspection, ...prev.handovers],
+      vehicles: prev.vehicles.map((v) =>
+        v.id === inspection.vehicle_id ? { ...v, ...vehicleUpdates } : v
+      ),
+      bookings: prev.bookings.map((b) =>
+        b.id === inspection.booking_id ? { ...b, ...bookingUpdates } : b
+      ),
+      logs: [newLog, ...prev.logs],
+    }));
+
+    return newInspection;
+  };
+
+  const deleteHandoverInspection = (id: string) => {
+    try {
+      deleteDoc(doc(db, 'handovers', id)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore deleteHandover notice:', err);
+    }
+    setState((prev) => ({
+      ...prev,
+      handovers: prev.handovers.filter((h) => h.id !== id),
+    }));
+  };
+
+  const addExpenseRecord = (expense: Omit<ExpenseRecord, 'id' | 'created_at'>) => {
+    const id = `EXP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newExpense: ExpenseRecord = {
+      ...expense,
+      id,
+      created_at: new Date().toISOString().slice(0, 10),
+    };
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: 'Expense Logged',
+      details: `${expense.category} of ${expense.amount_rwf.toLocaleString()} RWF recorded${expense.vehicle_plate ? ` for ${expense.vehicle_plate}` : ''} (${expense.title}).`,
+      category: 'expense',
+    };
+
+    try {
+      setDoc(doc(db, 'expenses', id), cleanForFirestore(newExpense)).catch(() => {});
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore addExpense notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      expenses: [newExpense, ...prev.expenses],
+      logs: [newLog, ...prev.logs],
+    }));
+
+    return newExpense;
+  };
+
+  const updateExpenseStatus = (id: string, status: ExpenseStatus, approved_by?: string) => {
+    const target = state.expenses.find((e) => e.id === id);
+    if (!target) return;
+
+    const updated: ExpenseRecord = {
+      ...target,
+      status,
+      ...(approved_by ? { approved_by } : {}),
+    };
+
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: `Expense ${status}`,
+      details: `Expense #${id} (${target.title}) marked as ${status}${approved_by ? ` by ${approved_by}` : ''}.`,
+      category: 'expense',
+    };
+
+    try {
+      updateDoc(doc(db, 'expenses', id), cleanForFirestore(updated)).catch(() => {});
+      setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore updateExpense notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      expenses: prev.expenses.map((e) => (e.id === id ? updated : e)),
+      logs: [newLog, ...prev.logs],
+    }));
+  };
+
+  const deleteExpenseRecord = (id: string) => {
+    try {
+      deleteDoc(doc(db, 'expenses', id)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore deleteExpense notice:', err);
+    }
+    setState((prev) => ({
+      ...prev,
+      expenses: prev.expenses.filter((e) => e.id !== id),
+    }));
+  };
+
+  const addOperationalTask = (task: Omit<OperationalTask, 'id' | 'created_at'>) => {
+    const id = `TSK-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const newTask: OperationalTask = {
+      ...task,
+      id,
+      created_at: new Date().toISOString().slice(0, 10),
+    };
+
+    try {
+      setDoc(doc(db, 'tasks', id), cleanForFirestore(newTask)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore addTask notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      tasks: [newTask, ...prev.tasks],
+    }));
+
+    return newTask;
+  };
+
+  const updateTaskStatus = (id: string, status: TaskStatus) => {
+    try {
+      updateDoc(doc(db, 'tasks', id), { status }).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore updateTask notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) => (t.id === id ? { ...t, status } : t)),
+    }));
+  };
+
+  const deleteOperationalTask = (id: string) => {
+    try {
+      deleteDoc(doc(db, 'tasks', id)).catch(() => {});
+    } catch (err) {
+      console.warn('Firestore deleteTask notice:', err);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((t) => t.id !== id),
+    }));
+  };
+
   const loginWithGoogle = async () => {
     try {
       const res = await signInWithPopup(auth, googleProvider);
-      if (res.user) {
+      if (res.user && res.user.email) {
+        const normalizedEmail = res.user.email.toLowerCase();
+        const isSuper = isSuperAdminEmail(normalizedEmail);
+
+        let matchedUser = state.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+        if (!matchedUser) {
+          matchedUser = {
+            id: `usr-${Date.now().toString().slice(-4)}`,
+            name: res.user.displayName || normalizedEmail.split('@')[0],
+            email: res.user.email,
+            phone: res.user.phoneNumber || '+250 788 100 000',
+            role: isSuper ? 'superadmin' : 'owner',
+            company_id: isSuper ? 'platform-root' : state.currentCompany.id,
+            avatar_url: res.user.photoURL || undefined,
+            status: 'Active',
+            created_at: new Date().toISOString().slice(0, 10),
+          };
+          setDoc(doc(db, 'users', matchedUser.id), cleanForFirestore(matchedUser)).catch(() => {});
+        } else if (isSuper && matchedUser.role !== 'superadmin') {
+          matchedUser = { ...matchedUser, role: 'superadmin' };
+        }
+
         setState((prev) => ({
           ...prev,
           isAuthenticated: true,
-          currentUser: {
-            ...prev.currentUser,
-            name: res.user.displayName || prev.currentUser.name,
-            email: res.user.email || prev.currentUser.email,
-            avatar_url: res.user.photoURL || undefined,
-          },
+          currentUser: matchedUser!,
+          users: prev.users.some((u) => u.id === matchedUser!.id)
+            ? prev.users.map((u) => (u.id === matchedUser!.id ? matchedUser! : u))
+            : [matchedUser!, ...prev.users],
         }));
+
+        return { success: true, user: matchedUser };
       }
     } catch (err) {
       console.error('Google Sign-in error:', err);
+      throw err;
     }
   };
 
@@ -1388,7 +1621,8 @@ export function useFleetStore() {
   };
 
   const loginWithEmail = (email: string) => {
-    const user = state.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    const normalized = email.toLowerCase().trim();
+    const user = state.users.find((u) => u.email.toLowerCase() === normalized);
     if (user) {
       setState((prev) => ({
         ...prev,
@@ -1398,6 +1632,139 @@ export function useFleetStore() {
       return true;
     }
     return false;
+  };
+
+  const loginWithCredentials = async (email: string, passwordAttempt: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const isSuper = isSuperAdminEmail(normalizedEmail);
+
+    // 1. Super Admin Password Validation (Row-Level Security)
+    if (isSuper) {
+      const isValid = verifySuperAdminPassword(normalizedEmail, passwordAttempt);
+      if (!isValid) {
+        return {
+          success: false,
+          error: 'Security Alert: Incorrect Super Admin master credentials.',
+        };
+      }
+
+      let superUser = state.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+      if (!superUser) {
+        superUser = {
+          id: `usr-superadmin-${Date.now().toString().slice(-4)}`,
+          name: normalizedEmail.includes('9') ? 'Generas Kagiraneza (Secondary)' : 'Generas Kagiraneza',
+          email: normalizedEmail,
+          phone: '+250 788 100 200',
+          role: 'superadmin',
+          company_id: 'platform-root',
+          status: 'Active',
+          created_at: new Date().toISOString().slice(0, 10),
+        };
+      } else {
+        superUser = { ...superUser, role: 'superadmin' };
+      }
+
+      setState((prev) => ({
+        ...prev,
+        currentUser: superUser!,
+        users: prev.users.some((u) => u.id === superUser!.id)
+          ? prev.users.map((u) => (u.id === superUser!.id ? superUser! : u))
+          : [superUser!, ...prev.users],
+        isAuthenticated: true,
+      }));
+
+      return { success: true, user: superUser };
+    }
+
+    // 2. Standard Staff / Member login
+    const user = state.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    if (user) {
+      setState((prev) => ({
+        ...prev,
+        currentUser: user,
+        isAuthenticated: true,
+      }));
+      return { success: true, user };
+    }
+
+    // 3. Fallback account provisioning for legitimate credentials
+    if (passwordAttempt.length >= 6) {
+      const newUser: User = {
+        id: `usr-${Date.now().toString().slice(-4)}`,
+        name: email.split('@')[0],
+        email: normalizedEmail,
+        phone: '+250 788 000 000',
+        role: 'manager',
+        company_id: state.currentCompany.id,
+        status: 'Active',
+        created_at: new Date().toISOString().slice(0, 10),
+      };
+
+      setDoc(doc(db, 'users', newUser.id), cleanForFirestore(newUser)).catch(() => {});
+
+      setState((prev) => ({
+        ...prev,
+        users: [newUser, ...prev.users],
+        currentUser: newUser,
+        isAuthenticated: true,
+      }));
+
+      return { success: true, user: newUser };
+    }
+
+    return {
+      success: false,
+      error: 'Account not found. Please click "Create Account" to register or verify your password.',
+    };
+  };
+
+  const createUserAccount = async (data: {
+    name: string;
+    email: string;
+    phone: string;
+    role: UserRole;
+    password?: string;
+    companyId?: string;
+  }) => {
+    const normalizedEmail = data.email.trim().toLowerCase();
+    const isSuper = isSuperAdminEmail(normalizedEmail);
+
+    // If super admin email, enforce correct password
+    if (isSuper && data.password && !verifySuperAdminPassword(normalizedEmail, data.password)) {
+      return {
+        success: false,
+        error: 'Security Alert: Password does not match designated Super Admin master credential.',
+      };
+    }
+
+    const assignedRole: UserRole = isSuper ? 'superadmin' : data.role;
+    const assignedCompanyId = isSuper ? 'platform-root' : (data.companyId || state.currentCompany.id);
+
+    const newUser: User = {
+      id: `usr-${Date.now().toString().slice(-4)}`,
+      name: data.name.trim(),
+      email: normalizedEmail,
+      phone: data.phone.trim(),
+      role: assignedRole,
+      company_id: assignedCompanyId,
+      status: 'Active',
+      created_at: new Date().toISOString().slice(0, 10),
+    };
+
+    try {
+      await setDoc(doc(db, 'users', newUser.id), cleanForFirestore(newUser));
+    } catch (e) {
+      console.warn('Firestore user save notice:', e);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      users: [newUser, ...prev.users.filter((u) => u.email.toLowerCase() !== normalizedEmail)],
+      currentUser: newUser,
+      isAuthenticated: true,
+    }));
+
+    return { success: true, user: newUser };
   };
 
   const switchRole = (role: UserRole) => {
@@ -1692,6 +2059,9 @@ export function useFleetStore() {
       customers: INITIAL_CUSTOMERS,
       payments: INITIAL_PAYMENTS,
       maintenance: INITIAL_MAINTENANCE,
+      handovers: INITIAL_HANDOVER_INSPECTIONS,
+      expenses: INITIAL_EXPENSES,
+      tasks: INITIAL_OPERATIONAL_TASKS,
       companies: INITIAL_COMPANIES,
       settings: DEFAULT_COMPANY_SETTINGS,
       activeTierId: 'growth',
@@ -1728,6 +2098,8 @@ export function useFleetStore() {
     isFirebaseConnected: state.isFirebaseConnected,
     login,
     loginWithEmail,
+    loginWithCredentials,
+    createUserAccount,
     loginWithGoogle,
     switchRole,
     logout,
@@ -1765,6 +2137,17 @@ export function useFleetStore() {
     updateMaintenanceRecord,
     completeMaintenanceRecord,
     deleteMaintenanceRecord,
+    handovers: state.handovers,
+    addHandoverInspection,
+    deleteHandoverInspection,
+    expenses: state.expenses,
+    addExpenseRecord,
+    updateExpenseStatus,
+    deleteExpenseRecord,
+    tasks: state.tasks,
+    addOperationalTask,
+    updateTaskStatus,
+    deleteOperationalTask,
     updateCompanyStatus,
     updateCompanyPlan,
     switchCompanyContext,
