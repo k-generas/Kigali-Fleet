@@ -22,6 +22,23 @@ import {
   ExpenseStatus,
   OperationalTask,
   TaskStatus,
+  PlatformAdmin,
+  PlatformPlan,
+  CompanySubscription,
+  SaasPaymentRecord,
+  SaasPaymentStatus,
+  PlatformAuditLog,
+  SupportTicket,
+  SupportTicketStatus,
+  NotificationTemplate,
+  NotificationDeliveryLog,
+  PlatformIntegration,
+  BackgroundJob,
+  SystemErrorLog,
+  SecurityIncident,
+  PlatformContentItem,
+  PlatformSettings,
+  SuperAdminSubRole,
 } from '../types';
 import {
   INITIAL_VEHICLES,
@@ -40,6 +57,22 @@ import {
   INITIAL_EXPENSES,
   INITIAL_OPERATIONAL_TASKS,
 } from '../data/seedData';
+import {
+  INITIAL_PLATFORM_ADMINS,
+  INITIAL_PLATFORM_PLANS,
+  INITIAL_COMPANY_SUBSCRIPTIONS,
+  INITIAL_SAAS_PAYMENTS,
+  INITIAL_SUPPORT_TICKETS,
+  INITIAL_PLATFORM_AUDIT_LOGS,
+  INITIAL_NOTIFICATION_TEMPLATES,
+  INITIAL_NOTIFICATION_LOGS,
+  INITIAL_PLATFORM_INTEGRATIONS,
+  INITIAL_BACKGROUND_JOBS,
+  INITIAL_SYSTEM_ERRORS,
+  INITIAL_SECURITY_INCIDENTS,
+  INITIAL_PLATFORM_CONTENT,
+  DEFAULT_PLATFORM_SETTINGS,
+} from '../data/superAdminSeedData';
 import { checkBookingCollision, generateDriverSMS } from '../utils/collision';
 import { getThemeById, applyThemeCssVariables } from '../theme';
 import {
@@ -49,7 +82,7 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  getDocs,
+  getDocFromServer,
 } from 'firebase/firestore';
 import {
   signInWithPopup,
@@ -58,7 +91,12 @@ import {
   User as FirebaseUser,
 } from 'firebase/auth';
 import { db, auth, googleProvider, handleFirestoreError, OperationType } from '../firebase';
-import { isSuperAdminEmail, isSuperAdminUser, verifySuperAdminPassword } from '../utils/auth';
+import {
+  canModifyPlatformAdmin,
+  getDefaultRolePermissions,
+  isSuperAdminEmail,
+  verifySuperAdminPassword,
+} from '../utils/auth';
 
 const STORAGE_KEY_FLEET = 'kigalifleet_state_v3';
 
@@ -92,6 +130,20 @@ interface StoredState {
   expenses: ExpenseRecord[];
   tasks: OperationalTask[];
   settings: CompanySettings;
+  platformAdmins: PlatformAdmin[];
+  platformPlans: PlatformPlan[];
+  companySubscriptions: CompanySubscription[];
+  saasPayments: SaasPaymentRecord[];
+  supportTickets: SupportTicket[];
+  platformAuditLogs: PlatformAuditLog[];
+  notificationTemplates: NotificationTemplate[];
+  notificationDeliveryLogs: NotificationDeliveryLog[];
+  platformIntegrations: PlatformIntegration[];
+  backgroundJobs: BackgroundJob[];
+  systemErrorLogs: SystemErrorLog[];
+  securityIncidents: SecurityIncident[];
+  platformContent: PlatformContentItem[];
+  platformSettings: PlatformSettings;
   isAuthenticated: boolean;
   isFirebaseConnected: boolean;
 }
@@ -124,6 +176,20 @@ function loadInitialState(): StoredState {
           expenses: parsed.expenses || INITIAL_EXPENSES,
           tasks: parsed.tasks || INITIAL_OPERATIONAL_TASKS,
           settings: parsed.settings || DEFAULT_COMPANY_SETTINGS,
+          platformAdmins: parsed.platformAdmins || INITIAL_PLATFORM_ADMINS,
+          platformPlans: parsed.platformPlans || INITIAL_PLATFORM_PLANS,
+          companySubscriptions: parsed.companySubscriptions || INITIAL_COMPANY_SUBSCRIPTIONS,
+          saasPayments: parsed.saasPayments || INITIAL_SAAS_PAYMENTS,
+          supportTickets: parsed.supportTickets || INITIAL_SUPPORT_TICKETS,
+          platformAuditLogs: parsed.platformAuditLogs || INITIAL_PLATFORM_AUDIT_LOGS,
+          notificationTemplates: parsed.notificationTemplates || INITIAL_NOTIFICATION_TEMPLATES,
+          notificationDeliveryLogs: parsed.notificationDeliveryLogs || INITIAL_NOTIFICATION_LOGS,
+          platformIntegrations: parsed.platformIntegrations || INITIAL_PLATFORM_INTEGRATIONS,
+          backgroundJobs: parsed.backgroundJobs || INITIAL_BACKGROUND_JOBS,
+          systemErrorLogs: parsed.systemErrorLogs || INITIAL_SYSTEM_ERRORS,
+          securityIncidents: parsed.securityIncidents || INITIAL_SECURITY_INCIDENTS,
+          platformContent: parsed.platformContent || INITIAL_PLATFORM_CONTENT,
+          platformSettings: parsed.platformSettings || DEFAULT_PLATFORM_SETTINGS,
           isAuthenticated: parsed.isAuthenticated ?? true,
           isFirebaseConnected: false,
         };
@@ -144,6 +210,20 @@ function loadInitialState(): StoredState {
     expenses: INITIAL_EXPENSES,
     tasks: INITIAL_OPERATIONAL_TASKS,
     settings: DEFAULT_COMPANY_SETTINGS,
+    platformAdmins: INITIAL_PLATFORM_ADMINS,
+    platformPlans: INITIAL_PLATFORM_PLANS,
+    companySubscriptions: INITIAL_COMPANY_SUBSCRIPTIONS,
+    saasPayments: INITIAL_SAAS_PAYMENTS,
+    supportTickets: INITIAL_SUPPORT_TICKETS,
+    platformAuditLogs: INITIAL_PLATFORM_AUDIT_LOGS,
+    notificationTemplates: INITIAL_NOTIFICATION_TEMPLATES,
+    notificationDeliveryLogs: INITIAL_NOTIFICATION_LOGS,
+    platformIntegrations: INITIAL_PLATFORM_INTEGRATIONS,
+    backgroundJobs: INITIAL_BACKGROUND_JOBS,
+    systemErrorLogs: INITIAL_SYSTEM_ERRORS,
+    securityIncidents: INITIAL_SECURITY_INCIDENTS,
+    platformContent: INITIAL_PLATFORM_CONTENT,
+    platformSettings: DEFAULT_PLATFORM_SETTINGS,
     activeTierId: 'growth',
     theme: 'dark',
     accentColorId: 'amber',
@@ -190,7 +270,22 @@ export function useFleetStore() {
     let unsubscribeCustomers: () => void = () => {};
     let unsubscribePayments: () => void = () => {};
     let unsubscribeMaintenance: () => void = () => {};
+    let unsubscribeCompanies: () => void = () => {};
+    let unsubscribeSupportTickets: () => void = () => {};
+    let unsubscribePlatformPlans: () => void = () => {};
     let unsubscribeAuth: () => void = () => {};
+    const authOnlyUnsubscribers: Array<() => void> = [];
+
+    const clearAuthListeners = () => {
+      while (authOnlyUnsubscribers.length) {
+        const unsub = authOnlyUnsubscribers.pop();
+        try {
+          unsub?.();
+        } catch {
+          // ignore
+        }
+      }
+    };
 
     const initFirestoreSync = async () => {
       try {
@@ -201,9 +296,8 @@ export function useFleetStore() {
           async (snapshot) => {
             if (snapshot.empty && !isInitialSeedingDone.current) {
               isInitialSeedingDone.current = true;
-              console.log('Seeding initial vehicles to Firestore...');
               for (const v of INITIAL_VEHICLES) {
-                await setDoc(doc(db, 'vehicles', v.id), cleanForFirestore(v));
+                setDoc(doc(db, 'vehicles', v.id), cleanForFirestore(v)).catch(() => {});
               }
             } else if (!snapshot.empty) {
               const liveVehicles: Vehicle[] = snapshot.docs.map((d) => d.data() as Vehicle);
@@ -220,20 +314,17 @@ export function useFleetStore() {
         );
 
         // 2. Drivers Real-Time Listener
-        const drvCol = collection(db, 'drivers');
         unsubscribeDrivers = onSnapshot(
-          drvCol,
-          async (snapshot) => {
+          collection(db, 'drivers'),
+          (snapshot) => {
             if (snapshot.empty && !isInitialSeedingDone.current) {
-              console.log('Seeding initial drivers to Firestore...');
               for (const d of INITIAL_DRIVERS) {
-                await setDoc(doc(db, 'drivers', d.id), cleanForFirestore(d));
+                setDoc(doc(db, 'drivers', d.id), cleanForFirestore(d)).catch(() => {});
               }
             } else if (!snapshot.empty) {
-              const liveDrivers: Driver[] = snapshot.docs.map((d) => d.data() as Driver);
               setState((prev) => ({
                 ...prev,
-                drivers: liveDrivers,
+                drivers: snapshot.docs.map((d) => d.data() as Driver),
                 isFirebaseConnected: true,
               }));
             }
@@ -244,20 +335,17 @@ export function useFleetStore() {
         );
 
         // 3. Bookings Real-Time Listener
-        const bkCol = collection(db, 'bookings');
         unsubscribeBookings = onSnapshot(
-          bkCol,
-          async (snapshot) => {
+          collection(db, 'bookings'),
+          (snapshot) => {
             if (snapshot.empty && !isInitialSeedingDone.current) {
-              console.log('Seeding initial bookings to Firestore...');
               for (const b of INITIAL_BOOKINGS) {
-                await setDoc(doc(db, 'bookings', b.id), cleanForFirestore(b));
+                setDoc(doc(db, 'bookings', b.id), cleanForFirestore(b)).catch(() => {});
               }
             } else if (!snapshot.empty) {
-              const liveBookings: Booking[] = snapshot.docs.map((d) => d.data() as Booking);
               setState((prev) => ({
                 ...prev,
-                bookings: liveBookings,
+                bookings: snapshot.docs.map((d) => d.data() as Booking),
                 isFirebaseConnected: true,
               }));
             }
@@ -267,115 +355,164 @@ export function useFleetStore() {
           }
         );
 
-        // 4. Activity Logs Real-Time Listener
-        const logsCol = collection(db, 'activity_logs');
-        unsubscribeLogs = onSnapshot(
-          logsCol,
-          async (snapshot) => {
-            if (snapshot.empty && !isInitialSeedingDone.current) {
-              console.log('Seeding initial activity logs to Firestore...');
-              for (const l of INITIAL_LOGS) {
-                await setDoc(doc(db, 'activity_logs', l.id), cleanForFirestore(l));
-              }
-            } else if (!snapshot.empty) {
-              const liveLogs: ActivityLog[] = snapshot.docs.map((d) => d.data() as ActivityLog);
+        // 4. Companies Real-Time Listener
+        unsubscribeCompanies = onSnapshot(
+          collection(db, 'companies'),
+          (snapshot) => {
+            if (!snapshot.empty) {
               setState((prev) => ({
                 ...prev,
-                logs: liveLogs,
+                companies: snapshot.docs.map((d) => d.data() as Company),
                 isFirebaseConnected: true,
               }));
             }
           },
           (error) => {
-            console.warn('Firestore logs listener notice:', error.message);
+            console.warn('Firestore companies listener notice:', error.message);
           }
         );
 
-        // 5. Customers Real-Time Listener
-        const custCol = collection(db, 'customers');
-        unsubscribeCustomers = onSnapshot(
-          custCol,
-          async (snapshot) => {
-            if (snapshot.empty && !isInitialSeedingDone.current) {
-              console.log('Seeding initial customers to Firestore...');
-              for (const c of INITIAL_CUSTOMERS) {
-                await setDoc(doc(db, 'customers', c.id), cleanForFirestore(c));
-              }
-            } else if (!snapshot.empty) {
-              const liveCustomers: Customer[] = snapshot.docs.map((d) => d.data() as Customer);
+        // 5. Public Platform Plans Listener
+        unsubscribePlatformPlans = onSnapshot(
+          collection(db, 'platform_plans'),
+          (snapshot) => {
+            if (!snapshot.empty) {
               setState((prev) => ({
                 ...prev,
-                customers: liveCustomers,
+                platformPlans: snapshot.docs.map((d) => d.data() as PlatformPlan),
                 isFirebaseConnected: true,
               }));
             }
           },
           (error) => {
-            console.warn('Firestore customers listener notice:', error.message);
+            console.warn('Firestore platform_plans listener notice:', error.message);
           }
         );
 
-        // 6. Payments Real-Time Listener
-        const payCol = collection(db, 'payments');
-        unsubscribePayments = onSnapshot(
-          payCol,
-          async (snapshot) => {
-            if (snapshot.empty && !isInitialSeedingDone.current) {
-              console.log('Seeding initial payments to Firestore...');
-              for (const p of INITIAL_PAYMENTS) {
-                await setDoc(doc(db, 'payments', p.id), cleanForFirestore(p));
-              }
-            } else if (!snapshot.empty) {
-              const livePayments: PaymentRecord[] = snapshot.docs.map((d) => d.data() as PaymentRecord);
+        // 6. Support Tickets Listener
+        unsubscribeSupportTickets = onSnapshot(
+          collection(db, 'support_tickets'),
+          (snapshot) => {
+            if (!snapshot.empty) {
               setState((prev) => ({
                 ...prev,
-                payments: livePayments,
+                supportTickets: snapshot.docs.map((d) => d.data() as SupportTicket),
                 isFirebaseConnected: true,
               }));
             }
           },
           (error) => {
-            console.warn('Firestore payments listener notice:', error.message);
+            console.warn('Firestore support_tickets listener notice:', error.message);
           }
         );
 
-        // 7. Maintenance Work Orders Real-Time Listener
-        const maintCol = collection(db, 'maintenance');
-        unsubscribeMaintenance = onSnapshot(
-          maintCol,
-          async (snapshot) => {
-            if (snapshot.empty && !isInitialSeedingDone.current) {
-              console.log('Seeding initial maintenance records to Firestore...');
-              for (const m of INITIAL_MAINTENANCE) {
-                await setDoc(doc(db, 'maintenance', m.id), cleanForFirestore(m));
-              }
-            } else if (!snapshot.empty) {
-              const liveMaintenance: MaintenanceRecord[] = snapshot.docs.map((d) => d.data() as MaintenanceRecord);
-              setState((prev) => ({
-                ...prev,
-                maintenance: liveMaintenance,
-                isFirebaseConnected: true,
-              }));
-            }
-          },
-          (error) => {
-            console.warn('Firestore maintenance listener notice:', error.message);
-          }
-        );
-
-        // 8. Auth State Changed Listener
+        // 7. Auth State Changed Listener -> attach protected listeners only when authenticated
         unsubscribeAuth = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
+          clearAuthListeners();
           if (fbUser) {
+            const email = fbUser.email || '';
+            const isSuper = isSuperAdminEmail(email);
             setState((prev) => ({
               ...prev,
               isAuthenticated: true,
               currentUser: {
                 ...prev.currentUser,
                 name: fbUser.displayName || prev.currentUser.name,
-                email: fbUser.email || prev.currentUser.email,
+                email: email || prev.currentUser.email,
+                role: isSuper ? 'superadmin' : prev.currentUser.role,
                 avatar_url: fbUser.photoURL || prev.currentUser.avatar_url,
               },
             }));
+
+            authOnlyUnsubscribers.push(
+              onSnapshot(
+                collection(db, 'activity_logs'),
+                (snapshot) => {
+                  if (!snapshot.empty) {
+                    setState((prev) => ({
+                      ...prev,
+                      logs: snapshot.docs.map((d) => d.data() as ActivityLog),
+                    }));
+                  }
+                },
+                (err) => console.warn('activity_logs listener notice:', err.message)
+              ),
+              onSnapshot(
+                collection(db, 'customers'),
+                (snapshot) => {
+                  if (!snapshot.empty) {
+                    setState((prev) => ({
+                      ...prev,
+                      customers: snapshot.docs.map((d) => d.data() as Customer),
+                    }));
+                  }
+                },
+                (err) => console.warn('customers listener notice:', err.message)
+              ),
+              onSnapshot(
+                collection(db, 'payments'),
+                (snapshot) => {
+                  if (!snapshot.empty) {
+                    setState((prev) => ({
+                      ...prev,
+                      payments: snapshot.docs.map((d) => d.data() as PaymentRecord),
+                    }));
+                  }
+                },
+                (err) => console.warn('payments listener notice:', err.message)
+              ),
+              onSnapshot(
+                collection(db, 'maintenance'),
+                (snapshot) => {
+                  if (!snapshot.empty) {
+                    setState((prev) => ({
+                      ...prev,
+                      maintenance: snapshot.docs.map((d) => d.data() as MaintenanceRecord),
+                    }));
+                  }
+                },
+                (err) => console.warn('maintenance listener notice:', err.message)
+              ),
+              onSnapshot(
+                collection(db, 'platform_audit_logs'),
+                (snapshot) => {
+                  if (!snapshot.empty) {
+                    const liveAudit = snapshot.docs
+                      .map((d) => d.data() as PlatformAuditLog)
+                      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+                    setState((prev) => ({
+                      ...prev,
+                      platformAuditLogs: liveAudit,
+                    }));
+                  }
+                },
+                (err) => console.warn('platform_audit_logs listener notice:', err.message)
+              ),
+              onSnapshot(
+                collection(db, 'saas_payments'),
+                (snapshot) => {
+                  if (!snapshot.empty) {
+                    setState((prev) => ({
+                      ...prev,
+                      saasPayments: snapshot.docs.map((d) => d.data() as SaasPaymentRecord),
+                    }));
+                  }
+                },
+                (err) => console.warn('saas_payments listener notice:', err.message)
+              ),
+              onSnapshot(
+                collection(db, 'company_subscriptions'),
+                (snapshot) => {
+                  if (!snapshot.empty) {
+                    setState((prev) => ({
+                      ...prev,
+                      companySubscriptions: snapshot.docs.map((d) => d.data() as CompanySubscription),
+                    }));
+                  }
+                },
+                (err) => console.warn('company_subscriptions listener notice:', err.message)
+              )
+            );
           }
         });
       } catch (err) {
@@ -393,7 +530,11 @@ export function useFleetStore() {
       unsubscribeCustomers();
       unsubscribePayments();
       unsubscribeMaintenance();
+      unsubscribeCompanies();
+      unsubscribeSupportTickets();
+      unsubscribePlatformPlans();
       unsubscribeAuth();
+      clearAuthListeners();
     };
   }, []);
 
@@ -1399,10 +1540,35 @@ export function useFleetStore() {
       status: isPickup ? 'Booked' : 'Available',
     };
 
+    let newPenaltyPayment: PaymentRecord | undefined;
+    const existingBooking = state.bookings.find((b) => b.id === inspection.booking_id);
+
+    if (!isPickup && inspection.additional_charges_rwf && inspection.additional_charges_rwf > 0) {
+      newPenaltyPayment = {
+        id: `PAY-PENALTY-${Date.now()}`,
+        booking_id: inspection.booking_id,
+        customer_name: inspection.client_name,
+        customer_phone: inspection.client_phone,
+        amount_rwf: 0,
+        expected_amount_rwf: inspection.additional_charges_rwf,
+        payment_method: 'MTN Mobile Money',
+        date: new Date().toISOString().split('T')[0],
+        status: 'Pending',
+        notes: `Vehicle Return Adjustment: ${inspection.additional_charges_reason || 'Excess mileage / fuel shortfall'}`,
+        created_at: new Date().toISOString(),
+      };
+    }
+
     const bookingUpdates: Partial<Booking> = {
       ...(isPickup
         ? { handover_pickup_id: id, status: 'In Progress' as BookingStatus }
-        : { handover_return_id: id, status: 'Completed' as BookingStatus }),
+        : {
+            handover_return_id: id,
+            status: 'Completed' as BookingStatus,
+            ...(inspection.additional_charges_rwf && inspection.additional_charges_rwf > 0
+              ? { total_rwf: (existingBooking?.total_rwf || 0) + inspection.additional_charges_rwf }
+              : {}),
+          }),
     };
 
     try {
@@ -1410,6 +1576,9 @@ export function useFleetStore() {
       updateDoc(doc(db, 'vehicles', inspection.vehicle_id), cleanForFirestore(vehicleUpdates)).catch(() => {});
       if (inspection.booking_id) {
         updateDoc(doc(db, 'bookings', inspection.booking_id), cleanForFirestore(bookingUpdates)).catch(() => {});
+      }
+      if (newPenaltyPayment) {
+        setDoc(doc(db, 'payments', newPenaltyPayment.id), cleanForFirestore(newPenaltyPayment)).catch(() => {});
       }
       setDoc(doc(db, 'activity_logs', newLog.id), cleanForFirestore(newLog)).catch(() => {});
     } catch (err) {
@@ -1425,6 +1594,7 @@ export function useFleetStore() {
       bookings: prev.bookings.map((b) =>
         b.id === inspection.booking_id ? { ...b, ...bookingUpdates } : b
       ),
+      payments: newPenaltyPayment ? [newPenaltyPayment, ...prev.payments] : prev.payments,
       logs: [newLog, ...prev.logs],
     }));
 
@@ -1880,45 +2050,166 @@ export function useFleetStore() {
     }));
   };
 
-  const updateCompanyStatus = (companyId: string, status: CompanyStatus) => {
-    setState((prev) => {
-      const updatedCompanies = prev.companies.map((c) => (c.id === companyId ? { ...c, status } : c));
-      const updatedCurrentCompany =
-        prev.currentCompany.id === companyId ? { ...prev.currentCompany, status } : prev.currentCompany;
-      return {
-        ...prev,
-        companies: updatedCompanies,
-        currentCompany: updatedCurrentCompany,
-      };
-    });
+  // ============================================================================
+  // Immutable Platform Audit Logger & Superadmin Actions (Release 1 & 2)
+  // ============================================================================
+
+  const createAuditEntry = (params: {
+    action: string;
+    affected_entity_type: PlatformAuditLog['affected_entity_type'];
+    affected_entity_id: string;
+    affected_entity_label: string;
+    reason: string;
+    before_value?: string;
+    after_value?: string;
+  }): PlatformAuditLog => {
+    const actor = state.currentUser;
+    const matchedAdmin = state.platformAdmins.find(
+      (a) => a.email.toLowerCase() === actor.email.toLowerCase()
+    );
+    const entry: PlatformAuditLog = {
+      id: `paud-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      actor_name: actor.name,
+      actor_email: actor.email,
+      actor_role: matchedAdmin?.sub_role || actor.role,
+      action: params.action,
+      affected_entity_type: params.affected_entity_type,
+      affected_entity_id: params.affected_entity_id,
+      affected_entity_label: params.affected_entity_label,
+      reason: params.reason || 'Administrative action recorded via Superadmin Control Center',
+      before_value: params.before_value,
+      after_value: params.after_value,
+      correlation_id: `CORR-${Date.now().toString().slice(-6)}`,
+      timestamp: new Date().toISOString(),
+    };
+    if (auth.currentUser) {
+      setDoc(doc(db, 'platform_audit_logs', entry.id), cleanForFirestore(entry)).catch(() => {});
+    }
+    return entry;
   };
 
-  const updateCompanyPlan = (companyId: string, tierId: 'starter' | 'growth' | 'enterprise') => {
-    const fee = tierId === 'enterprise' ? 150000 : tierId === 'growth' ? 75000 : 35000;
-    setState((prev) => {
-      const updatedCompanies = prev.companies.map((c) =>
-        c.id === companyId ? { ...c, tier_id: tierId, monthly_fee_rwf: fee } : c
-      );
-      const updatedCurrentCompany =
-        prev.currentCompany.id === companyId
-          ? { ...prev.currentCompany, tier_id: tierId, monthly_fee_rwf: fee }
-          : prev.currentCompany;
-      return {
-        ...prev,
-        companies: updatedCompanies,
-        currentCompany: updatedCurrentCompany,
-        activeTierId: prev.currentCompany.id === companyId ? tierId : prev.activeTierId,
-      };
-    });
-  };
-
-  const switchCompanyContext = (companyId: string) => {
+  const updateCompanyStatus = (companyId: string, status: CompanyStatus, reason?: string) => {
     const target = state.companies.find((c) => c.id === companyId);
     if (!target) return;
+    const audit = createAuditEntry({
+      action: `Company Status Changed to ${status}`,
+      affected_entity_type: 'Company',
+      affected_entity_id: companyId,
+      affected_entity_label: target.name,
+      reason: reason?.trim() || `Tenant status updated to ${status}`,
+      before_value: target.status || 'Active',
+      after_value: status,
+    });
+
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'companies', companyId), cleanForFirestore({ status, suspension_reason: reason })).catch(
+        () => {}
+      );
+    }
+
+    const mappedSubStatus =
+      status === 'Suspended'
+        ? 'Suspended'
+        : status === 'Grace Period'
+        ? 'Past Due'
+        : status === 'Trial'
+        ? 'Trial'
+        : status === 'Closed'
+        ? 'Cancelled'
+        : 'Active';
+
+    setState((prev) => ({
+      ...prev,
+      companies: prev.companies.map((c) =>
+        c.id === companyId ? { ...c, status, suspension_reason: reason || c.suspension_reason } : c
+      ),
+      currentCompany:
+        prev.currentCompany.id === companyId
+          ? { ...prev.currentCompany, status, suspension_reason: reason || prev.currentCompany.suspension_reason }
+          : prev.currentCompany,
+      companySubscriptions: prev.companySubscriptions.map((sub) =>
+        sub.company_id === companyId
+          ? {
+              ...sub,
+              status: mappedSubStatus,
+              last_adjustment_reason: reason || sub.last_adjustment_reason,
+              updated_at: new Date().toISOString().slice(0, 10),
+            }
+          : sub
+      ),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const updateCompanyPlan = (
+    companyId: string,
+    tierId: 'starter' | 'growth' | 'enterprise',
+    reason?: string
+  ) => {
+    const target = state.companies.find((c) => c.id === companyId);
+    const matchingPlan = state.platformPlans.find((p) => p.tier_key === tierId);
+    const fee =
+      matchingPlan?.monthly_fee_rwf ??
+      (tierId === 'enterprise' ? 150000 : tierId === 'growth' ? 75000 : 35000);
+
+    const audit = createAuditEntry({
+      action: 'Company Plan Changed',
+      affected_entity_type: 'Subscription',
+      affected_entity_id: companyId,
+      affected_entity_label: target?.name || companyId,
+      reason: reason?.trim() || `Plan updated to ${tierId.toUpperCase()}`,
+      before_value: target?.tier_id || 'starter',
+      after_value: `${tierId} (${fee.toLocaleString()} RWF/mo)`,
+    });
+
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'companies', companyId), { tier_id: tierId, monthly_fee_rwf: fee }).catch(() => {});
+    }
+
+    setState((prev) => ({
+      ...prev,
+      companies: prev.companies.map((c) =>
+        c.id === companyId ? { ...c, tier_id: tierId, monthly_fee_rwf: fee } : c
+      ),
+      currentCompany:
+        prev.currentCompany.id === companyId
+          ? { ...prev.currentCompany, tier_id: tierId, monthly_fee_rwf: fee }
+          : prev.currentCompany,
+      activeTierId: prev.currentCompany.id === companyId ? tierId : prev.activeTierId,
+      companySubscriptions: prev.companySubscriptions.map((sub) =>
+        sub.company_id === companyId
+          ? {
+              ...sub,
+              plan_id: matchingPlan?.id || `plan-${tierId}`,
+              plan_name: matchingPlan?.name || tierId,
+              monthly_fee_rwf: fee,
+              last_adjustment_reason: reason || `Changed to ${tierId}`,
+              updated_at: new Date().toISOString().slice(0, 10),
+            }
+          : sub
+      ),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const switchCompanyContext = (companyId: string, reason?: string) => {
+    const target = state.companies.find((c) => c.id === companyId);
+    if (!target) return;
+    const audit = createAuditEntry({
+      action: 'Tenant Context Switched (Audited)',
+      affected_entity_type: 'Company',
+      affected_entity_id: target.id,
+      affected_entity_label: target.name,
+      reason: reason || 'Superadmin switched active tenant workspace context for operational inspection.',
+      before_value: state.currentCompany.name,
+      after_value: target.name,
+    });
+
     setState((prev) => ({
       ...prev,
       currentCompany: target,
       activeTierId: target.tier_id,
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
     }));
   };
 
@@ -1929,7 +2220,7 @@ export function useFleetStore() {
     ownerPhone: string
   ) => {
     const slug = companyData.slug || companyData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const id = `comp-${slug}`;
+    const id = `comp-${slug}-${Date.now().toString().slice(-3)}`;
     const monthlyFee =
       companyData.tier_id === 'enterprise' ? 150000 : companyData.tier_id === 'growth' ? 75000 : 35000;
 
@@ -1940,6 +2231,8 @@ export function useFleetStore() {
       status: companyData.status || 'Active',
       monthly_fee_rwf: monthlyFee,
       owner_name: ownerName,
+      branches_count: companyData.branches_count || 1,
+      last_activity: new Date().toISOString(),
       created_at: new Date().toISOString(),
     };
 
@@ -1950,15 +2243,754 @@ export function useFleetStore() {
       phone: ownerPhone,
       role: 'owner',
       company_id: id,
+      status: 'Active',
+      created_at: new Date().toISOString().slice(0, 10),
     };
+
+    const newSubscription: CompanySubscription = {
+      id: `sub-${slug}-${Date.now().toString().slice(-3)}`,
+      company_id: id,
+      company_name: newCompany.name,
+      plan_id: `plan-${newCompany.tier_id}`,
+      plan_name: newCompany.tier_id.charAt(0).toUpperCase() + newCompany.tier_id.slice(1),
+      status: newCompany.status === 'Trial' ? 'Trial' : 'Active',
+      start_date: new Date().toISOString().slice(0, 10),
+      renewal_date:
+        newCompany.renewal_date ||
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      monthly_fee_rwf: newCompany.status === 'Trial' ? 0 : monthlyFee,
+      auto_renew: true,
+      updated_at: new Date().toISOString().slice(0, 10),
+    };
+
+    const audit = createAuditEntry({
+      action: 'Tenant Company Onboarded',
+      affected_entity_type: 'Company',
+      affected_entity_id: id,
+      affected_entity_label: newCompany.name,
+      reason: `Onboarded new ${newCompany.business_type} operator on ${newCompany.tier_id} plan.`,
+      after_value: `${newCompany.name} (${newCompany.status})`,
+    });
+
+    if (auth.currentUser) {
+      setDoc(doc(db, 'companies', newCompany.id), cleanForFirestore(newCompany)).catch(() => {});
+      setDoc(doc(db, 'users', newOwner.id), cleanForFirestore(newOwner)).catch(() => {});
+      setDoc(doc(db, 'company_subscriptions', newSubscription.id), cleanForFirestore(newSubscription)).catch(
+        () => {}
+      );
+    }
 
     setState((prev) => ({
       ...prev,
       companies: [newCompany, ...prev.companies],
       users: [newOwner, ...prev.users],
+      companySubscriptions: [newSubscription, ...prev.companySubscriptions],
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
     }));
 
     return newCompany;
+  };
+
+  const updateUserStatusByAdmin = (
+    userId: string,
+    status: 'Active' | 'Suspended' | 'Deactivated',
+    reason: string
+  ) => {
+    const target = state.users.find((u) => u.id === userId);
+    if (!target) return;
+    if (isSuperAdminEmail(target.email)) return;
+
+    const audit = createAuditEntry({
+      action: `Global User ${status}`,
+      affected_entity_type: 'User',
+      affected_entity_id: userId,
+      affected_entity_label: `${target.name} (${target.email})`,
+      reason,
+      before_value: target.status || 'Active',
+      after_value: status,
+    });
+
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'users', userId), cleanForFirestore({ status, suspension_reason: reason })).catch(
+        () => {}
+      );
+    }
+
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) => (u.id === userId ? { ...u, status, suspension_reason: reason } : u)),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const revokeUserSessions = (userId: string, reason: string) => {
+    const target = state.users.find((u) => u.id === userId);
+    if (!target) return;
+    const nowIso = new Date().toISOString();
+    const audit = createAuditEntry({
+      action: 'User Sessions Force-Revoked',
+      affected_entity_type: 'User',
+      affected_entity_id: userId,
+      affected_entity_label: `${target.name} (${target.email})`,
+      reason,
+      after_value: `Revoked at ${nowIso}`,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) => (u.id === userId ? { ...u, sessions_revoked_at: nowIso } : u)),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const triggerUserRecovery = (userId: string) => {
+    const target = state.users.find((u) => u.id === userId);
+    if (!target) return;
+    const nowIso = new Date().toISOString();
+    const audit = createAuditEntry({
+      action: 'Account Recovery Initiated',
+      affected_entity_type: 'User',
+      affected_entity_id: userId,
+      affected_entity_label: target.email,
+      reason: 'Superadmin initiated secure out-of-band password reset link.',
+      after_value: `Recovery dispatched ${nowIso}`,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) => (u.id === userId ? { ...u, recovery_requested_at: nowIso } : u)),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const savePlatformPlan = (plan: PlatformPlan, reason: string) => {
+    const existing = state.platformPlans.find((p) => p.id === plan.id);
+    const updatedPlan: PlatformPlan = {
+      ...plan,
+      updated_at: new Date().toISOString().slice(0, 10),
+    };
+    const audit = createAuditEntry({
+      action: existing ? 'Subscription Plan Updated' : 'Subscription Plan Created',
+      affected_entity_type: 'Plan',
+      affected_entity_id: updatedPlan.id,
+      affected_entity_label: updatedPlan.name,
+      reason,
+      before_value: existing ? `${existing.monthly_fee_rwf} RWF (${existing.max_vehicles} cars)` : undefined,
+      after_value: `${updatedPlan.monthly_fee_rwf} RWF (${updatedPlan.max_vehicles} cars)`,
+    });
+
+    if (auth.currentUser) {
+      setDoc(doc(db, 'platform_plans', updatedPlan.id), cleanForFirestore(updatedPlan)).catch(() => {});
+    }
+
+    setState((prev) => ({
+      ...prev,
+      platformPlans: existing
+        ? prev.platformPlans.map((p) => (p.id === updatedPlan.id ? updatedPlan : p))
+        : [...prev.platformPlans, updatedPlan],
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const extendCompanySubscription = (subscriptionId: string, newRenewalDate: string, reason: string) => {
+    const target = state.companySubscriptions.find((s) => s.id === subscriptionId);
+    if (!target) return;
+    const audit = createAuditEntry({
+      action: 'Subscription Renewal Extended',
+      affected_entity_type: 'Subscription',
+      affected_entity_id: subscriptionId,
+      affected_entity_label: target.company_name,
+      reason,
+      before_value: target.renewal_date,
+      after_value: newRenewalDate,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      companySubscriptions: prev.companySubscriptions.map((s) =>
+        s.id === subscriptionId
+          ? {
+              ...s,
+              renewal_date: newRenewalDate,
+              status: 'Active',
+              last_adjustment_reason: reason,
+              updated_at: new Date().toISOString().slice(0, 10),
+            }
+          : s
+      ),
+      companies: prev.companies.map((c) =>
+        c.id === target.company_id ? { ...c, renewal_date: newRenewalDate, status: 'Active' } : c
+      ),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const grantCompanyTrial = (companyId: string, trialDays: number, reason: string) => {
+    const target = state.companies.find((c) => c.id === companyId);
+    if (!target) return;
+    const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const audit = createAuditEntry({
+      action: `Granted ${trialDays}-Day Trial`,
+      affected_entity_type: 'Subscription',
+      affected_entity_id: companyId,
+      affected_entity_label: target.name,
+      reason,
+      before_value: target.status || 'Active',
+      after_value: `Trial until ${trialEnd}`,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      companies: prev.companies.map((c) =>
+        c.id === companyId ? { ...c, status: 'Trial', trial_ends_at: trialEnd, renewal_date: trialEnd } : c
+      ),
+      companySubscriptions: prev.companySubscriptions.map((s) =>
+        s.company_id === companyId
+          ? {
+              ...s,
+              status: 'Trial',
+              trial_end_date: trialEnd,
+              renewal_date: trialEnd,
+              last_adjustment_reason: reason,
+              updated_at: new Date().toISOString().slice(0, 10),
+            }
+          : s
+      ),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const reconcileSaasPayment = (
+    paymentId: string,
+    nextStatus: SaasPaymentStatus,
+    reconciliationNotes: string
+  ) => {
+    const target = state.saasPayments.find((p) => p.id === paymentId);
+    if (!target) return;
+    const ebmRef =
+      nextStatus === 'Successful'
+        ? target.ebm_invoice_ref || `EBM-SAAS-2026-${Math.floor(1000 + Math.random() * 9000)}`
+        : target.ebm_invoice_ref;
+
+    const audit = createAuditEntry({
+      action: `SaaS Payment Reconciled (${nextStatus})`,
+      affected_entity_type: 'SaasPayment',
+      affected_entity_id: paymentId,
+      affected_entity_label: `${target.transaction_ref} · ${target.company_name}`,
+      reason: reconciliationNotes,
+      before_value: target.status,
+      after_value: nextStatus,
+    });
+
+    if (auth.currentUser) {
+      updateDoc(
+        doc(db, 'saas_payments', paymentId),
+        cleanForFirestore({
+          status: nextStatus,
+          reconciliation_notes: reconciliationNotes,
+          reconciled_by: state.currentUser.email,
+          ebm_invoice_ref: ebmRef,
+        })
+      ).catch(() => {});
+    }
+
+    setState((prev) => ({
+      ...prev,
+      saasPayments: prev.saasPayments.map((p) =>
+        p.id === paymentId
+          ? {
+              ...p,
+              status: nextStatus,
+              reconciliation_notes: reconciliationNotes,
+              reconciled_by: prev.currentUser.email,
+              ebm_invoice_ref: ebmRef,
+            }
+          : p
+      ),
+      companies:
+        nextStatus === 'Successful'
+          ? prev.companies.map((c) => (c.id === target.company_id ? { ...c, status: 'Active' } : c))
+          : prev.companies,
+      companySubscriptions:
+        nextStatus === 'Successful'
+          ? prev.companySubscriptions.map((s) =>
+              s.id === target.subscription_id ? { ...s, status: 'Active' } : s
+            )
+          : prev.companySubscriptions,
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const refundSaasPayment = (paymentId: string, refundAmountRwf: number, reason: string) => {
+    const target = state.saasPayments.find((p) => p.id === paymentId);
+    if (!target) return;
+    const isFull = refundAmountRwf >= target.amount_rwf;
+    const nextStatus: SaasPaymentStatus = isFull ? 'Refunded' : 'Partially Refunded';
+
+    const audit = createAuditEntry({
+      action: `SaaS Payment ${nextStatus}`,
+      affected_entity_type: 'SaasPayment',
+      affected_entity_id: paymentId,
+      affected_entity_label: `${target.transaction_ref} · ${target.company_name}`,
+      reason,
+      before_value: `${target.status} (${target.amount_rwf.toLocaleString()} RWF)`,
+      after_value: `${nextStatus} (-${refundAmountRwf.toLocaleString()} RWF)`,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      saasPayments: prev.saasPayments.map((p) =>
+        p.id === paymentId
+          ? {
+              ...p,
+              status: nextStatus,
+              refunded_amount_rwf: refundAmountRwf,
+              refund_reason: reason,
+              reconciled_by: prev.currentUser.email,
+            }
+          : p
+      ),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const logAuditedBookingInspection = (bookingId: string, bookingLabel: string) => {
+    const audit = createAuditEntry({
+      action: 'Sensitive Data Access: Cross-Tenant Booking Inspected',
+      affected_entity_type: 'Booking',
+      affected_entity_id: bookingId,
+      affected_entity_label: bookingLabel,
+      reason: 'Superadmin opened read-only cross-company booking & dispute dossier.',
+    });
+    setState((prev) => ({
+      ...prev,
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const addSupportTicket = (
+    ticketData: Omit<SupportTicket, 'id' | 'ticket_ref' | 'status' | 'created_at'>
+  ) => {
+    const ticketRef = `TCK-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newTicket: SupportTicket = {
+      ...ticketData,
+      id: `tck-${Date.now().toString().slice(-6)}`,
+      ticket_ref: ticketRef,
+      status: 'New',
+      requester_type: ticketData.requester_type || 'Storefront Customer',
+      company_id: ticketData.company_id || state.currentCompany.id,
+      company_name: ticketData.company_name || state.currentCompany.name,
+      created_at: new Date().toISOString(),
+    };
+
+    if (auth.currentUser) {
+      setDoc(doc(db, 'support_tickets', newTicket.id), cleanForFirestore(newTicket)).catch(() => {});
+    }
+
+    setState((prev) => ({
+      ...prev,
+      supportTickets: [newTicket, ...prev.supportTickets],
+    }));
+    return newTicket;
+  };
+
+  const updateSupportTicket = (
+    ticketId: string,
+    updates: Partial<SupportTicket>,
+    newInternalNote?: string
+  ) => {
+    const target = state.supportTickets.find((t) => t.id === ticketId);
+    if (!target) return;
+
+    const appendedNotes = newInternalNote?.trim()
+      ? [
+          ...(target.internal_notes || []),
+          {
+            id: `note-${Date.now()}`,
+            author: state.currentUser.name,
+            note: newInternalNote.trim(),
+            created_at: new Date().toISOString(),
+          },
+        ]
+      : target.internal_notes;
+
+    const updatedTicket: SupportTicket = {
+      ...target,
+      ...updates,
+      internal_notes: appendedNotes,
+      updated_at: new Date().toISOString(),
+    };
+
+    const audit = createAuditEntry({
+      action: `Support Ticket Updated (${updatedTicket.status})`,
+      affected_entity_type: 'SupportTicket',
+      affected_entity_id: ticketId,
+      affected_entity_label: `${target.ticket_ref} · ${target.customer_name}`,
+      reason: newInternalNote?.trim() || updates.response?.trim() || `Status set to ${updatedTicket.status}`,
+      before_value: target.status,
+      after_value: updatedTicket.status,
+    });
+
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'support_tickets', ticketId), cleanForFirestore(updatedTicket)).catch(() => {});
+    }
+
+    setState((prev) => ({
+      ...prev,
+      supportTickets: prev.supportTickets.map((t) => (t.id === ticketId ? updatedTicket : t)),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const saveNotificationTemplate = (template: NotificationTemplate) => {
+    const exists = state.notificationTemplates.some((t) => t.id === template.id);
+    const updated: NotificationTemplate = {
+      ...template,
+      updated_at: new Date().toISOString().slice(0, 10),
+    };
+    const audit = createAuditEntry({
+      action: exists ? 'Notification Template Edited' : 'Notification Template Created',
+      affected_entity_type: 'Notification',
+      affected_entity_id: updated.id,
+      affected_entity_label: `${updated.name} (${updated.channel})`,
+      reason: 'Updated platform messaging template.',
+    });
+
+    setState((prev) => ({
+      ...prev,
+      notificationTemplates: exists
+        ? prev.notificationTemplates.map((t) => (t.id === updated.id ? updated : t))
+        : [updated, ...prev.notificationTemplates],
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const sendPlatformNotification = (
+    templateId: string,
+    recipient: string,
+    companyName?: string
+  ) => {
+    const tpl = state.notificationTemplates.find((t) => t.id === templateId);
+    if (!tpl) return;
+    const provider =
+      tpl.channel === 'SMS'
+        ? "Africa's Talking SMS"
+        : tpl.channel === 'WhatsApp'
+        ? 'Meta WhatsApp Cloud API'
+        : tpl.channel === 'Email'
+        ? 'SendGrid Rwanda Relay'
+        : 'KigaliFleet In-App Push';
+
+    const delivery: NotificationDeliveryLog = {
+      id: `ndel-${Date.now().toString().slice(-6)}`,
+      template_id: tpl.id,
+      template_name: tpl.name,
+      channel: tpl.channel,
+      recipient,
+      company_name: companyName,
+      provider,
+      status: 'Provider Accepted',
+      sent_at: new Date().toISOString(),
+    };
+
+    const audit = createAuditEntry({
+      action: 'Platform Notification Dispatched',
+      affected_entity_type: 'Notification',
+      affected_entity_id: delivery.id,
+      affected_entity_label: `${tpl.channel} -> ${recipient}`,
+      reason: `Dispatched template "${tpl.name}" via ${provider}.`,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      notificationDeliveryLogs: [delivery, ...prev.notificationDeliveryLogs],
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const toggleIntegration = (integrationId: string, reason: string) => {
+    const target = state.platformIntegrations.find((i) => i.id === integrationId);
+    if (!target) return;
+    const nextEnabled = !target.is_enabled;
+    const audit = createAuditEntry({
+      action: `Integration ${nextEnabled ? 'Enabled' : 'Disabled'}`,
+      affected_entity_type: 'Integration',
+      affected_entity_id: integrationId,
+      affected_entity_label: target.name,
+      reason,
+      before_value: target.is_enabled ? 'Enabled' : 'Disabled',
+      after_value: nextEnabled ? 'Enabled' : 'Disabled',
+    });
+
+    setState((prev) => ({
+      ...prev,
+      platformIntegrations: prev.platformIntegrations.map((i) =>
+        i.id === integrationId
+          ? {
+              ...i,
+              is_enabled: nextEnabled,
+              status: nextEnabled ? 'Connected' : 'Disconnected',
+              last_checked_at: new Date().toISOString(),
+            }
+          : i
+      ),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const testIntegrationConnection = async (integrationId: string) => {
+    const start = Date.now();
+    let status: PlatformIntegration['status'] = 'Connected';
+    let latencyMs = 110;
+    if (integrationId === 'int-firebase') {
+      try {
+        await Promise.race([
+          getDocFromServer(doc(db, 'test', 'connection')),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500)),
+        ]);
+        latencyMs = Math.max(25, Date.now() - start);
+        status = 'Connected';
+      } catch {
+        latencyMs = Date.now() - start;
+        status = 'Degraded';
+      }
+    } else {
+      latencyMs = 85 + Math.floor(Math.random() * 90);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      platformIntegrations: prev.platformIntegrations.map((i) =>
+        i.id === integrationId
+          ? {
+              ...i,
+              status: i.is_enabled ? status : 'Disconnected',
+              latency_ms: latencyMs,
+              last_checked_at: new Date().toISOString(),
+            }
+          : i
+      ),
+    }));
+    return { status, latencyMs };
+  };
+
+  const retryBackgroundJob = (jobId: string) => {
+    const target = state.backgroundJobs.find((j) => j.id === jobId);
+    if (!target) return;
+    const nowIso = new Date().toISOString();
+    const audit = createAuditEntry({
+      action: 'Background Job Retried',
+      affected_entity_type: 'Integration',
+      affected_entity_id: jobId,
+      affected_entity_label: target.name,
+      reason: 'Manual retry triggered from System Health monitor.',
+      before_value: target.status,
+      after_value: 'Completed',
+    });
+
+    setState((prev) => ({
+      ...prev,
+      backgroundJobs: prev.backgroundJobs.map((j) =>
+        j.id === jobId
+          ? {
+              ...j,
+              status: 'Completed',
+              last_run_at: nowIso,
+              error_message: undefined,
+              records_processed: j.records_processed + 1,
+            }
+          : j
+      ),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const resolveSystemError = (errorId: string) => {
+    setState((prev) => ({
+      ...prev,
+      systemErrorLogs: prev.systemErrorLogs.map((e) => (e.id === errorId ? { ...e, resolved: true } : e)),
+    }));
+  };
+
+  const logFailedLoginAttempt = (emailAttempt: string, details: string) => {
+    const incident: SecurityIncident = {
+      id: `sec-${Date.now().toString().slice(-6)}`,
+      title: `Failed Login Attempt (${emailAttempt})`,
+      category: 'Failed Login Spike',
+      severity: isSuperAdminEmail(emailAttempt) ? 'Critical' : 'Medium',
+      target_email: emailAttempt,
+      details,
+      status: 'Open',
+      assigned_to: 'security@kigalifleet.rw',
+      created_at: new Date().toISOString(),
+    };
+    setState((prev) => ({
+      ...prev,
+      securityIncidents: [incident, ...prev.securityIncidents],
+    }));
+  };
+
+  const resolveSecurityIncident = (
+    incidentId: string,
+    status: SecurityIncident['status'],
+    resolutionNotes: string
+  ) => {
+    const target = state.securityIncidents.find((i) => i.id === incidentId);
+    if (!target) return;
+    const audit = createAuditEntry({
+      action: `Security Incident ${status}`,
+      affected_entity_type: 'Security',
+      affected_entity_id: incidentId,
+      affected_entity_label: target.title,
+      reason: resolutionNotes,
+      before_value: target.status,
+      after_value: status,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      securityIncidents: prev.securityIncidents.map((i) =>
+        i.id === incidentId ? { ...i, status, resolution_notes: resolutionNotes } : i
+      ),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const savePlatformContent = (item: PlatformContentItem) => {
+    const exists = state.platformContent.some((c) => c.id === item.id);
+    const updated: PlatformContentItem = {
+      ...item,
+      updated_by: state.currentUser.email,
+      updated_at: new Date().toISOString(),
+    };
+    const audit = createAuditEntry({
+      action: exists ? `Content Updated (${updated.status})` : `Content Created (${updated.status})`,
+      affected_entity_type: 'Content',
+      affected_entity_id: updated.id,
+      affected_entity_label: `${updated.title} v${updated.version}`,
+      reason: `Updated ${updated.type} content item.`,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      platformContent: exists
+        ? prev.platformContent.map((c) => (c.id === updated.id ? updated : c))
+        : [updated, ...prev.platformContent],
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const updatePlatformSettings = (updates: Partial<PlatformSettings>, reason: string) => {
+    const nextSettings: PlatformSettings = {
+      ...state.platformSettings,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    const audit = createAuditEntry({
+      action: 'Platform Settings Updated',
+      affected_entity_type: 'Settings',
+      affected_entity_id: 'global-platform-settings',
+      affected_entity_label: nextSettings.platform_name,
+      reason,
+      after_value: updates.maintenance_mode !== undefined ? `Maintenance=${updates.maintenance_mode}` : 'Config updated',
+    });
+
+    if (auth.currentUser) {
+      setDoc(doc(db, 'platform_settings', 'global'), cleanForFirestore(nextSettings)).catch(() => {});
+    }
+
+    setState((prev) => ({
+      ...prev,
+      platformSettings: nextSettings,
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+  };
+
+  const createPlatformAdmin = (
+    data: { name: string; email: string; phone: string; sub_role: SuperAdminSubRole },
+    reason: string
+  ): { success: boolean; error?: string } => {
+    const actorAdmin = state.platformAdmins.find(
+      (a) => a.email.toLowerCase() === state.currentUser.email.toLowerCase()
+    );
+    const dummyTarget: PlatformAdmin = {
+      id: `adm-${Date.now().toString().slice(-5)}`,
+      name: data.name.trim(),
+      email: data.email.trim().toLowerCase(),
+      phone: data.phone.trim(),
+      sub_role: data.sub_role,
+      status: 'Active',
+      permissions: getDefaultRolePermissions(data.sub_role),
+      created_at: new Date().toISOString(),
+    };
+    const guard = canModifyPlatformAdmin(actorAdmin, dummyTarget, data.sub_role);
+    if (!guard.allowed) {
+      return { success: false, error: guard.reason };
+    }
+
+    const audit = createAuditEntry({
+      action: 'Platform Admin Added',
+      affected_entity_type: 'PlatformAdmin',
+      affected_entity_id: dummyTarget.id,
+      affected_entity_label: `${dummyTarget.name} (${dummyTarget.sub_role})`,
+      reason,
+      after_value: dummyTarget.email,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      platformAdmins: [...prev.platformAdmins, dummyTarget],
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+    return { success: true };
+  };
+
+  const updatePlatformAdmin = (
+    adminId: string,
+    updates: Partial<PlatformAdmin>,
+    reason: string
+  ): { success: boolean; error?: string } => {
+    const actorAdmin = state.platformAdmins.find(
+      (a) => a.email.toLowerCase() === state.currentUser.email.toLowerCase()
+    );
+    const targetAdmin = state.platformAdmins.find((a) => a.id === adminId);
+    if (!targetAdmin) return { success: false, error: 'Administrator not found.' };
+
+    const guard = canModifyPlatformAdmin(actorAdmin, targetAdmin, updates.sub_role);
+    if (!guard.allowed) {
+      return { success: false, error: guard.reason };
+    }
+
+    const nextSubRole = updates.sub_role || targetAdmin.sub_role;
+    const nextPermissions =
+      updates.permissions ||
+      (updates.sub_role && updates.sub_role !== targetAdmin.sub_role
+        ? getDefaultRolePermissions(nextSubRole)
+        : targetAdmin.permissions);
+
+    const updatedAdmin: PlatformAdmin = {
+      ...targetAdmin,
+      ...updates,
+      sub_role: nextSubRole,
+      permissions: nextPermissions,
+    };
+
+    const audit = createAuditEntry({
+      action: 'Platform Admin Updated',
+      affected_entity_type: 'PlatformAdmin',
+      affected_entity_id: adminId,
+      affected_entity_label: `${updatedAdmin.name} (${updatedAdmin.email})`,
+      reason,
+      before_value: `${targetAdmin.sub_role} / ${targetAdmin.status}`,
+      after_value: `${updatedAdmin.sub_role} / ${updatedAdmin.status}`,
+    });
+
+    setState((prev) => ({
+      ...prev,
+      platformAdmins: prev.platformAdmins.map((a) => (a.id === adminId ? updatedAdmin : a)),
+      platformAuditLogs: [audit, ...prev.platformAuditLogs],
+    }));
+    return { success: true };
   };
 
   const updateCompanySettings = (newSettings: Partial<CompanySettings>) => {
@@ -1972,6 +3004,9 @@ export function useFleetStore() {
   };
 
   const updateCompanyProfile = (profileUpdates: Partial<Company>) => {
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'companies', state.currentCompany.id), cleanForFirestore(profileUpdates)).catch(() => {});
+    }
     setState((prev) => {
       const updatedCurrent = { ...prev.currentCompany, ...profileUpdates };
       const updatedCompanies = prev.companies.map((c) =>
@@ -1993,6 +3028,10 @@ export function useFleetStore() {
       created_at: new Date().toISOString().slice(0, 10),
     };
 
+    if (auth.currentUser) {
+      setDoc(doc(db, 'users', newStaff.id), cleanForFirestore(newStaff)).catch(() => {});
+    }
+
     setState((prev) => ({
       ...prev,
       users: [newStaff, ...prev.users],
@@ -2002,6 +3041,10 @@ export function useFleetStore() {
   };
 
   const updateStaffRole = (userId: string, role: UserRole) => {
+    if (role === 'superadmin') return;
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'users', userId), { role }).catch(() => {});
+    }
     setState((prev) => ({
       ...prev,
       users: prev.users.map((u) => (u.id === userId ? { ...u, role } : u)),
@@ -2009,7 +3052,10 @@ export function useFleetStore() {
     }));
   };
 
-  const updateStaffStatus = (userId: string, status: 'Active' | 'Invited' | 'Deactivated') => {
+  const updateStaffStatus = (userId: string, status: 'Active' | 'Invited' | 'Deactivated' | 'Suspended') => {
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'users', userId), { status }).catch(() => {});
+    }
     setState((prev) => ({
       ...prev,
       users: prev.users.map((u) => (u.id === userId ? { ...u, status } : u)),
@@ -2017,6 +3063,9 @@ export function useFleetStore() {
   };
 
   const deleteStaffMember = (userId: string) => {
+    if (auth.currentUser) {
+      deleteDoc(doc(db, 'users', userId)).catch(() => {});
+    }
     setState((prev) => ({
       ...prev,
       users: prev.users.filter((u) => u.id !== userId),
@@ -2025,7 +3074,6 @@ export function useFleetStore() {
 
   const resetToDefaults = async () => {
     try {
-      // Clean Firestore
       for (const v of state.vehicles) {
         deleteDoc(doc(db, 'vehicles', v.id)).catch(() => {});
       }
@@ -2035,8 +3083,6 @@ export function useFleetStore() {
       for (const b of state.bookings) {
         deleteDoc(doc(db, 'bookings', b.id)).catch(() => {});
       }
-
-      // Re-seed defaults
       for (const v of INITIAL_VEHICLES) {
         setDoc(doc(db, 'vehicles', v.id), cleanForFirestore(v)).catch(() => {});
       }
@@ -2064,6 +3110,20 @@ export function useFleetStore() {
       tasks: INITIAL_OPERATIONAL_TASKS,
       companies: INITIAL_COMPANIES,
       settings: DEFAULT_COMPANY_SETTINGS,
+      platformAdmins: INITIAL_PLATFORM_ADMINS,
+      platformPlans: INITIAL_PLATFORM_PLANS,
+      companySubscriptions: INITIAL_COMPANY_SUBSCRIPTIONS,
+      saasPayments: INITIAL_SAAS_PAYMENTS,
+      supportTickets: INITIAL_SUPPORT_TICKETS,
+      platformAuditLogs: INITIAL_PLATFORM_AUDIT_LOGS,
+      notificationTemplates: INITIAL_NOTIFICATION_TEMPLATES,
+      notificationDeliveryLogs: INITIAL_NOTIFICATION_LOGS,
+      platformIntegrations: INITIAL_PLATFORM_INTEGRATIONS,
+      backgroundJobs: INITIAL_BACKGROUND_JOBS,
+      systemErrorLogs: INITIAL_SYSTEM_ERRORS,
+      securityIncidents: INITIAL_SECURITY_INCIDENTS,
+      platformContent: INITIAL_PLATFORM_CONTENT,
+      platformSettings: DEFAULT_PLATFORM_SETTINGS,
       activeTierId: 'growth',
       theme: 'dark',
       accentColorId: 'amber',
@@ -2077,14 +3137,29 @@ export function useFleetStore() {
 
   const currentTheme = getThemeById(state.accentColorId || 'amber');
 
+  // Sync dynamic PlatformPlans back into SubscriptionTier[] for company billing views
+  const dynamicTiers: SubscriptionTier[] = (['starter', 'growth', 'enterprise'] as const).map((key) => {
+    const plan = state.platformPlans.find((p) => p.tier_key === key);
+    const fallback = SUBSCRIPTION_TIERS.find((t) => t.id === key)!;
+    if (!plan) return fallback;
+    return {
+      id: key,
+      name: plan.name,
+      target_fleet_size: plan.target_fleet_size,
+      max_vehicles: plan.max_vehicles,
+      monthly_fee_rwf: plan.monthly_fee_rwf,
+      features: plan.features,
+    };
+  });
+
   return {
     state,
     vehicles: state.vehicles,
     drivers: state.drivers,
     bookings: state.bookings,
     logs: state.logs,
-    activeTier: SUBSCRIPTION_TIERS.find((t) => t.id === state.activeTierId) || SUBSCRIPTION_TIERS[1],
-    tiers: SUBSCRIPTION_TIERS,
+    activeTier: dynamicTiers.find((t) => t.id === state.activeTierId) || dynamicTiers[1],
+    tiers: dynamicTiers,
     theme: state.theme,
     toggleTheme,
     accentColorId: state.accentColorId || 'amber',
@@ -2152,6 +3227,44 @@ export function useFleetStore() {
     updateCompanyPlan,
     switchCompanyContext,
     addTenantCompany,
+    // Superadmin Release 1 & 2 state + actions
+    platformAdmins: state.platformAdmins,
+    platformPlans: state.platformPlans,
+    companySubscriptions: state.companySubscriptions,
+    saasPayments: state.saasPayments,
+    supportTickets: state.supportTickets,
+    platformAuditLogs: state.platformAuditLogs,
+    notificationTemplates: state.notificationTemplates,
+    notificationDeliveryLogs: state.notificationDeliveryLogs,
+    platformIntegrations: state.platformIntegrations,
+    backgroundJobs: state.backgroundJobs,
+    systemErrorLogs: state.systemErrorLogs,
+    securityIncidents: state.securityIncidents,
+    platformContent: state.platformContent,
+    platformSettings: state.platformSettings,
+    updateUserStatusByAdmin,
+    revokeUserSessions,
+    triggerUserRecovery,
+    savePlatformPlan,
+    extendCompanySubscription,
+    grantCompanyTrial,
+    reconcileSaasPayment,
+    refundSaasPayment,
+    logAuditedBookingInspection,
+    addSupportTicket,
+    updateSupportTicket,
+    saveNotificationTemplate,
+    sendPlatformNotification,
+    toggleIntegration,
+    testIntegrationConnection,
+    retryBackgroundJob,
+    resolveSystemError,
+    logFailedLoginAttempt,
+    resolveSecurityIncident,
+    savePlatformContent,
+    updatePlatformSettings,
+    createPlatformAdmin,
+    updatePlatformAdmin,
     settings: state.settings,
     updateCompanySettings,
     updateCompanyProfile,

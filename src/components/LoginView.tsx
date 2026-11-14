@@ -43,6 +43,7 @@ interface LoginViewProps {
     password?: string;
     companyId?: string;
   }) => Promise<{ success: boolean; user?: User; error?: string }>;
+  onLogFailedLogin?: (emailAttempt: string, details: string) => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
@@ -56,6 +57,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   onLoginWithGoogle,
   onLoginWithCredentials,
   onCreateUserAccount,
+  onLogFailedLogin,
 }) => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
 
@@ -102,6 +104,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           onLoginSuccess(isSuper);
           return;
         } else {
+          onLogFailedLogin?.(email.trim(), result.error || 'Failed credential authentication attempt');
           setErrorMessage(result.error || 'Invalid credentials.');
           setIsLoading(false);
           return;

@@ -7,93 +7,822 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Hardened Global Row-Level Security (RLS) Helpers
-    function isAuthenticated() {
+    // =========================================================================
+    // Hardened Global Helpers (Row-Level Security & Input Validation)
+    // =========================================================================
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    function isSuperAdmin() {
-      return isAuthenticated() && (
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isMasterOwner() {
+      return isVerifiedUser() && (
         request.auth.token.email == 'generaskagiraneza@gmail.com' ||
-        request.auth.token.email == 'generaskagiraneza9@gmail.com' ||
-        request.auth.token.role == 'superadmin'
+        request.auth.token.email == 'generaskagiraneza9@gmail.com'
+      );
+    }
+
+    function isSuperAdmin() {
+      return isMasterOwner() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/platform_admins/$(request.auth.uid))
       );
     }
 
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // 1. Vehicles Collection (Row-Level Security)
-    // Public can read vehicles for guest booking storefront.
-    // Writes restricted to company staff or super admin.
+    function isBoundedString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function isOptionalBoundedString(data, key, maxLen) {
+      return !(key in data) || isBoundedString(data[key], maxLen);
+    }
+
+    function isOptionalNumber(data, key) {
+      return !(key in data) || (data[key] is number && data[key] >= 0);
+    }
+
+    function isOptionalBool(data, key) {
+      return !(key in data) || data[key] is bool;
+    }
+
+    // =========================================================================
+    // Entity Validation Blueprints (Anti-Update-Gap & Schema Enforcement)
+    // =========================================================================
+
+    function isValidVehicle(data) {
+      return data.keys().hasAll(['category', 'model_name', 'plate_number', 'daily_rate_rwf', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'category', 'model_name', 'plate_number', 'daily_rate_rwf', 'status',
+          'transmission', 'fuel_type', 'seating_capacity', 'current_odometer_km',
+          'location', 'image_url', 'year', 'assigned_driver_id', 'assigned_driver_name',
+          'insurance_expiry', 'controle_technique_expiry', 'last_service_date',
+          'last_service_notes', 'next_service_km'
+        ]) &&
+        data.category in ['RAV4', 'LandCruiser', 'Coaster', 'Safari Van', 'Luxury Sedan'] &&
+        isBoundedString(data.model_name, 200) &&
+        isBoundedString(data.plate_number, 20) &&
+        data.daily_rate_rwf is number && data.daily_rate_rwf >= 0 &&
+        data.status in ['Available', 'Booked', 'Maintenance'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'transmission', 30) &&
+        isOptionalBoundedString(data, 'fuel_type', 30) &&
+        isOptionalNumber(data, 'seating_capacity') &&
+        isOptionalNumber(data, 'current_odometer_km') &&
+        isOptionalBoundedString(data, 'location', 200) &&
+        isOptionalBoundedString(data, 'image_url', 1000) &&
+        isOptionalNumber(data, 'year') &&
+        isOptionalBoundedString(data, 'assigned_driver_id', 128) &&
+        isOptionalBoundedString(data, 'assigned_driver_name', 200) &&
+        isOptionalBoundedString(data, 'insurance_expiry', 20) &&
+        isOptionalBoundedString(data, 'controle_technique_expiry', 20) &&
+        isOptionalBoundedString(data, 'last_service_date', 20) &&
+        isOptionalBoundedString(data, 'last_service_notes', 500) &&
+        isOptionalNumber(data, 'next_service_km');
+    }
+
+    function isValidDriver(data) {
+      return data.keys().hasAll(['name', 'phone', 'language', 'status', 'license_number']) &&
+        data.keys().hasOnly([
+          'id', 'name', 'phone', 'email', 'national_id', 'license_expiry',
+          'experience_years', 'emergency_phone', 'language', 'status',
+          'license_number', 'trips_completed', 'rating', 'assigned_vehicle_id', 'notes'
+        ]) &&
+        isBoundedString(data.name, 200) &&
+        isBoundedString(data.phone, 50) &&
+        data.language in ['EN', 'RW', 'FR', 'EN/RW'] &&
+        data.status in ['Available', 'On Trip', 'Off Duty', 'On Leave', 'Rest Day'] &&
+        isBoundedString(data.license_number, 100) &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'email', 200) &&
+        isOptionalBoundedString(data, 'national_id', 32) &&
+        isOptionalBoundedString(data, 'license_expiry', 20) &&
+        isOptionalNumber(data, 'experience_years') &&
+        isOptionalBoundedString(data, 'emergency_phone', 50) &&
+        isOptionalNumber(data, 'trips_completed') &&
+        isOptionalNumber(data, 'rating') &&
+        isOptionalBoundedString(data, 'assigned_vehicle_id', 128) &&
+        isOptionalBoundedString(data, 'notes', 500);
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['client_name', 'vehicle_id', 'driver_id', 'start_date', 'end_date', 'total_rwf', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'client_name', 'client_email', 'client_phone', 'vehicle_id', 'driver_id',
+          'start_date', 'end_date', 'total_rwf', 'flight_number', 'flight_status',
+          'flight_delay_minutes', 'flight_origin', 'destination', 'status',
+          'dispatch_status', 'payment_status', 'payment_method', 'notes',
+          'source', 'handover_pickup_id', 'handover_return_id', 'created_at'
+        ]) &&
+        isBoundedString(data.client_name, 200) &&
+        isValidId(data.vehicle_id) &&
+        isValidId(data.driver_id) &&
+        isBoundedString(data.start_date, 20) &&
+        isBoundedString(data.end_date, 20) &&
+        data.total_rwf is number && data.total_rwf >= 0 &&
+        data.status in ['Confirmed', 'Pending Dispatch', 'In Progress', 'Completed', 'Cancelled'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'client_email', 200) &&
+        isOptionalBoundedString(data, 'client_phone', 50) &&
+        isOptionalBoundedString(data, 'flight_number', 30) &&
+        isOptionalBoundedString(data, 'flight_status', 30) &&
+        isOptionalNumber(data, 'flight_delay_minutes') &&
+        isOptionalBoundedString(data, 'flight_origin', 120) &&
+        isOptionalBoundedString(data, 'destination', 200) &&
+        isOptionalBoundedString(data, 'dispatch_status', 50) &&
+        isOptionalBoundedString(data, 'payment_status', 50) &&
+        isOptionalBoundedString(data, 'payment_method', 50) &&
+        isOptionalBoundedString(data, 'notes', 500) &&
+        isOptionalBoundedString(data, 'source', 50) &&
+        isOptionalBoundedString(data, 'handover_pickup_id', 128) &&
+        isOptionalBoundedString(data, 'handover_return_id', 128) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidCompany(data) {
+      return data.keys().hasAll(['name', 'slug', 'tin_number', 'phone', 'email', 'tier_id']) &&
+        data.keys().hasOnly([
+          'id', 'name', 'slug', 'business_type', 'tin_number', 'phone', 'email',
+          'city', 'country', 'currency', 'tier_id', 'status', 'renewal_date',
+          'trial_ends_at', 'vehicle_count', 'branches_count', 'monthly_fee_rwf',
+          'owner_name', 'assigned_support_admin', 'last_activity', 'suspension_reason',
+          'created_at'
+        ]) &&
+        isBoundedString(data.name, 200) &&
+        isBoundedString(data.slug, 100) &&
+        isBoundedString(data.tin_number, 50) &&
+        isBoundedString(data.phone, 50) &&
+        isBoundedString(data.email, 200) &&
+        data.tier_id in ['starter', 'growth', 'enterprise'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'business_type', 100) &&
+        isOptionalBoundedString(data, 'city', 100) &&
+        isOptionalBoundedString(data, 'country', 100) &&
+        isOptionalBoundedString(data, 'currency', 10) &&
+        isOptionalBoundedString(data, 'status', 50) &&
+        isOptionalBoundedString(data, 'renewal_date', 50) &&
+        isOptionalBoundedString(data, 'trial_ends_at', 50) &&
+        isOptionalNumber(data, 'vehicle_count') &&
+        isOptionalNumber(data, 'branches_count') &&
+        isOptionalNumber(data, 'monthly_fee_rwf') &&
+        isOptionalBoundedString(data, 'owner_name', 200) &&
+        isOptionalBoundedString(data, 'assigned_support_admin', 200) &&
+        isOptionalBoundedString(data, 'last_activity', 50) &&
+        isOptionalBoundedString(data, 'suspension_reason', 500) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'role', 'company_id']) &&
+        data.keys().hasOnly([
+          'id', 'name', 'email', 'phone', 'role', 'company_id', 'avatar_url',
+          'driver_id', 'status', 'last_login', 'sessions_revoked_at',
+          'recovery_requested_at', 'suspension_reason', 'created_at'
+        ]) &&
+        isBoundedString(data.name, 200) &&
+        isBoundedString(data.email, 200) &&
+        data.role in ['owner', 'manager', 'dispatcher', 'accountant', 'fleet_manager', 'mechanic', 'driver', 'receptionist', 'superadmin'] &&
+        isBoundedString(data.company_id, 128) &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'phone', 50) &&
+        isOptionalBoundedString(data, 'avatar_url', 1000) &&
+        isOptionalBoundedString(data, 'driver_id', 128) &&
+        isOptionalBoundedString(data, 'status', 30) &&
+        isOptionalBoundedString(data, 'last_login', 50) &&
+        isOptionalBoundedString(data, 'sessions_revoked_at', 50) &&
+        isOptionalBoundedString(data, 'recovery_requested_at', 50) &&
+        isOptionalBoundedString(data, 'suspension_reason', 500) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidCustomer(data) {
+      return data.keys().hasAll(['name', 'phone', 'email', 'category']) &&
+        data.keys().hasOnly([
+          'id', 'name', 'phone', 'email', 'category', 'organization', 'tin_number',
+          'address', 'credit_terms', 'discount_rate_pct', 'total_spent_rwf',
+          'total_bookings_count', 'outstanding_balance_rwf', 'notes', 'created_at'
+        ]) &&
+        isBoundedString(data.name, 200) &&
+        isBoundedString(data.phone, 50) &&
+        isBoundedString(data.email, 200) &&
+        data.category in ['Individual', 'Tourist / Expat', 'Corporate', 'NGO / Diplomatic', 'Travel Agency'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'organization', 200) &&
+        isOptionalBoundedString(data, 'tin_number', 50) &&
+        isOptionalBoundedString(data, 'address', 300) &&
+        isOptionalBoundedString(data, 'credit_terms', 50) &&
+        isOptionalNumber(data, 'discount_rate_pct') &&
+        isOptionalNumber(data, 'total_spent_rwf') &&
+        isOptionalNumber(data, 'total_bookings_count') &&
+        isOptionalNumber(data, 'outstanding_balance_rwf') &&
+        isOptionalBoundedString(data, 'notes', 500) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidPaymentRecord(data) {
+      return data.keys().hasAll(['booking_id', 'customer_name', 'amount_rwf', 'expected_amount_rwf', 'payment_method', 'date', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'booking_id', 'customer_name', 'customer_phone', 'organization',
+          'amount_rwf', 'expected_amount_rwf', 'payment_method', 'momo_tx_id',
+          'ebm_receipt_number', 'date', 'status', 'notes', 'created_at'
+        ]) &&
+        isValidId(data.booking_id) &&
+        isBoundedString(data.customer_name, 200) &&
+        data.amount_rwf is number && data.amount_rwf >= 0 &&
+        data.expected_amount_rwf is number && data.expected_amount_rwf >= 0 &&
+        data.payment_method in ['MTN Mobile Money', 'Airtel Money', 'Bank Transfer', 'Credit Card', 'Cash on Delivery'] &&
+        isBoundedString(data.date, 30) &&
+        data.status in ['Paid', 'Partially Paid', 'Pending', 'Overdue', 'Refunded'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'customer_phone', 50) &&
+        isOptionalBoundedString(data, 'organization', 200) &&
+        isOptionalBoundedString(data, 'momo_tx_id', 128) &&
+        isOptionalBoundedString(data, 'ebm_receipt_number', 128) &&
+        isOptionalBoundedString(data, 'notes', 500) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidMaintenanceRecord(data) {
+      return data.keys().hasAll(['vehicle_id', 'service_type', 'garage_name', 'start_date', 'cost_rwf', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'vehicle_id', 'vehicle_plate', 'vehicle_model', 'service_type',
+          'garage_name', 'garage_phone', 'garage_location', 'description',
+          'start_date', 'expected_completion_date', 'actual_completion_date',
+          'odometer_at_service_km', 'next_service_due_km', 'cost_rwf', 'status',
+          'invoice_ref', 'technician_name', 'parts_replaced', 'created_at'
+        ]) &&
+        isValidId(data.vehicle_id) &&
+        isBoundedString(data.service_type, 100) &&
+        isBoundedString(data.garage_name, 200) &&
+        isBoundedString(data.start_date, 30) &&
+        data.cost_rwf is number && data.cost_rwf >= 0 &&
+        data.status in ['In Garage', 'Scheduled', 'Completed', 'Awaiting Parts'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'vehicle_plate', 30) &&
+        isOptionalBoundedString(data, 'vehicle_model', 200) &&
+        isOptionalBoundedString(data, 'garage_phone', 50) &&
+        isOptionalBoundedString(data, 'garage_location', 200) &&
+        isOptionalBoundedString(data, 'description', 1000) &&
+        isOptionalBoundedString(data, 'expected_completion_date', 30) &&
+        isOptionalBoundedString(data, 'actual_completion_date', 30) &&
+        isOptionalNumber(data, 'odometer_at_service_km') &&
+        isOptionalNumber(data, 'next_service_due_km') &&
+        isOptionalBoundedString(data, 'invoice_ref', 128) &&
+        isOptionalBoundedString(data, 'technician_name', 200) &&
+        (!('parts_replaced' in data) || (
+          data.parts_replaced is list &&
+          data.parts_replaced.size() <= 30 &&
+          (data.parts_replaced.size() == 0 || data.parts_replaced[0] is string)
+        )) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidExpense(data) {
+      return data.keys().hasAll(['title', 'category', 'amount_rwf', 'date', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'title', 'category', 'amount_rwf', 'date', 'vehicle_id',
+          'vehicle_plate', 'booking_id', 'supplier_name', 'description',
+          'status', 'recorded_by', 'approved_by', 'receipt_ref', 'created_at'
+        ]) &&
+        isBoundedString(data.title, 200) &&
+        isBoundedString(data.category, 100) &&
+        data.amount_rwf is number && data.amount_rwf >= 0 &&
+        isBoundedString(data.date, 20) &&
+        data.status in ['Pending', 'Approved', 'Paid', 'Rejected'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'vehicle_id', 128) &&
+        isOptionalBoundedString(data, 'vehicle_plate', 30) &&
+        isOptionalBoundedString(data, 'booking_id', 128) &&
+        isOptionalBoundedString(data, 'supplier_name', 200) &&
+        isOptionalBoundedString(data, 'description', 500) &&
+        isOptionalBoundedString(data, 'recorded_by', 200) &&
+        isOptionalBoundedString(data, 'approved_by', 200) &&
+        isOptionalBoundedString(data, 'receipt_ref', 128) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidHandover(data) {
+      return data.keys().hasAll(['booking_id', 'vehicle_id', 'inspection_type', 'odometer_km', 'inspector_name']) &&
+        data.keys().hasOnly([
+          'id', 'booking_id', 'vehicle_id', 'vehicle_plate', 'vehicle_model',
+          'client_name', 'client_phone', 'inspection_type', 'odometer_km',
+          'fuel_level_eighths', 'cleanliness', 'condition_checklist',
+          'damage_notes', 'inspector_name', 'client_signature_confirmed',
+          'additional_charges_rwf', 'additional_charges_reason', 'created_at'
+        ]) &&
+        isValidId(data.booking_id) &&
+        isValidId(data.vehicle_id) &&
+        data.inspection_type in ['pickup', 'return'] &&
+        data.odometer_km is number && data.odometer_km >= 0 &&
+        isBoundedString(data.inspector_name, 200) &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'vehicle_plate', 30) &&
+        isOptionalBoundedString(data, 'vehicle_model', 200) &&
+        isOptionalBoundedString(data, 'client_name', 200) &&
+        isOptionalBoundedString(data, 'client_phone', 50) &&
+        isOptionalNumber(data, 'fuel_level_eighths') &&
+        isOptionalBoundedString(data, 'cleanliness', 30) &&
+        (!('condition_checklist' in data) || data.condition_checklist is map) &&
+        isOptionalBoundedString(data, 'damage_notes', 1000) &&
+        isOptionalBool(data, 'client_signature_confirmed') &&
+        isOptionalNumber(data, 'additional_charges_rwf') &&
+        isOptionalBoundedString(data, 'additional_charges_reason', 500) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['title', 'assigned_to_name', 'due_date', 'priority', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'title', 'description', 'assigned_to_name', 'assigned_to_role',
+          'due_date', 'priority', 'status', 'related_vehicle_id',
+          'related_booking_id', 'created_at'
+        ]) &&
+        isBoundedString(data.title, 200) &&
+        isBoundedString(data.assigned_to_name, 200) &&
+        isBoundedString(data.due_date, 30) &&
+        data.priority in ['Low', 'Normal', 'High', 'Urgent'] &&
+        data.status in ['Open', 'In Progress', 'Completed', 'Cancelled'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'description', 1000) &&
+        isOptionalBoundedString(data, 'assigned_to_role', 50) &&
+        isOptionalBoundedString(data, 'related_vehicle_id', 128) &&
+        isOptionalBoundedString(data, 'related_booking_id', 128) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidActivityLog(data) {
+      return data.keys().hasAll(['timestamp', 'action', 'details', 'category']) &&
+        data.keys().hasOnly(['id', 'timestamp', 'action', 'details', 'category']) &&
+        isBoundedString(data.timestamp, 50) &&
+        isBoundedString(data.action, 200) &&
+        isBoundedString(data.details, 500) &&
+        data.category in ['booking', 'dispatch', 'fleet', 'driver', 'handover', 'expense'] &&
+        isOptionalBoundedString(data, 'id', 128);
+    }
+
+    function isValidPlatformAdmin(data) {
+      return data.keys().hasAll(['name', 'email', 'sub_role', 'status']) &&
+        data.keys().hasOnly(['id', 'name', 'email', 'phone', 'sub_role', 'status', 'permissions', 'last_login', 'sessions_revoked_at', 'created_at']) &&
+        isBoundedString(data.name, 200) &&
+        isBoundedString(data.email, 200) &&
+        data.sub_role in ['platform_owner', 'platform_admin', 'finance_admin', 'support_admin', 'technical_admin', 'security_admin'] &&
+        data.status in ['Active', 'Suspended'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'phone', 50) &&
+        (!('permissions' in data) || data.permissions is map) &&
+        isOptionalBoundedString(data, 'last_login', 50) &&
+        isOptionalBoundedString(data, 'sessions_revoked_at', 50) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidPlatformPlan(data) {
+      return data.keys().hasAll(['tier_key', 'name', 'monthly_fee_rwf', 'max_vehicles']) &&
+        data.keys().hasOnly([
+          'id', 'tier_key', 'name', 'target_fleet_size', 'monthly_fee_rwf',
+          'annual_fee_rwf', 'billing_period', 'trial_days', 'max_vehicles',
+          'max_employees', 'max_branches', 'max_monthly_bookings',
+          'is_public', 'is_active', 'features', 'updated_at'
+        ]) &&
+        data.tier_key in ['trial', 'starter', 'growth', 'enterprise'] &&
+        isBoundedString(data.name, 120) &&
+        data.monthly_fee_rwf is number && data.monthly_fee_rwf >= 0 &&
+        data.max_vehicles is number && data.max_vehicles >= 0 &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'target_fleet_size', 100) &&
+        isOptionalNumber(data, 'annual_fee_rwf') &&
+        isOptionalBoundedString(data, 'billing_period', 30) &&
+        isOptionalNumber(data, 'trial_days') &&
+        isOptionalNumber(data, 'max_employees') &&
+        isOptionalNumber(data, 'max_branches') &&
+        isOptionalNumber(data, 'max_monthly_bookings') &&
+        isOptionalBool(data, 'is_public') &&
+        isOptionalBool(data, 'is_active') &&
+        (!('features' in data) || (
+          data.features is list &&
+          data.features.size() <= 25 &&
+          (data.features.size() == 0 || data.features[0] is string)
+        )) &&
+        isOptionalBoundedString(data, 'updated_at', 50);
+    }
+
+    function isValidCompanySubscription(data) {
+      return data.keys().hasAll(['company_id', 'company_name', 'plan_id', 'status', 'renewal_date']) &&
+        data.keys().hasOnly([
+          'id', 'company_id', 'company_name', 'plan_id', 'plan_name', 'status',
+          'start_date', 'renewal_date', 'trial_end_date', 'monthly_fee_rwf',
+          'auto_renew', 'last_adjustment_reason', 'updated_at'
+        ]) &&
+        isValidId(data.company_id) &&
+        isBoundedString(data.company_name, 200) &&
+        isValidId(data.plan_id) &&
+        data.status in ['Trial', 'Active', 'Past Due', 'Suspended', 'Cancelled', 'Expired'] &&
+        isBoundedString(data.renewal_date, 30) &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'plan_name', 120) &&
+        isOptionalBoundedString(data, 'start_date', 30) &&
+        isOptionalBoundedString(data, 'trial_end_date', 30) &&
+        isOptionalNumber(data, 'monthly_fee_rwf') &&
+        isOptionalBool(data, 'auto_renew') &&
+        isOptionalBoundedString(data, 'last_adjustment_reason', 500) &&
+        isOptionalBoundedString(data, 'updated_at', 50);
+    }
+
+    function isValidSaasPayment(data) {
+      return data.keys().hasAll(['transaction_ref', 'company_id', 'amount_rwf', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'transaction_ref', 'provider_ref', 'company_id', 'company_name',
+          'subscription_id', 'plan_name', 'amount_rwf', 'refunded_amount_rwf',
+          'currency', 'method', 'provider', 'status', 'failure_reason',
+          'reconciliation_notes', 'reconciled_by', 'refund_reason',
+          'ebm_invoice_ref', 'paid_at', 'created_at'
+        ]) &&
+        isBoundedString(data.transaction_ref, 128) &&
+        isValidId(data.company_id) &&
+        data.amount_rwf is number && data.amount_rwf >= 0 &&
+        data.status in ['Pending', 'Successful', 'Failed', 'Cancelled', 'Refunded', 'Partially Refunded'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'provider_ref', 128) &&
+        isOptionalBoundedString(data, 'company_name', 200) &&
+        isOptionalBoundedString(data, 'subscription_id', 128) &&
+        isOptionalBoundedString(data, 'plan_name', 120) &&
+        isOptionalNumber(data, 'refunded_amount_rwf') &&
+        isOptionalBoundedString(data, 'currency', 10) &&
+        isOptionalBoundedString(data, 'method', 50) &&
+        isOptionalBoundedString(data, 'provider', 80) &&
+        isOptionalBoundedString(data, 'failure_reason', 500) &&
+        isOptionalBoundedString(data, 'reconciliation_notes', 500) &&
+        isOptionalBoundedString(data, 'reconciled_by', 200) &&
+        isOptionalBoundedString(data, 'refund_reason', 500) &&
+        isOptionalBoundedString(data, 'ebm_invoice_ref', 128) &&
+        isOptionalBoundedString(data, 'paid_at', 50) &&
+        isOptionalBoundedString(data, 'created_at', 50);
+    }
+
+    function isValidSupportTicket(data) {
+      return data.keys().hasAll(['ticket_ref', 'customer_name', 'customer_email', 'issue_category', 'priority', 'message', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'ticket_ref', 'requester_type', 'company_id', 'company_name',
+          'customer_name', 'customer_email', 'customer_phone', 'booking_ref',
+          'issue_category', 'priority', 'message', 'status', 'assigned_admin_email',
+          'escalated', 'created_at', 'updated_at', 'response', 'internal_notes'
+        ]) &&
+        isBoundedString(data.ticket_ref, 64) &&
+        isBoundedString(data.customer_name, 200) &&
+        isBoundedString(data.customer_email, 200) &&
+        isBoundedString(data.issue_category, 120) &&
+        data.priority in ['Normal', 'Urgent', 'Emergency'] &&
+        isBoundedString(data.message, 2000) &&
+        data.status in ['New', 'Open', 'In Progress', 'Waiting for User', 'Escalated', 'Resolved', 'Closed'] &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'requester_type', 50) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
+        isOptionalBoundedString(data, 'company_name', 200) &&
+        isOptionalBoundedString(data, 'customer_phone', 50) &&
+        isOptionalBoundedString(data, 'booking_ref', 128) &&
+        isOptionalBoundedString(data, 'assigned_admin_email', 200) &&
+        isOptionalBool(data, 'escalated') &&
+        isOptionalBoundedString(data, 'created_at', 50) &&
+        isOptionalBoundedString(data, 'updated_at', 50) &&
+        isOptionalBoundedString(data, 'response', 2000) &&
+        (!('internal_notes' in data) || (
+          data.internal_notes is list &&
+          data.internal_notes.size() <= 50 &&
+          (data.internal_notes.size() == 0 || data.internal_notes[0] is map)
+        ));
+    }
+
+    function isValidPlatformAuditLog(data) {
+      return data.keys().hasAll(['actor_name', 'actor_email', 'action', 'affected_entity_type', 'affected_entity_id', 'reason', 'correlation_id', 'timestamp']) &&
+        data.keys().hasOnly([
+          'id', 'actor_name', 'actor_email', 'actor_role', 'action',
+          'affected_entity_type', 'affected_entity_id', 'affected_entity_label',
+          'reason', 'before_value', 'after_value', 'correlation_id', 'timestamp'
+        ]) &&
+        isBoundedString(data.actor_name, 200) &&
+        isBoundedString(data.actor_email, 200) &&
+        isBoundedString(data.action, 200) &&
+        data.affected_entity_type in ['Company', 'User', 'Subscription', 'Plan', 'SaasPayment', 'Booking', 'SupportTicket', 'Notification', 'Integration', 'Security', 'Content', 'Settings', 'PlatformAdmin'] &&
+        isBoundedString(data.affected_entity_id, 128) &&
+        isBoundedString(data.reason, 500) &&
+        isBoundedString(data.correlation_id, 64) &&
+        isBoundedString(data.timestamp, 50) &&
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'actor_role', 64) &&
+        isOptionalBoundedString(data, 'affected_entity_label', 250) &&
+        isOptionalBoundedString(data, 'before_value', 500) &&
+        isOptionalBoundedString(data, 'after_value', 500);
+    }
+
+    function isValidPlatformSettings(data) {
+      return data.keys().hasAll(['platform_name', 'support_email', 'default_currency', 'maintenance_mode']) &&
+        data.keys().hasOnly([
+          'platform_name', 'support_email', 'support_phone', 'default_currency',
+          'timezone', 'require_company_approval', 'allow_public_self_registration',
+          'default_trial_days', 'grace_period_days', 'auto_suspend_after_grace_days',
+          'momo_merchant_code', 'rra_saas_tin', 'vat_rate_pct', 'maintenance_mode',
+          'maintenance_message', 'updated_at'
+        ]) &&
+        isBoundedString(data.platform_name, 120) &&
+        isBoundedString(data.support_email, 200) &&
+        data.default_currency in ['RWF', 'USD'] &&
+        data.maintenance_mode is bool &&
+        isOptionalBoundedString(data, 'support_phone', 50) &&
+        isOptionalBoundedString(data, 'timezone', 64) &&
+        isOptionalBool(data, 'require_company_approval') &&
+        isOptionalBool(data, 'allow_public_self_registration') &&
+        isOptionalNumber(data, 'default_trial_days') &&
+        isOptionalNumber(data, 'grace_period_days') &&
+        isOptionalNumber(data, 'auto_suspend_after_grace_days') &&
+        isOptionalBoundedString(data, 'momo_merchant_code', 64) &&
+        isOptionalBoundedString(data, 'rra_saas_tin', 64) &&
+        isOptionalNumber(data, 'vat_rate_pct') &&
+        isOptionalBoundedString(data, 'maintenance_message', 500) &&
+        isOptionalBoundedString(data, 'updated_at', 50);
+    }
+
+    // =========================================================================
+    // Collection Security Rules (20 Active Paths)
+    // =========================================================================
+
+    // 1. Vehicles (Public Storefront Catalog + Verified Fleet Management)
     match /vehicles/{vehicleId} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || (isAuthenticated() && isValidId(vehicleId));
+      allow get: if isValidId(vehicleId);
+      allow list: if resource.data.status in ['Available', 'Booked', 'Maintenance'];
+      allow create: if isVerifiedUser() && isValidId(vehicleId) && isValidVehicle(incoming());
+      allow update: if isVerifiedUser() && isValidId(vehicleId) && isValidVehicle(incoming()) && (
+        isSuperAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['daily_rate_rwf']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['current_odometer_km', 'status', 'last_service_date', 'last_service_notes', 'next_service_km']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'category', 'model_name', 'plate_number', 'daily_rate_rwf', 'status',
+          'transmission', 'fuel_type', 'seating_capacity', 'current_odometer_km',
+          'location', 'image_url', 'year', 'assigned_driver_id', 'assigned_driver_name',
+          'insurance_expiry', 'controle_technique_expiry', 'last_service_date',
+          'last_service_notes', 'next_service_km'
+        ])
+      );
+      allow delete: if isSuperAdmin() && isValidId(vehicleId);
     }
 
-    // 2. Drivers Collection (Chauffeurs)
-    // Public/Storefront can read driver names for assignment transparency.
-    // Writes restricted to authenticated staff or super admin.
+    // 2. Drivers (Verified Chauffeur Roster)
     match /drivers/{driverId} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || (isAuthenticated() && isValidId(driverId));
+      allow get: if isValidId(driverId) && (isVerifiedUser() || existing().status == 'Available');
+      allow list: if resource.data.status in ['Available', 'On Trip', 'Off Duty', 'On Leave', 'Rest Day'];
+      allow create: if isVerifiedUser() && isValidId(driverId) && isValidDriver(incoming());
+      allow update: if isVerifiedUser() && isValidId(driverId) && isValidDriver(incoming()) && (
+        isSuperAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['trips_completed']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'phone', 'email', 'national_id', 'license_expiry',
+          'experience_years', 'emergency_phone', 'language', 'status',
+          'license_number', 'assigned_vehicle_id', 'notes'
+        ])
+      );
+      allow delete: if isSuperAdmin() && isValidId(driverId);
     }
 
-    // 3. Bookings Collection (Reservations & Storefront)
-    // Anyone can create a booking via public storefront.
-    // Updates/deletes restricted to booking client, company staff, or super admin.
+    // 3. Bookings (Storefront Reservations + Dispatch Lifecycle)
     match /bookings/{bookingId} {
-      allow create: if isValidId(bookingId);
-      allow read: if true;
-      allow update, delete: if isSuperAdmin() || isAuthenticated();
+      allow get: if isValidId(bookingId) && (isSuperAdmin() || isVerifiedUser() || (isSignedIn() && existing().client_email == request.auth.token.email));
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Confirmed', 'Pending Dispatch', 'In Progress', 'Completed', 'Cancelled']);
+      allow create: if isValidId(bookingId) && isValidBooking(incoming());
+      allow update: if isVerifiedUser() && isValidId(bookingId) && isValidBooking(incoming()) && (
+        isSuperAdmin() ||
+        (existing().status != 'Completed' && existing().status != 'Cancelled' && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['dispatch_status']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['dispatch_status', 'status']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['driver_id']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['flight_status', 'flight_delay_minutes']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['handover_pickup_id']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['handover_return_id', 'status']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'client_name', 'client_email', 'client_phone', 'vehicle_id', 'driver_id',
+            'start_date', 'end_date', 'total_rwf', 'destination', 'status',
+            'dispatch_status', 'payment_status', 'payment_method', 'notes'
+          ])
+        ))
+      );
+      allow delete: if isSuperAdmin() && isValidId(bookingId);
     }
 
-    // 4. Companies Collection (Tenants)
-    // Public read for storefront branding and legal info.
-    // Writes restricted to company owner or super admin.
+    // 4. Companies (Public Tenant Branding + Superadmin Lifecycle Control)
     match /companies/{companyId} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || (isAuthenticated() && isValidId(companyId));
+      allow get: if isValidId(companyId);
+      allow list: if resource.data.tier_id in ['starter', 'growth', 'enterprise'];
+      allow create: if isValidId(companyId) && isValidCompany(incoming()) && (
+        isSuperAdmin() ||
+        (isVerifiedUser() && (!('status' in incoming()) || incoming().status in ['Pending', 'Pending Verification', 'Trial']))
+      );
+      allow update: if isVerifiedUser() && isValidId(companyId) && isValidCompany(incoming()) && (
+        isSuperAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'phone', 'email', 'city', 'business_type', 'tin_number', 'owner_name'
+        ])
+      );
+      allow delete: if isSuperAdmin() && isValidId(companyId);
     }
 
-    // 5. Users Collection (Staff, Drivers, Clients)
-    // Users can read/write their own document.
-    // Super admins have global cross-tenant access.
+    // 5. Users (PII-Isolated Staff & User Directory + Anti-Privilege-Escalation)
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isValidId(userId);
-      allow update, delete: if isSuperAdmin() || isOwner(userId);
+      allow get: if isValidId(userId) && (
+        isSuperAdmin() ||
+        isOwner(userId) ||
+        (isVerifiedUser() && existing().email == request.auth.token.email)
+      );
+      allow list: if isMasterOwner() || (
+        isVerifiedUser() && (
+          resource.data.email == request.auth.token.email ||
+          resource.data.id == request.auth.uid
+        )
+      );
+      allow create: if isValidId(userId) && isValidUser(incoming()) && (
+        isSuperAdmin() ||
+        (isVerifiedUser() && incoming().role != 'superadmin' && incoming().email == request.auth.token.email)
+      );
+      allow update: if isVerifiedUser() && isValidId(userId) && isValidUser(incoming()) && (
+        isSuperAdmin() ||
+        ((isOwner(userId) || existing().email == request.auth.token.email) &&
+          incoming().role == existing().role &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'avatar_url', 'last_login'])
+        )
+      );
+      allow delete: if isSuperAdmin() && isValidId(userId);
     }
 
-    // 6. Expenses Collection (Financial Records)
-    // Strict RLS: restricted to authenticated company staff and super admin.
+    // 6. Customers (PII-Protected Fleet Client Ledger)
+    match /customers/{customerId} {
+      allow get: if isValidId(customerId) && (isSuperAdmin() || isVerifiedUser());
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.category in ['Individual', 'Tourist / Expat', 'Corporate', 'NGO / Diplomatic', 'Travel Agency']);
+      allow create: if isVerifiedUser() && isValidId(customerId) && isValidCustomer(incoming());
+      allow update: if isVerifiedUser() && isValidId(customerId) && isValidCustomer(incoming()) && (
+        isSuperAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['total_spent_rwf', 'total_bookings_count', 'outstanding_balance_rwf']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'phone', 'email', 'category', 'organization', 'tin_number',
+          'address', 'credit_terms', 'discount_rate_pct', 'notes'
+        ])
+      );
+      allow delete: if isSuperAdmin() && isValidId(customerId);
+    }
+
+    // 7. Payments (Booking Payments & EBM Receipts)
+    match /payments/{paymentId} {
+      allow get: if isValidId(paymentId) && (isSuperAdmin() || isVerifiedUser());
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Paid', 'Partially Paid', 'Pending', 'Overdue', 'Refunded']);
+      allow create: if isVerifiedUser() && isValidId(paymentId) && isValidPaymentRecord(incoming()) && exists(/databases/$(database)/documents/bookings/$(incoming().booking_id));
+      allow update: if isVerifiedUser() && isValidId(paymentId) && isValidPaymentRecord(incoming()) && (
+        isSuperAdmin() ||
+        (existing().status != 'Refunded' && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['ebm_receipt_number']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'amount_rwf', 'momo_tx_id', 'ebm_receipt_number', 'notes'])
+        ))
+      );
+      allow delete: if isSuperAdmin() && isValidId(paymentId);
+    }
+
+    // 8. Maintenance (Workshop & Repair Orders)
+    match /maintenance/{maintenanceId} {
+      allow get: if isValidId(maintenanceId) && (isSuperAdmin() || isVerifiedUser());
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['In Garage', 'Scheduled', 'Completed', 'Awaiting Parts']);
+      allow create: if isVerifiedUser() && isValidId(maintenanceId) && isValidMaintenanceRecord(incoming()) && exists(/databases/$(database)/documents/vehicles/$(incoming().vehicle_id));
+      allow update: if isVerifiedUser() && isValidId(maintenanceId) && isValidMaintenanceRecord(incoming()) && (
+        isSuperAdmin() ||
+        (existing().status != 'Completed' && incoming().diff(existing()).affectedKeys().hasOnly([
+          'status', 'actual_completion_date', 'cost_rwf', 'invoice_ref', 'description', 'parts_replaced', 'technician_name'
+        ]))
+      );
+      allow delete: if isSuperAdmin() && isValidId(maintenanceId);
+    }
+
+    // 9. Expenses (Direct Operating Expenses)
     match /expenses/{expenseId} {
-      allow read, write: if isSuperAdmin() || (isAuthenticated() && isValidId(expenseId));
+      allow get: if isValidId(expenseId) && (isSuperAdmin() || isVerifiedUser());
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Pending', 'Approved', 'Paid', 'Rejected']);
+      allow create: if isVerifiedUser() && isValidId(expenseId) && isValidExpense(incoming());
+      allow update: if isVerifiedUser() && isValidId(expenseId) && isValidExpense(incoming()) && (
+        isSuperAdmin() ||
+        (existing().status != 'Paid' && existing().status != 'Rejected' && incoming().diff(existing()).affectedKeys().hasOnly([
+          'status', 'approved_by', 'receipt_ref', 'description', 'amount_rwf'
+        ]))
+      );
+      allow delete: if isSuperAdmin() && isValidId(expenseId);
     }
 
-    // 7. Handovers Collection (Vehicle Inspections)
+    // 10. Handovers (Check-out & Check-in Inspections)
     match /handovers/{handoverId} {
-      allow read, write: if isSuperAdmin() || (isAuthenticated() && isValidId(handoverId));
+      allow get: if isValidId(handoverId) && (isSuperAdmin() || isVerifiedUser());
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.inspection_type in ['pickup', 'return']);
+      allow create: if isVerifiedUser() && isValidId(handoverId) && isValidHandover(incoming()) && exists(/databases/$(database)/documents/bookings/$(incoming().booking_id));
+      allow update: if isSuperAdmin() && isValidId(handoverId) && isValidHandover(incoming());
+      allow delete: if isSuperAdmin() && isValidId(handoverId);
     }
 
-    // 8. Tasks Collection (Operational Duty Queue)
+    // 11. Tasks (Operational Duty Queue)
     match /tasks/{taskId} {
-      allow read, write: if isSuperAdmin() || (isAuthenticated() && isValidId(taskId));
+      allow get: if isValidId(taskId) && (isSuperAdmin() || isVerifiedUser());
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Open', 'In Progress', 'Completed', 'Cancelled']);
+      allow create: if isVerifiedUser() && isValidId(taskId) && isValidTask(incoming());
+      allow update: if isVerifiedUser() && isValidId(taskId) && isValidTask(incoming()) && (
+        isSuperAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+      );
+      allow delete: if isVerifiedUser() && isValidId(taskId);
     }
 
-    // 9. Activity Logs Collection (Audit Trail)
+    // 12. Activity Logs (Operational Audit Feed - Append Only for Staff)
     match /activity_logs/{logId} {
-      allow read, write: if isSuperAdmin() || (isAuthenticated() && isValidId(logId));
+      allow get: if isValidId(logId) && (isSuperAdmin() || isVerifiedUser());
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.category in ['booking', 'dispatch', 'fleet', 'driver', 'handover', 'expense']);
+      allow create: if isVerifiedUser() && isValidId(logId) && isValidActivityLog(incoming());
+      allow update, delete: if false;
     }
 
-    // 10. Connection test document
+    // 13. Platform Admins (Strict Master Owner Governance)
+    match /platform_admins/{adminId} {
+      allow get: if isValidId(adminId) && (isSuperAdmin() || isOwner(adminId));
+      allow list: if isMasterOwner();
+      allow create: if isMasterOwner() && isValidId(adminId) && isValidPlatformAdmin(incoming());
+      allow update: if isMasterOwner() && isValidId(adminId) && isValidPlatformAdmin(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'sub_role', 'status', 'permissions', 'last_login', 'sessions_revoked_at'])
+      );
+      allow delete: if isMasterOwner() && isValidId(adminId);
+    }
+
+    // 14. Platform Plans (Public Pricing Read, Superadmin Only Write)
+    match /platform_plans/{planId} {
+      allow get: if isValidId(planId);
+      allow list: if resource.data.is_active == true || isMasterOwner();
+      allow create, update: if isSuperAdmin() && isValidId(planId) && isValidPlatformPlan(incoming());
+      allow delete: if isMasterOwner() && isValidId(planId);
+    }
+
+    // 15. Company Subscriptions (Tenant Contract Billing)
+    match /company_subscriptions/{subscriptionId} {
+      allow get: if isValidId(subscriptionId) && (isSuperAdmin() || isVerifiedUser());
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Trial', 'Active', 'Past Due', 'Suspended', 'Cancelled', 'Expired']);
+      allow create, update: if isSuperAdmin() && isValidId(subscriptionId) && isValidCompanySubscription(incoming());
+      allow delete: if isMasterOwner() && isValidId(subscriptionId);
+    }
+
+    // 16. SaaS Payments (Platform Revenue Ledger - Strict Superadmin Control)
+    match /saas_payments/{paymentId} {
+      allow get: if isValidId(paymentId) && isSuperAdmin();
+      allow list: if isMasterOwner();
+      allow create, update: if isSuperAdmin() && isValidId(paymentId) && isValidSaasPayment(incoming());
+      allow delete: if false;
+    }
+
+    // 17. Support Tickets (Public Submission, Authenticated / Superadmin Triage)
+    match /support_tickets/{ticketId} {
+      allow get: if isValidId(ticketId) && (isSuperAdmin() || (isVerifiedUser() && existing().customer_email == request.auth.token.email));
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.customer_email == request.auth.token.email);
+      allow create: if isValidId(ticketId) && isValidSupportTicket(incoming()) && incoming().status == 'New';
+      allow update: if isSuperAdmin() && isValidId(ticketId) && isValidSupportTicket(incoming());
+      allow delete: if false;
+    }
+
+    // 18. Platform Audit Logs (Strictly Immutable Append-Only Stream)
+    match /platform_audit_logs/{logId} {
+      allow get: if isValidId(logId) && isSuperAdmin();
+      allow list: if isMasterOwner();
+      allow create: if isSuperAdmin() && isValidId(logId) && isValidPlatformAuditLog(incoming());
+      allow update, delete: if false;
+    }
+
+    // 19. Platform Settings (Global Configuration & Maintenance Mode)
+    match /platform_settings/{settingId} {
+      allow get: if isValidId(settingId) && (settingId == 'global' || isSuperAdmin());
+      allow list: if isMasterOwner();
+      allow create, update: if isSuperAdmin() && isValidId(settingId) && isValidPlatformSettings(incoming());
+      allow delete: if false;
+    }
+
+    // 20. Health Check Probe
     match /test/connection {
-      allow read, write: if true;
+      allow get: if true;
+      allow list, write: if false;
     }
   }
 }

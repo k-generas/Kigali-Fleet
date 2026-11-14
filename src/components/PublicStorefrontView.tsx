@@ -74,6 +74,9 @@ interface PublicStorefrontViewProps {
   onCompleteClientBooking: (
     booking: Omit<Booking, 'id' | 'created_at' | 'dispatch_status'>
   ) => { success: boolean; booking?: Booking; error?: string };
+  onSubmitSupportTicket?: (
+    ticketData: Omit<SupportTicket, 'id' | 'ticket_ref' | 'status' | 'created_at'>
+  ) => SupportTicket | void;
   onReturnToManager: (newBookingId?: string) => void;
 }
 
@@ -109,6 +112,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   currentCompany,
   companySettings,
   onCompleteClientBooking,
+  onSubmitSupportTicket,
   onReturnToManager,
 }) => {
   const activeThemeColor = currentTheme?.hex || '#f59e0b';
@@ -492,6 +496,26 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   // Submit Customer Support Ticket
   const handleSubmitTicket = (e: React.FormEvent) => {
     e.preventDefault();
+    if (onSubmitSupportTicket) {
+      const created = onSubmitSupportTicket({
+        requester_type: 'Storefront Customer',
+        company_id: currentCompany?.id,
+        company_name: currentCompany?.name,
+        customer_name: ticketName || 'Storefront Guest',
+        customer_email: ticketEmail || 'guest@kigalifleet.rw',
+        customer_phone: ticketPhone || '+250 788 000 000',
+        booking_ref: ticketBookingRef || undefined,
+        issue_category: ticketCategory,
+        priority: ticketPriority,
+        message: ticketMessage,
+      });
+      setTicketSubmittedId(
+        created && 'ticket_ref' in created
+          ? created.ticket_ref
+          : `TCK-2026-${Math.floor(1000 + Math.random() * 9000)}`
+      );
+      return;
+    }
     const tckId = `TCK-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     setTicketSubmittedId(tckId);
   };

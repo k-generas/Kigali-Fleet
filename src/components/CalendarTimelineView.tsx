@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Vehicle, Driver, Booking, VehicleCategory, BookingStatus } from '../types';
+import { Vehicle, Driver, Booking, VehicleCategory, BookingStatus, MaintenanceRecord } from '../types';
 import { datesOverlap, formatRwf, checkDriverCollision, calculateDays } from '../utils/collision';
 import {
   ChevronLeft,
@@ -32,6 +32,7 @@ interface CalendarTimelineViewProps {
   vehicles: Vehicle[];
   drivers: Driver[];
   bookings: Booking[];
+  maintenance?: MaintenanceRecord[];
   currentTheme?: ColorTheme;
   onOpenBookingForVehicle: (vehicleId: string, date: string) => void;
   onAssignDriver: (bookingId: string, driverId: string) => { success: boolean; error?: string };
@@ -124,6 +125,7 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
   vehicles,
   drivers,
   bookings,
+  maintenance = [],
   currentTheme,
   onOpenBookingForVehicle,
   onAssignDriver,
@@ -892,6 +894,55 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
                           </div>
                         );
                       })}
+
+                      {/* Maintenance & Workshop Service Bars */}
+                      {(() => {
+                        const vehMaintenance = maintenance.filter(
+                          (m) =>
+                            m.vehicle_id === vehicle.id &&
+                            m.status !== 'Completed' &&
+                            datesOverlap(monthStartStr, monthEndStr, m.start_date, m.expected_completion_date || m.start_date)
+                        );
+                        return vehMaintenance.map((m) => {
+                          const mEnd = m.expected_completion_date || m.start_date;
+                          const effectiveStartStr = m.start_date < monthStartStr ? monthStartStr : m.start_date;
+                          const effectiveEndStr = mEnd > monthEndStr ? monthEndStr : mEnd;
+
+                          const startDayObj = daysList.find((d) => d.dateStr === effectiveStartStr);
+                          const endDayObj = daysList.find((d) => d.dateStr === effectiveEndStr);
+                          if (!startDayObj || !endDayObj) return null;
+
+                          const startIndex = startDayObj.dayIndex - 1;
+                          const endIndex = endDayObj.dayIndex - 1;
+                          const spanDays = Math.max(1, endIndex - startIndex + 1);
+                          const leftOffset = startIndex * colWidth + 4;
+                          const barWidth = Math.max(36, spanDays * colWidth - 8);
+
+                          return (
+                            <div
+                              key={m.id}
+                              style={{
+                                left: `${leftOffset}px`,
+                                width: `${barWidth}px`,
+                                top: '12px',
+                                height: '38px',
+                              }}
+                              className="absolute z-20 rounded-lg px-2.5 flex items-center justify-between text-xs font-bold cursor-pointer shadow-lg bg-gradient-to-r from-rose-700 via-amber-700 to-rose-700 text-white border border-amber-300/80 transition-transform hover:-translate-y-0.5 select-none"
+                              title={`Grounded in Garage: ${m.garage_name} (${m.service_type}) · ${m.start_date} to ${m.expected_completion_date} · ${formatRwf(m.cost_rwf)}`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                <Wrench className="w-3.5 h-3.5 text-amber-200 shrink-0" />
+                                <span className="text-[10px] uppercase font-mono tracking-wider truncate">
+                                  {m.garage_name.split(' ')[0]}: {m.service_type}
+                                </span>
+                              </div>
+                              <span className="text-[9px] bg-slate-950/80 text-amber-300 font-mono px-1.5 py-0.5 rounded shrink-0 ml-1">
+                                {formatRwf(m.cost_rwf)}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 );
@@ -916,6 +967,9 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
           </span>
           <span className="flex items-center gap-1 text-amber-300">
             <span className="w-2.5 h-2.5 rounded border border-amber-400"></span> 2h/4h Turnaround Prep
+          </span>
+          <span className="flex items-center gap-1 text-rose-400 font-semibold">
+            <Wrench className="w-3.5 h-3.5 text-rose-400" /> In Garage Service
           </span>
         </div>
 

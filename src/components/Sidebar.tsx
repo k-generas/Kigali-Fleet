@@ -239,6 +239,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const navItems = allNavItems.filter((item) => item.roles.includes(userRole));
+  const isSuperAdminMode = userRole === 'superadmin';
+  const primarySuperAdminIds = new Set(['super-admin', 'landing']);
+  const superAdminPrimaryNav = isSuperAdminMode
+    ? navItems.filter((i) => primarySuperAdminIds.has(i.id))
+    : navItems;
+  const superAdminTenantNav = isSuperAdminMode
+    ? navItems.filter((i) => !primarySuperAdminIds.has(i.id))
+    : [];
 
   const handleNavClick = (tabId: string) => {
     onSelectTab(tabId);
@@ -278,13 +286,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white truncate max-w-[130px]" title={currentCompany?.name || 'KigaliFleet'}>
-                  {currentCompany?.name ? currentCompany.name.split(' ')[0] + ' Fleet' : 'KigaliFleet'}
+                  {isSuperAdminMode
+                    ? 'Platform Root'
+                    : currentCompany?.name
+                    ? currentCompany.name.split(' ')[0] + ' Fleet'
+                    : 'KigaliFleet'}
                 </span>
-                <span
-                  className="w-2 h-2 rounded-full animate-pulse shrink-0"
-                  style={{ backgroundColor: activeThemeObj.hex }}
-                  title="System Online"
-                />
               </div>
               <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 capitalize truncate">
                 {currentUser ? `${currentUser.name.split(' ')[0]} · ${currentUser.role}` : 'Rwanda Dispatch SaaS'}
@@ -303,27 +310,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Quick Action Button */}
-        <div className="p-3 border-b border-slate-200/80 dark:border-slate-800/80">
-          <button
-            onClick={() => {
-              onOpenNewBooking();
-              if (isOpenMobile) onCloseMobile();
-            }}
-            className={`w-full py-2.5 px-3 rounded-lg font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] ${activeThemeObj.btnText}`}
-            style={{ backgroundColor: activeThemeObj.hex }}
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>New Booking</span>
-          </button>
-        </div>
+        {!isSuperAdminMode && (
+          <div className="p-3 border-b border-slate-200/80 dark:border-slate-800/80">
+            <button
+              onClick={() => {
+                onOpenNewBooking();
+                if (isOpenMobile) onCloseMobile();
+              }}
+              className={`w-full py-2.5 px-3 rounded-lg font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] ${activeThemeObj.btnText}`}
+              style={{ backgroundColor: activeThemeObj.hex }}
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>New Booking</span>
+            </button>
+          </div>
+        )}
 
         {/* Navigation Items - Scrollable */}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
           <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Fleet Operations
+            {isSuperAdminMode ? 'Platform Control' : 'Fleet Operations'}
           </div>
 
-          {navItems.map((item) => {
+          {superAdminPrimaryNav.map((item) => {
             const isActive = currentTab === item.id;
             const Icon = item.icon;
             return (
@@ -338,9 +347,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 style={
                   isActive
                     ? {
-                        backgroundColor: `${activeThemeObj.hex}1a`, // 10% opacity tint
+                        backgroundColor: `${activeThemeObj.hex}1a`,
                         color: activeThemeObj.hex,
-                        borderLeft: `4px solid ${activeThemeObj.hex}`,
                       }
                     : undefined
                 }
@@ -375,6 +383,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
+
+          {isSuperAdminMode && superAdminTenantNav.length > 0 && (
+            <details className="pt-3 group" open={currentTab !== 'super-admin' && currentTab !== 'landing'}>
+              <summary className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 cursor-pointer list-none flex items-center justify-between hover:text-slate-300">
+                <span>Tenant Workspace ({currentCompany?.name?.split(' ')[0] || 'Active'})</span>
+                <span className="text-[10px] font-mono">+</span>
+              </summary>
+              <div className="mt-1 space-y-1">
+                {superAdminTenantNav.map((item) => {
+                  const isActive = currentTab === item.id;
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavClick(item.id)}
+                      className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        isActive
+                          ? 'font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
+          )}
 
           {/* Quick link to Storefront */}
           <div className="pt-2">

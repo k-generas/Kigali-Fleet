@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Vehicle, Driver, Booking } from '../types';
-import { checkBookingCollision, calculateDays, formatRwf } from '../utils/collision';
-import { X, ShieldAlert, ShieldCheck, Plane, AlertCircle, Compass, Sparkles, Receipt } from 'lucide-react';
+import { Vehicle, Driver, Booking, MaintenanceRecord } from '../types';
+import { checkBookingCollision, calculateDays, formatRwf, datesOverlap } from '../utils/collision';
+import { X, ShieldAlert, ShieldCheck, Plane, AlertCircle, Compass, Sparkles, Receipt, Wrench } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
 interface NewBookingModalProps {
@@ -10,6 +10,7 @@ interface NewBookingModalProps {
   vehicles: Vehicle[];
   drivers: Driver[];
   existingBookings: Booking[];
+  maintenance?: MaintenanceRecord[];
   onSubmitBooking: (booking: Omit<Booking, 'id' | 'created_at' | 'dispatch_status'>) => {
     success: boolean;
     error?: string;
@@ -25,6 +26,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   vehicles,
   drivers,
   existingBookings,
+  maintenance = [],
   onSubmitBooking,
   initialVehicleId,
   initialDate,
@@ -89,12 +91,14 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const vatRwf = includeVat ? Math.round(subtotalRwf * 0.18) : 0;
   const totalRwf = subtotalRwf + vatRwf;
 
-  // Real-time Collision Guard Check
+  // Real-time Collision Guard Check (Active Bookings + Garage Maintenance Grounding)
   const collisionResult = checkBookingCollision(
     vehicleId,
     startDate,
     endDate,
-    existingBookings
+    existingBookings,
+    undefined,
+    maintenance
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -231,19 +235,38 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
           {/* Vehicle Selection */}
           <div>
-            <label className="block text-slate-300 font-semibold mb-1">
-              Select Fleet Vehicle ({vehicles.length} in fleet)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-slate-300 font-semibold text-xs">
+                Select Fleet Vehicle ({vehicles.length} in fleet)
+              </label>
+              {selectedVehicle?.status === 'Maintenance' && (
+                <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-950/60 border border-amber-800/80 px-2 py-0.5 rounded">
+                  <Wrench className="w-3 h-3" />
+                  <span>Currently in Garage</span>
+                </span>
+              )}
+            </div>
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white outline-none focus:border-amber-400 text-xs font-medium"
             >
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.model_name} [{v.plate_number}] — {formatRwf(v.daily_rate_rwf)}/day ({v.category})
-                </option>
-              ))}
+              {vehicles.map((v) => {
+                const isGrounded =
+                  v.status === 'Maintenance' ||
+                  maintenance.some(
+                    (m) =>
+                      m.vehicle_id === v.id &&
+                      m.status !== 'Completed' &&
+                      datesOverlap(startDate, endDate, m.start_date, m.expected_completion_date || m.start_date)
+                  );
+                return (
+                  <option key={v.id} value={v.id}>
+                    {v.model_name} [{v.plate_number}] — {formatRwf(v.daily_rate_rwf)}/day ({v.category})
+                    {isGrounded ? ' [🔧 IN GARAGE]' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

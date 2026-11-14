@@ -1,0 +1,1283 @@
+Now we move to the **KigaliFleet Superadmin — the control center for the entire SaaS platform.**
+
+This is different from the company dashboard.
+
+- **Company owner:** Manages one transport business.
+- **Company employee:** Performs assigned business operations.
+- **Superadmin:** Manages the entire KigaliFleet platform, all registered businesses, platform users, subscriptions, payments, system configuration, security, support and platform performance.
+
+The Superadmin should be able to understand what is happening across KigaliFleet, investigate problems, manage platform access and protect the system.
+
+# KigaliFleet — Superadmin Product Requirements Document
+
+Platform administration · Version 1.0 · 9 November 2026
+
+(Target product specification)
+
+**Important:** This is the proposed target specification. It does not mean the current Superadmin already has these features. We must inspect the existing implementation before deciding what to change.
+
+\# KigaliFleet — Superadmin Product Requirements Document\
+\
+\## 1. Product definition\
+\
+The Superadmin is the highest-level administrative interface for KigaliFleet.\
+\
+It is used by the platform owner and authorized platform administrators to manage the SaaS business and its infrastructure.\
+\
+The Superadmin should provide control over:\
+\
+\- Registered companies.\
+\- Platform users.\
+\- Company subscriptions.\
+\- Platform revenue.\
+\- Payments and billing.\
+\- Platform-wide bookings and activity.\
+\- Customer and company support.\
+\- Platform configuration.\
+\- Security and access.\
+\- Notifications.\
+\- System health.\
+\- Integrations.\
+\- Reports and analytics.\
+\- Platform policies.\
+\- Administrative activity.\
+\
+The Superadmin must not be treated as an ordinary company dashboard with more menu items.\
+\
+It is the control center for the entire SaaS platform.\
+\
+\## 2. Superadmin users and roles\
+\
+Not everyone working for KigaliFleet should have unrestricted access.\
+\
+\### A. Platform owner\
+\
+The highest level of platform control.\
+\
+Can:\
+\- View platform-wide information.\
+\- Manage platform administrators.\
+\- Manage companies.\
+\- Manage subscriptions and plans.\
+\- View platform financial information.\
+\- Configure platform settings.\
+\- Manage integrations.\
+\- Review security and audit logs.\
+\- Manage platform policies.\
+\- Access all authorized administration functions.\
+\
+\### B. Platform administrator\
+\
+Responsible for daily platform administration.\
+\
+Can:\
+\- Review companies.\
+\- Manage platform users.\
+\- Handle approved account actions.\
+\- Monitor platform activity.\
+\- Handle support escalations.\
+\- Review reports.\
+\
+Access must be restricted by assigned permissions.\
+\
+\### C. Finance administrator\
+\
+Responsible for platform financial operations.\
+\
+Can:\
+\- View subscription payments.\
+\- Track invoices.\
+\- Monitor outstanding balances.\
+\- Manage refunds according to authorization.\
+\- Review platform revenue.\
+\- Export financial reports.\
+\
+\### D. Customer support administrator\
+\
+Responsible for company and customer support.\
+\
+Can:\
+\- View support tickets.\
+\- Communicate with users.\
+\- Investigate reported problems.\
+\- Escalate technical issues.\
+\- Review permitted company account information.\
+\
+Should not automatically access confidential financial or security information.\
+\
+\### E. Technical administrator\
+\
+Responsible for technical operations.\
+\
+Can:\
+\- Monitor application health.\
+\- Review system errors.\
+\- Monitor integrations.\
+\- Investigate failed background jobs.\
+\- Review deployment and service status, where integrated.\
+\- Manage approved technical configuration.\
+\
+\### F. Security administrator\
+\
+Responsible for security oversight.\
+\
+Can:\
+\- Review suspicious activity.\
+\- Investigate login events.\
+\- Review access violations.\
+\- Manage security incidents.\
+\- Disable compromised accounts through controlled procedures.\
+\
+\### Role principle\
+\
+Every administrative role must have explicitly assigned permissions.\
+\
+The platform owner should be able to define who can:\
+\
+\- View.\
+\- Create.\
+\- Edit.\
+\- Approve.\
+\- Suspend.\
+\- Delete.\
+\- Export.\
+\- Configure.\
+\
+Sensitive actions should require additional authorization and an audit record.\
+\
+\## 3. Superadmin dashboard structure\
+\
+The proposed navigation is:\
+\
+1\. Overview\
+2\. Companies\
+3\. Users\
+4\. Subscriptions\
+5\. Plans and pricing\
+6\. Payments\
+7\. Platform revenue\
+8\. Bookings overview\
+9\. Fleet overview\
+10\. Support center\
+11\. Notifications\
+12\. Platform analytics\
+13\. Integrations\
+14\. System health\
+15\. Security center\
+16\. Audit logs\
+17\. Content and policies\
+18\. Platform settings\
+19\. Administrators and permissions\
+20\. Subscription billing and configuration\
+\
+The navigation should adapt to the administrator's permissions.\
+\
+\## 4. Superadmin overview dashboard\
+\
+This is the first page after an authorized administrator logs in.\
+\
+It should answer:\
+\
+\- How many companies are registered?\
+\- How many are active?\
+\- How many are paying?\
+\- How many subscriptions are expired?\
+\- How many users are active?\
+\- How much subscription revenue has been collected?\
+\- Are payments failing?\
+\- Are companies experiencing problems?\
+\- Is the platform healthy?\
+\- What requires immediate attention?\
+\
+\### Main statistics\
+\
+\#### Company statistics\
+\- Total registered companies.\
+\- Active companies.\
+\- Pending companies.\
+\- Suspended companies.\
+\- Trial companies.\
+\- Paid companies.\
+\- Inactive companies.\
+\
+\#### User statistics\
+\- Total platform users.\
+\- Company owners.\
+\- Company employees.\
+\- Platform administrators.\
+\- Recently registered users.\
+\- Suspended users.\
+\
+\#### Subscription statistics\
+\- Active subscriptions.\
+\- Trial subscriptions.\
+\- Expired subscriptions.\
+\- Cancelled subscriptions.\
+\- Subscriptions approaching renewal.\
+\- Companies with overdue payments.\
+\
+\#### Financial statistics\
+\- Total subscription revenue collected.\
+\- Revenue this month.\
+\- Revenue this year.\
+\- Outstanding subscription payments.\
+\- Successful payments.\
+\- Failed payments.\
+\- Refunds.\
+\
+These figures must come from verified records and have clear definitions.\
+\
+\### Dashboard charts\
+\
+\- Company registration trends.\
+\- Subscription growth.\
+\- Monthly recurring revenue.\
+\- Payment success and failure.\
+\- Subscription plan distribution.\
+\- Company activity.\
+\- User registration trends.\
+\
+\### Recent activity\
+\
+Show:\
+\- New company registrations.\
+\- New subscriptions.\
+\- Subscription renewals.\
+\- Payment events.\
+\- Company suspensions.\
+\- Support escalations.\
+\- Security alerts.\
+\- Important administrative actions.\
+\
+\## 5. Company management\
+\
+This is one of the most important Superadmin modules.\
+\
+The platform owner must be able to manage every business registered on KigaliFleet.\
+\
+\### Company listing\
+\
+Each company record should display:\
+\
+\- Company name.\
+\- Business email.\
+\- Phone number.\
+\- Registration date.\
+\- Account status.\
+\- Subscription plan.\
+\- Subscription expiry.\
+\- Number of employees.\
+\- Number of vehicles.\
+\- Number of bookings.\
+\- Last activity.\
+\
+\### Company statuses\
+\
+\- Pending.\
+\- Active.\
+\- Trial.\
+\- Suspended.\
+\- Restricted.\
+\- Inactive.\
+\- Closed.\
+\
+The platform must define what each status means and which functions are allowed.\
+\
+\### Company details page\
+\
+Opening a company should show several sections.\
+\
+\#### A. Overview\
+\- Business information.\
+\- Account status.\
+\- Registration date.\
+\- Subscription.\
+\- Last activity.\
+\- Assigned platform support contact.\
+\
+\#### B. Business profile\
+\- Registered business name.\
+\- Trading name.\
+\- Email.\
+\- Phone.\
+\- Address.\
+\- Country.\
+\- Business category.\
+\- Branches.\
+\
+\#### C. Company users\
+\- Owner.\
+\- Managers.\
+\- Employees.\
+\- Account status.\
+\- Assigned roles.\
+\
+\#### D. Fleet\
+\- Total vehicles.\
+\- Available vehicles.\
+\- Rented vehicles.\
+\- Vehicles under maintenance.\
+\
+\#### E. Bookings\
+\- Total bookings.\
+\- Pending bookings.\
+\- Confirmed bookings.\
+\- Cancelled bookings.\
+\
+\#### F. Subscription\
+\- Current plan.\
+\- Start date.\
+\- Renewal date.\
+\- Payment status.\
+\- Subscription history.\
+\
+\#### G. Platform activity\
+\- Login history.\
+\- Important account changes.\
+\- Subscription changes.\
+\- Support interactions.\
+\
+\### Company actions\
+\
+Authorized administrators should be able to:\
+\
+\- View company details.\
+\- Approve company registration, if approval is required.\
+\- Change account status.\
+\- Assign or change subscription plans.\
+\- Extend a trial or subscription with a recorded reason.\
+\- Review company activity.\
+\- Contact company owners.\
+\- Handle reported issues.\
+\- Initiate account closure according to policy.\
+\
+Suspension must not silently delete company records.\
+\
+\## 6. Platform user management\
+\
+The Superadmin needs a global view of users across all companies.\
+\
+\### User listing\
+\
+Show:\
+\- Full name.\
+\- Email.\
+\- Phone.\
+\- User type.\
+\- Associated company.\
+\- Assigned role.\
+\- Registration date.\
+\- Last login.\
+\- Account status.\
+\
+\### User types\
+\
+\- Company owner.\
+\- Company manager.\
+\- Company employee.\
+\- Driver.\
+\- Customer.\
+\- Platform administrator.\
+\
+\### User details\
+\
+An administrator should be able to view:\
+\- Profile information.\
+\- Associated companies.\
+\- Assigned permissions.\
+\- Account activity.\
+\- Login history.\
+\- Account status.\
+\- Relevant support history.\
+\
+\### User actions\
+\
+\- Search user.\
+\- View user.\
+\- Suspend account.\
+\- Reactivate account.\
+\- Initiate account recovery.\
+\- Revoke active sessions.\
+\- Review account activity.\
+\
+Account deletion and personal data deletion must follow defined privacy and legal procedures.\
+\
+The Superadmin should not casually change user passwords or access private user credentials.\
+\
+\## 7. Subscription management\
+\
+KigaliFleet is a SaaS business. Subscription management must be a first-class module.\
+\
+\### Subscription listing\
+\
+Display:\
+\- Company.\
+\- Current plan.\
+\- Subscription status.\
+\- Start date.\
+\- Renewal date.\
+\- Billing cycle.\
+\- Amount.\
+\- Payment status.\
+\
+\### Subscription statuses\
+\
+\- Trial.\
+\- Active.\
+\- Past due.\
+\- Suspended.\
+\- Cancelled.\
+\- Expired.\
+\
+\### Subscription details\
+\
+Show:\
+\- Company information.\
+\- Plan.\
+\- Price.\
+\- Billing period.\
+\- Start date.\
+\- Renewal date.\
+\- Payment records.\
+\- Previous plan changes.\
+\- Subscription history.\
+\
+\### Administrative actions\
+\
+\- Assign plan.\
+\- Upgrade plan.\
+\- Downgrade plan.\
+\- Extend subscription.\
+\- Grant approved trial.\
+\- Suspend subscription.\
+\- Cancel subscription.\
+\- Reactivate subscription.\
+\- Record an adjustment with reason.\
+\
+Every manual subscription change must be recorded.\
+\
+\## 8. Plans and pricing management\
+\
+The Superadmin should control the plans KigaliFleet sells.\
+\
+\### Plan configuration\
+\
+Each plan should support:\
+\
+\- Plan name.\
+\- Description.\
+\- Price.\
+\- Billing period.\
+\- Currency.\
+\- Trial duration.\
+\- Feature access.\
+\- Usage limits.\
+\- Display order.\
+\- Public visibility.\
+\- Active or inactive status.\
+\
+\### Possible plan structure\
+\
+Examples only; actual pricing must be validated with customers.\
+\
+\#### Free / Trial\
+\- Limited platform access.\
+\- Limited vehicles or bookings.\
+\- Basic storefront.\
+\- Limited reporting.\
+\
+\#### Starter\
+\- Core fleet management.\
+\- Booking management.\
+\- Customer records.\
+\- Basic storefront.\
+\
+\#### Professional\
+\- More operational features.\
+\- Employee management.\
+\- Driver operations.\
+\- Advanced reporting.\
+\- Additional business controls.\
+\
+\#### Enterprise\
+\- Multi-branch support.\
+\- Advanced permissions.\
+\- Advanced reporting.\
+\- Corporate operations.\
+\- Custom configurations.\
+\
+\### Feature limits\
+\
+The platform should support configurable limits such as:\
+\
+\- Number of vehicles.\
+\- Number of employees.\
+\- Number of branches.\
+\- Monthly bookings.\
+\- Storage.\
+\- Enabled integrations.\
+\
+Do not hardcode plan limits across multiple frontend pages. Use centrally managed plan configuration and enforce entitlements on the backend.\
+\
+\## 9. Payments management\
+\
+The Superadmin needs a global payment administration interface.\
+\
+\### Payment listing\
+\
+Display:\
+\- Transaction reference.\
+\- Company.\
+\- Subscription.\
+\- Amount.\
+\- Currency.\
+\- Payment method.\
+\- Provider.\
+\- Transaction date.\
+\- Status.\
+\
+\### Payment statuses\
+\
+\- Pending.\
+\- Successful.\
+\- Failed.\
+\- Cancelled.\
+\- Refunded.\
+\- Partially refunded.\
+\
+\### Payment details\
+\
+Show:\
+\- Internal payment reference.\
+\- Provider transaction reference.\
+\- Company.\
+\- Related subscription.\
+\- Amount.\
+\- Currency.\
+\- Provider response status.\
+\- Payment timestamps.\
+\- Refund information.\
+\- Related audit events.\
+\
+\### Administrative actions\
+\
+\- View transaction.\
+\- Investigate failed payment.\
+\- Review payment provider response.\
+\- Initiate authorized refund.\
+\- Record an approved manual adjustment.\
+\- Export financial records.\
+\
+Do not let administrators mark an external payment as successful simply by editing a status field. Verification must follow trusted provider evidence or a documented manual reconciliation procedure.\
+\
+\## 10. Platform revenue and financial management\
+\
+The platform owner needs to understand KigaliFleet's own financial performance.\
+\
+This is different from the rental companies' revenue.\
+\
+\### Financial metrics\
+\
+\- Subscription revenue collected.\
+\- Monthly recurring revenue.\
+\- Annual recurring revenue.\
+\- New subscription revenue.\
+\- Renewals.\
+\- Refunds.\
+\- Outstanding invoices.\
+\- Failed payments.\
+\- Churn.\
+\- Average revenue per paying company.\
+\
+\### Revenue breakdown\
+\
+\- Revenue by plan.\
+\- Revenue by month.\
+\- Revenue by country.\
+\- Revenue by payment method.\
+\- Revenue by customer segment.\
+\
+\### Financial reports\
+\
+\- Daily payment report.\
+\- Monthly revenue report.\
+\- Annual revenue report.\
+\- Refund report.\
+\- Outstanding payment report.\
+\- Subscription renewal report.\
+\- Churn report.\
+\
+\### Financial definitions\
+\
+The system must distinguish:\
+\
+\- Amount invoiced.\
+\- Amount collected.\
+\- Amount outstanding.\
+\- Amount refunded.\
+\- Recognized revenue, where accounting rules require it.\
+\
+A payment attempt is not revenue. A failed transaction is not revenue. A subscription invoice is not proof of collection.\
+\
+\## 11. Platform bookings overview\
+\
+The Superadmin should have a platform-wide view of booking activity without taking over the daily work of companies.\
+\
+\### Booking statistics\
+\
+\- Total bookings.\
+\- Bookings by company.\
+\- Bookings by date.\
+\- Confirmed bookings.\
+\- Cancelled bookings.\
+\- Pending requests.\
+\- Booking sources.\
+\
+\### Booking listing\
+\
+Show:\
+\- Booking reference.\
+\- Company.\
+\- Booking date.\
+\- Service type.\
+\- Booking status.\
+\- Payment status.\
+\- Vehicle, where appropriate.\
+\
+\### Booking details\
+\
+Authorized administrators may need to investigate disputes, system errors or support requests.\
+\
+Access should be restricted and logged.\
+\
+The Superadmin should not routinely edit company bookings or interfere with their operational decisions.\
+\
+\## 12. Fleet overview\
+\
+The platform should provide high-level fleet statistics.\
+\
+\### Metrics\
+\
+\- Total registered vehicles.\
+\- Active vehicles.\
+\- Vehicles rented.\
+\- Vehicles available.\
+\- Vehicles under maintenance.\
+\- Vehicle distribution by company.\
+\- Vehicle categories.\
+\
+\### Fleet actions\
+\
+Primarily view and investigate.\
+\
+Any change to a company's vehicle records should require explicit authorization, a documented reason and an audit record.\
+\
+\## 13. Support center\
+\
+This is the platform's customer-service management module.\
+\
+KigaliFleet has two major support audiences:\
+\
+1\. Companies using KigaliFleet.\
+2\. Customers booking through company storefronts.\
+\
+\### Support ticket listing\
+\
+Show:\
+\- Ticket reference.\
+\- Requester.\
+\- Requester type.\
+\- Company.\
+\- Issue category.\
+\- Priority.\
+\- Status.\
+\- Assigned support administrator.\
+\- Created date.\
+\- Last response.\
+\
+\### Ticket categories\
+\
+\- Account access.\
+\- Registration.\
+\- Subscription.\
+\- Payment.\
+\- Storefront.\
+\- Booking.\
+\- Vehicle management.\
+\- Technical issue.\
+\- Security.\
+\- Feature request.\
+\- General inquiry.\
+\
+\### Ticket statuses\
+\
+\- New.\
+\- Open.\
+\- In progress.\
+\- Waiting for user.\
+\- Escalated.\
+\- Resolved.\
+\- Closed.\
+\
+\### Support actions\
+\
+\- Open ticket.\
+\- Respond.\
+\- Assign administrator.\
+\- Change priority.\
+\- Add internal notes.\
+\- Escalate.\
+\- Resolve.\
+\- Reopen.\
+\
+Internal notes must never appear to the customer.\
+\
+\## 14. Notifications management\
+\
+The Superadmin should manage platform-wide communications.\
+\
+\### Notification channels\
+\
+\- Email.\
+\- SMS.\
+\- WhatsApp, where integrated.\
+\- In-app notifications.\
+\
+\### Notification categories\
+\
+\- Account registration.\
+\- Account verification.\
+\- Subscription activation.\
+\- Payment confirmation.\
+\- Subscription renewal.\
+\- Subscription expiry.\
+\- Security alerts.\
+\- Platform announcements.\
+\- Maintenance notifications.\
+\
+\### Notification templates\
+\
+Administrators should be able to manage approved templates with:\
+\
+\- Template name.\
+\- Event trigger.\
+\- Channel.\
+\- Language.\
+\- Message content.\
+\- Active status.\
+\
+Templates should use validated variables such as company name, plan name, renewal date and transaction reference.\
+\
+\### Delivery tracking\
+\
+Record:\
+\- Recipient.\
+\- Channel.\
+\- Provider.\
+\- Message type.\
+\- Delivery status.\
+\- Failure reason.\
+\- Retry status.\
+\- Timestamp.\
+\
+Do not treat provider acceptance as confirmed delivery.\
+\
+\## 15. Platform analytics\
+\
+This module helps the owner understand whether KigaliFleet is growing and whether customers are using it.\
+\
+\### Growth analytics\
+\
+\- New companies.\
+\- Paying companies.\
+\- New users.\
+\- Active companies.\
+\- Trial-to-paid conversion.\
+\- Subscription cancellations.\
+\- Monthly churn.\
+\
+\### Engagement analytics\
+\
+\- Daily active users.\
+\- Weekly active users.\
+\- Monthly active users.\
+\- Company login activity.\
+\- Feature usage.\
+\- Booking activity.\
+\- Storefront usage.\
+\
+\### Product analytics\
+\
+\- Most-used modules.\
+\- Least-used modules.\
+\- Booking conversion.\
+\- Company onboarding completion.\
+\- Subscription plan distribution.\
+\- Support ticket volume.\
+\
+\### Country and market analytics\
+\
+\- Companies by country.\
+\- Companies by city.\
+\- Users by country.\
+\- Subscription revenue by country.\
+\
+Only collect the information needed for legitimate product analytics. Avoid unnecessary tracking of individual customers.\
+\
+\## 16. Integrations management\
+\
+KigaliFleet may depend on external providers.\
+\
+The Superadmin should manage the platform's integrations.\
+\
+\### Potential integrations\
+\
+\- Payment providers.\
+\- Email delivery.\
+\- SMS gateways.\
+\- WhatsApp Business.\
+\- Maps and location services.\
+\- Flight information providers.\
+\- EBM integration.\
+\- Storage providers.\
+\- Analytics services.\
+\
+\### Integration details\
+\
+Each integration should display:\
+\
+\- Provider name.\
+\- Purpose.\
+\- Connection status.\
+\- Configuration status.\
+\- Last successful operation.\
+\- Recent errors.\
+\- Environment.\
+\- Enabled or disabled status.\
+\
+\### Integration actions\
+\
+\- Configure.\
+\- Test connection.\
+\- Enable.\
+\- Disable.\
+\- Review logs.\
+\- Rotate credentials through a secure process.\
+\
+Never display complete secret API keys in the browser or expose them to ordinary administrators.\
+\
+\## 17. System health and monitoring\
+\
+The Superadmin should know when the platform is experiencing technical problems.\
+\
+\### System health dashboard\
+\
+Monitor:\
+\
+\- Frontend availability.\
+\- Backend API availability.\
+\- Database connectivity.\
+\- Authentication service.\
+\- File storage.\
+\- Payment integrations.\
+\- Notification providers.\
+\- Background jobs.\
+\- Error rates.\
+\- Response times.\
+\
+\### Error monitoring\
+\
+Display:\
+\- Error identifier.\
+\- Affected service.\
+\- Time.\
+\- Severity.\
+\- Occurrence count.\
+\- Related request or trace identifier.\
+\- Resolution status.\
+\
+Avoid exposing passwords, payment credentials, private documents or unnecessary personal data in logs.\
+\
+\### Background jobs\
+\
+Monitor tasks such as:\
+\
+\- Subscription renewals.\
+\- Notification delivery.\
+\- Booking reminders.\
+\- Payment verification.\
+\- Expiration checks.\
+\- Scheduled reports.\
+\
+Failed jobs should be visible and safely retryable.\
+\
+\## 18. Security center\
+\
+Security should have its own dedicated module.\
+\
+\### Security monitoring\
+\
+\- Failed login attempts.\
+\- Suspicious login activity.\
+\- Unusual account access.\
+\- Repeated verification failures.\
+\- Permission violations.\
+\- Administrative actions.\
+\- API abuse.\
+\- Unusual payment activity.\
+\
+\### Security actions\
+\
+\- Revoke sessions.\
+\- Suspend compromised accounts.\
+\- Require account recovery.\
+\- Investigate security alerts.\
+\- Review administrator activity.\
+\- Escalate incidents.\
+\
+\### Security incidents\
+\
+Each incident should record:\
+\
+\- Incident reference.\
+\- Type.\
+\- Severity.\
+\- Affected accounts or services.\
+\- Detection time.\
+\- Assigned administrator.\
+\- Actions taken.\
+\- Resolution.\
+\- Audit history.\
+\
+Sensitive security actions should require strong authentication and additional authorization.\
+\
+\## 19. Audit logs\
+\
+The Superadmin must have a complete history of important platform actions.\
+\
+\### Record events such as\
+\
+\- Company registration approval.\
+\- Company suspension.\
+\- User suspension.\
+\- Subscription changes.\
+\- Plan changes.\
+\- Refund actions.\
+\- Permission changes.\
+\- Administrator login.\
+\- Integration configuration changes.\
+\- Sensitive data access.\
+\- Platform setting changes.\
+\
+\### Audit record fields\
+\
+\- Actor.\
+\- Actor role.\
+\- Action.\
+\- Affected entity.\
+\- Timestamp.\
+\- Reason.\
+\- Relevant before-and-after values.\
+\- Request or correlation identifier.\
+\
+Audit logs should be protected from ordinary editing and deletion.\
+\
+\## 20. Platform content and policies\
+\
+The Superadmin should control information displayed across KigaliFleet.\
+\
+\### Content management\
+\
+\- Homepage announcements.\
+\- Platform banners.\
+\- Help center content.\
+\- FAQ.\
+\- Tutorials.\
+\- Terms of service.\
+\- Privacy policy.\
+\- Subscription policy.\
+\- Acceptable use policy.\
+\- Maintenance announcements.\
+\
+\### Content controls\
+\
+\- Draft.\
+\- Published.\
+\- Scheduled.\
+\- Archived.\
+\
+Policy updates should have versions and effective dates.\
+\
+\## 21. Platform settings\
+\
+The platform owner needs centralized configuration.\
+\
+\### General settings\
+\
+\- Platform name.\
+\- Logo.\
+\- Brand colors.\
+\- Support email.\
+\- Support phone.\
+\- Default language.\
+\- Supported languages.\
+\- Default currency.\
+\- Supported currencies.\
+\- Default timezone.\
+\
+\### Registration settings\
+\
+\- Open or restricted registration.\
+\- Email verification requirements.\
+\- Phone verification requirements.\
+\- Company approval requirements.\
+\- Trial eligibility.\
+\
+\### Subscription settings\
+\
+\- Default plan.\
+\- Trial period.\
+\- Renewal rules.\
+\- Grace period.\
+\- Suspension policy.\
+\- Cancellation policy.\
+\
+\### Operational settings\
+\
+\- Notification defaults.\
+\- File upload limits.\
+\- Booking limits.\
+\- Platform-wide maintenance mode.\
+\
+Changes should be validated, logged and reversible where appropriate.\
+\
+\## 22. Administrator management\
+\
+The platform owner should be able to manage internal KigaliFleet administrators.\
+\
+\### Administrator records\
+\
+\- Name.\
+\- Email.\
+\- Role.\
+\- Permissions.\
+\- Account status.\
+\- Last login.\
+\- Creation date.\
+\
+\### Actions\
+\
+\- Invite administrator.\
+\- Assign role.\
+\- Change permissions.\
+\- Suspend administrator.\
+\- Reactivate administrator.\
+\- Revoke sessions.\
+\- Review activity.\
+\
+A platform administrator should not be able to grant themselves owner-level access.\
+\
+\## 23. Data management and privacy\
+\
+The platform handles information belonging to many separate businesses and their customers.\
+\
+Requirements:\
+\
+\- Strict company tenant isolation.\
+\- Strong authentication.\
+\- Role-based authorization.\
+\- Secure document storage.\
+\- Controlled data export.\
+\- Defined retention policies.\
+\- Account deletion procedures.\
+\- Backup and disaster recovery.\
+\- Secure audit logging.\
+\- Access monitoring.\
+\- Data breach response procedures.\
+\
+The Superadmin must have a legitimate reason and appropriate authorization before accessing sensitive company or customer information.\
+\
+\## 24. Platform-wide edge cases\
+\
+The system must handle:\
+\
+\- Company registration abuse.\
+\- Duplicate company registrations.\
+\- Owner loses account access.\
+\- Administrator leaves the organization.\
+\- Subscription payment fails.\
+\- Payment provider reports a delayed transaction.\
+\- Refund fails.\
+\- Company disputes suspension.\
+\- Company requests account closure.\
+\- Integration becomes unavailable.\
+\- Database service becomes unavailable.\
+\- Background job fails.\
+\- Notification provider stops delivering messages.\
+\- Unauthorized administrator action.\
+\- Platform outage.\
+\- Accidental configuration change.\
+\- Data restoration after an incident.\
+\
+\## 25. Recommended release plan\
+\
+\### Release 1 — Platform control\
+\
+\- Secure Superadmin login.\
+\- Administrator roles and permissions.\
+\- Overview dashboard.\
+\- Company management.\
+\- User management.\
+\- Subscription management.\
+\- Plan management.\
+\- Payment records.\
+\- Basic platform analytics.\
+\- Support center.\
+\- Audit logs.\
+\- Platform settings.\
+\
+\### Release 2 — Financial and operational intelligence\
+\
+\- Advanced financial reporting.\
+\- Automated subscription renewals.\
+\- Payment reconciliation.\
+\- Notification templates.\
+\- Integration management.\
+\- System health dashboard.\
+\- Advanced company activity reports.\
+\- Security monitoring.\
+\- Data export controls.\
+\
+\### Release 3 — Advanced SaaS management\
+\
+\- Advanced subscription automation.\
+\- Multi-country configuration.\
+\- Advanced fraud and abuse monitoring.\
+\- Advanced product analytics.\
+\- Automated customer onboarding.\
+\- Advanced support workflows.\
+\- Enterprise administration.\
+\- Advanced infrastructure observability.\
+\
+\## 26. Acceptance criteria\
+\
+The Superadmin is not ready for launch until:\
+\
+\- Only authorized platform administrators can access it.\
+\- Administrative roles have enforceable permissions.\
+\- Company records are isolated.\
+\- The platform owner can view registered companies.\
+\- Company status changes work correctly.\
+\- Users can be managed safely.\
+\- Plans and subscriptions can be configured.\
+\- Payments are recorded accurately.\
+\- Refund actions are controlled and audited.\
+\- Platform financial figures use correct definitions.\
+\- Support tickets can be managed.\
+\- Important actions create audit records.\
+\- Sensitive credentials are protected.\
+\- Platform errors can be investigated.\
+\- Platform settings are centrally managed.\
+\- The interface works on desktop and mobile.\
+\
+\## 27. Final product principle\
+\
+The Superadmin is the control center for the SaaS company.\
+\
+It must answer four questions:\
+\
+1\. \*\*Growth:\*\* Is KigaliFleet acquiring and retaining businesses?\
+2\. \*\*Money:\*\* Is the platform collecting subscription revenue correctly?\
+3\. \*\*Operations:\*\* Are companies and users able to use the platform successfully?\
+4\. \*\*Security:\*\* Is the platform protected and properly governed?\
+\
+The Superadmin should give the platform owner visibility and control without creating unnecessary access to private company data.\
+\
+The quality of the Superadmin will determine how effectively KigaliFleet can grow from a small platform into a multi-company SaaS business.\
+
+---
+
+## 2. How the Superadmin connects to the other parts of KigaliFleet
+
+The platform has three main administrative layers:
+
+**SUPERADMIN**
+
+Controls the entire SaaS platform
+
+Companies · Users · Plans · Payments · Security · Support
+
+**COMPANY DASHBOARD**
+
+Controls each individual transport business
+
+Fleet · Employees · Bookings · Drivers · Finance · Maintenance
+
+**PUBLIC STOREFRONT**
+
+Serves each company's customers
+
+Vehicles · Services · Booking · Payment · Confirmation · Support
+
+For example:
+
+- A company publishes a new vehicle.
+- The storefront displays it.
+- A customer books it.
+- The company receives the booking.
+- The Superadmin can see platform-wide booking activity.
+- The Superadmin should not need to interfere with the company's booking unless an authorized investigation requires it.
+
+This separation is fundamental.
+
+## 3. Important decisions we must not overlook
+
+| Decision                                            | Recommended approach                            |
+| --------------------------------------------------- | ----------------------------------------------- |
+| Can Superadmin access every company?                | Controlled access, with sensitive access logged |
+| Can Superadmin change company bookings?             | Only through authorized exceptional procedures  |
+| Can Superadmin suspend a company?                   | Yes, with reason and audit trail                |
+| Can company owners see platform financial data?     | No                                              |
+| Can company admins manage platform subscriptions?   | Only their own subscription                     |
+| Can support staff see payment secrets?              | No                                              |
+| Can administrators delete audit records?            | No ordinary administrator should                |
+| Can an expired subscription delete business data?   | No                                              |
+| Can a company access another company's information? | Never                                           |
+| Can platform owners create free subscriptions?      | Yes, with recorded reason and authorization     |
+
+## 4. My strongest recommendations
+
+Three areas deserve special attention.
+
+**1. Platform financial intelligence**
+
+Do not confuse KigaliFleet's revenue with the revenue generated by rental companies. These are different financial systems.
+
+**2. Administrator accountability**
+
+Every sensitive action needs an actor, timestamp and reason. Without this, the Superadmin becomes a security risk.
+
+**3. Tenant isolation**
+
+A Superadmin can have authorized cross-company visibility, but ordinary company users must never cross tenant boundaries. This needs backend enforcement, not just hidden frontend menus.
+
+---
+
+## 5. What comes next: the actual Superadmin audit
+
+We now have specifications for all three sides:
+
+- Public storefront.
+- Company dashboard.
+- Superadmin.
+
+The next step is to inspect the existing Superadmin and classify every page and feature:
+
+- **KEEP:** Works correctly and should be preserved.
+- **FIX:** Exists but is broken or incomplete.
+- **BUILD:** Does not exist and is required.
+- **REMOVE:** Unnecessary, duplicated or unsafe.
+
+The goal is not to make the dashboard bigger. It is to make KigaliFleet controllable, secure and commercially viable.
+
+Reload response

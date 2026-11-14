@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Vehicle, VehicleCategory, VehicleStatus, Booking, Driver } from '../types';
+import { Vehicle, VehicleCategory, VehicleStatus, Booking, Driver, ExpenseRecord, MaintenanceRecord } from '../types';
 import { formatRwf } from '../utils/collision';
 import { getCategoryBadge } from './CalendarTimelineView';
 import {
@@ -28,6 +28,7 @@ import {
   FileText,
   Activity,
   Layers,
+  TrendingUp,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -35,6 +36,8 @@ interface VehiclesViewProps {
   vehicles: Vehicle[];
   bookings: Booking[];
   drivers?: Driver[];
+  expenses?: ExpenseRecord[];
+  maintenance?: MaintenanceRecord[];
   currentTheme?: ColorTheme;
   onAddVehicle: (v: Omit<Vehicle, 'id'>) => void;
   onUpdateStatus: (id: string, status: VehicleStatus) => void;
@@ -87,6 +90,8 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   vehicles,
   bookings,
   drivers = [],
+  expenses = [],
+  maintenance = [],
   currentTheme,
   onAddVehicle,
   onUpdateStatus,
@@ -856,6 +861,63 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* Unit Financial Performance & Profitability Ledger (PRD Section 14 & 17) */}
+            {(() => {
+              const vBookings = bookings.filter((b) => b.vehicle_id === selectedVehicleDetails.id && b.status !== 'Cancelled');
+              const grossRevenue = vBookings.reduce((sum, b) => sum + (b.total_rwf || 0), 0);
+              const vMaintenance = maintenance.filter((m) => m.vehicle_id === selectedVehicleDetails.id);
+              const totalMaintCost = vMaintenance.reduce((sum, m) => sum + (m.cost_rwf || 0), 0);
+              const vExpenses = expenses.filter((e) => e.vehicle_id === selectedVehicleDetails.id && e.status !== 'Rejected');
+              const totalFuelExpenses = vExpenses.reduce((sum, e) => sum + (e.amount_rwf || 0), 0);
+              const totalRecordedCosts = totalMaintCost + totalFuelExpenses;
+              const netOperatingContribution = grossRevenue - totalRecordedCosts;
+              const marginPct = grossRevenue > 0 ? Math.round((netOperatingContribution / grossRevenue) * 100) : 0;
+
+              return (
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/60 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      <span>Asset Financial Performance & Net Contribution</span>
+                    </h4>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold">
+                      {vBookings.length} Bookings · Margin: {marginPct}%
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-slate-400 font-semibold block">Gross Revenue</span>
+                      <span className="text-xs font-bold font-mono text-emerald-500">
+                        {formatRwf(grossRevenue)}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-slate-400 font-semibold block">Workshop Service</span>
+                      <span className="text-xs font-bold font-mono text-rose-400">
+                        -{formatRwf(totalMaintCost)}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-slate-400 font-semibold block">Fuel & Per Diem</span>
+                      <span className="text-xs font-bold font-mono text-amber-400">
+                        -{formatRwf(totalFuelExpenses)}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-slate-400 font-semibold block">Net Contribution</span>
+                      <span className={`text-xs font-bold font-mono ${netOperatingContribution >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {formatRwf(netOperatingContribution)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Rwanda Regulatory Compliance Section */}
             <div className="space-y-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/60">

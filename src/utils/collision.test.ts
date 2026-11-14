@@ -228,5 +228,41 @@ test('generateFlightDelaySMS creates delay notification in Kinyarwanda and Engli
   assert.match(enDelay.messageText, /Kigali International Airport/);
 });
 
+test('checkBookingCollision prevents booking a vehicle grounded in garage maintenance', () => {
+  const mockMaintenance = [
+    {
+      id: 'm-001',
+      vehicle_id: 'veh-landcruiser-02',
+      vehicle_plate: 'RAD 789 C',
+      vehicle_model: 'Toyota Land Cruiser V8',
+      service_type: 'Brake System & Pads' as const,
+      garage_name: 'CFAO Motors Rwanda',
+      garage_location: 'Gikondo Industrial Park',
+      description: 'Front and rear ceramic pad replacement',
+      start_date: '2026-11-12',
+      expected_completion_date: '2026-11-16',
+      odometer_at_service_km: 85000,
+      next_service_due_km: 95000,
+      cost_rwf: 320000,
+      status: 'In Garage' as const,
+      created_at: '2026-11-12T08:00:00Z',
+    },
+  ];
+
+  const collision = checkBookingCollision(
+    'veh-landcruiser-02',
+    '2026-11-14',
+    '2026-11-18',
+    [],
+    undefined,
+    mockMaintenance
+  );
+
+  assert.equal(collision.hasCollision, true);
+  assert.match(collision.conflictReason || '', /CFAO Motors Rwanda/);
+  assert.match(collision.conflictReason || '', /Brake System & Pads/);
+});
+
+
 
 

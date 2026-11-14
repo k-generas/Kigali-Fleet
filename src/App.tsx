@@ -187,6 +187,7 @@ export default function App() {
           onLoginWithGoogle={store.loginWithGoogle}
           onLoginWithCredentials={store.loginWithCredentials}
           onCreateUserAccount={store.createUserAccount}
+          onLogFailedLogin={store.logFailedLoginAttempt}
         />
 
         <ForgotPasswordModal
@@ -240,6 +241,7 @@ export default function App() {
           vehicles={store.vehicles}
           drivers={store.drivers}
           existingBookings={store.bookings}
+          maintenance={store.maintenance}
           onSubmitBooking={store.addBooking}
           initialVehicleId={selectedVehicleForBooking}
           initialDate={selectedDateForBooking}
@@ -281,6 +283,7 @@ export default function App() {
           currentCompany={store.currentCompany}
           companySettings={store.settings}
           onCompleteClientBooking={store.addBooking}
+          onSubmitSupportTicket={store.addSupportTicket}
           onReturnToManager={(newId) => handleSelectTab(newId ? 'bookings' : 'overview')}
         />
       </div>
@@ -361,6 +364,7 @@ export default function App() {
               vehicles={store.vehicles}
               drivers={store.drivers}
               bookings={store.bookings}
+              maintenance={store.maintenance}
               currentTheme={store.currentTheme}
               onOpenBookingForVehicle={(vehId, dt) => handleOpenBooking(vehId, dt)}
               onAssignDriver={store.assignDriverToBooking}
@@ -375,6 +379,8 @@ export default function App() {
               vehicles={store.vehicles}
               bookings={store.bookings}
               drivers={store.drivers}
+              expenses={store.expenses}
+              maintenance={store.maintenance}
               currentTheme={store.currentTheme}
               onAddVehicle={store.addVehicle}
               onUpdateStatus={store.updateVehicleStatus}
@@ -404,6 +410,7 @@ export default function App() {
               drivers={store.drivers}
               vehicles={store.vehicles}
               bookings={store.bookings}
+              currentUser={store.currentUser}
               currentTheme={store.currentTheme}
               onAddDriver={store.addDriver}
               onUpdateStatus={store.updateDriverStatus}
@@ -581,11 +588,51 @@ export default function App() {
                 currentCompany={store.currentCompany}
                 tiers={store.tiers}
                 currentUser={store.currentUser}
+                users={store.users}
+                vehicles={store.vehicles}
+                bookings={store.bookings}
+                maintenance={store.maintenance}
+                platformAdmins={store.platformAdmins}
+                platformPlans={store.platformPlans}
+                companySubscriptions={store.companySubscriptions}
+                saasPayments={store.saasPayments}
+                supportTickets={store.supportTickets}
+                platformAuditLogs={store.platformAuditLogs}
+                notificationTemplates={store.notificationTemplates}
+                notificationDeliveryLogs={store.notificationDeliveryLogs}
+                platformIntegrations={store.platformIntegrations}
+                backgroundJobs={store.backgroundJobs}
+                systemErrorLogs={store.systemErrorLogs}
+                securityIncidents={store.securityIncidents}
+                platformContent={store.platformContent}
+                platformSettings={store.platformSettings}
+                isFirebaseConnected={store.isFirebaseConnected}
                 currentTheme={store.currentTheme}
                 onUpdateCompanyStatus={store.updateCompanyStatus}
                 onUpdateCompanyPlan={store.updateCompanyPlan}
                 onSwitchCompanyContext={store.switchCompanyContext}
                 onAddTenantCompany={store.addTenantCompany}
+                onUpdateUserStatusByAdmin={store.updateUserStatusByAdmin}
+                onRevokeUserSessions={store.revokeUserSessions}
+                onTriggerUserRecovery={store.triggerUserRecovery}
+                onSavePlatformPlan={store.savePlatformPlan}
+                onExtendCompanySubscription={store.extendCompanySubscription}
+                onGrantCompanyTrial={store.grantCompanyTrial}
+                onReconcileSaasPayment={store.reconcileSaasPayment}
+                onRefundSaasPayment={store.refundSaasPayment}
+                onInspectBooking={store.logAuditedBookingInspection}
+                onUpdateSupportTicket={store.updateSupportTicket}
+                onSaveNotificationTemplate={store.saveNotificationTemplate}
+                onSendPlatformNotification={store.sendPlatformNotification}
+                onToggleIntegration={store.toggleIntegration}
+                onTestIntegrationConnection={store.testIntegrationConnection}
+                onRetryBackgroundJob={store.retryBackgroundJob}
+                onResolveSystemError={store.resolveSystemError}
+                onResolveSecurityIncident={store.resolveSecurityIncident}
+                onSavePlatformContent={store.savePlatformContent}
+                onUpdatePlatformSettings={store.updatePlatformSettings}
+                onCreatePlatformAdmin={store.createPlatformAdmin}
+                onUpdatePlatformAdmin={store.updatePlatformAdmin}
                 onNavigateToTab={handleSelectTab}
               />
             ) : (
@@ -660,6 +707,7 @@ export default function App() {
         vehicles={store.vehicles}
         drivers={store.drivers}
         existingBookings={store.bookings}
+        maintenance={store.maintenance}
         onSubmitBooking={store.addBooking}
         initialVehicleId={selectedVehicleForBooking}
         initialDate={selectedDateForBooking}

@@ -291,7 +291,11 @@ export interface User {
   company_id: string;
   avatar_url?: string;
   driver_id?: string;
-  status?: 'Active' | 'Invited' | 'Deactivated';
+  status?: 'Active' | 'Invited' | 'Deactivated' | 'Suspended';
+  last_login?: string;
+  sessions_revoked_at?: string;
+  recovery_requested_at?: string;
+  suspension_reason?: string;
   created_at?: string;
 }
 
@@ -312,9 +316,28 @@ export interface CompanySettings {
   storefront_published_vehicles?: string[];
 }
 
+export type SupportTicketStatus =
+  | 'New'
+  | 'Open'
+  | 'In Progress'
+  | 'Waiting for User'
+  | 'Escalated'
+  | 'Resolved'
+  | 'Closed';
+
+export interface SupportInternalNote {
+  id: string;
+  author: string;
+  note: string;
+  created_at: string;
+}
+
 export interface SupportTicket {
   id: string;
   ticket_ref: string;
+  requester_type?: 'Company' | 'Storefront Customer';
+  company_id?: string;
+  company_name?: string;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -322,12 +345,25 @@ export interface SupportTicket {
   issue_category: string;
   priority: 'Normal' | 'Urgent' | 'Emergency';
   message: string;
-  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  status: SupportTicketStatus;
+  assigned_admin_email?: string;
+  escalated?: boolean;
   created_at: string;
+  updated_at?: string;
   response?: string;
+  internal_notes?: SupportInternalNote[];
 }
 
-export type CompanyStatus = 'Active' | 'Grace Period' | 'Suspended' | 'Pending Verification';
+export type CompanyStatus =
+  | 'Pending'
+  | 'Pending Verification'
+  | 'Trial'
+  | 'Active'
+  | 'Grace Period'
+  | 'Suspended'
+  | 'Restricted'
+  | 'Inactive'
+  | 'Closed';
 
 export interface Company {
   id: string;
@@ -343,8 +379,291 @@ export interface Company {
   tier_id: 'starter' | 'growth' | 'enterprise';
   status?: CompanyStatus;
   renewal_date?: string;
+  trial_ends_at?: string;
   vehicle_count?: number;
+  branches_count?: number;
   monthly_fee_rwf?: number;
   owner_name?: string;
+  assigned_support_admin?: string;
+  last_activity?: string;
+  suspension_reason?: string;
   created_at: string;
 }
+
+// ============================================================================
+// Superadmin Control Center Types (Release 1 & Release 2)
+// ============================================================================
+
+export type SuperAdminSubRole =
+  | 'platform_owner'
+  | 'platform_admin'
+  | 'finance_admin'
+  | 'support_admin'
+  | 'technical_admin'
+  | 'security_admin';
+
+export type AdminPermissionAction =
+  | 'view'
+  | 'create'
+  | 'edit'
+  | 'approve'
+  | 'suspend'
+  | 'delete'
+  | 'export'
+  | 'configure';
+
+export type SuperAdminModuleId =
+  | 'overview'
+  | 'companies'
+  | 'users'
+  | 'subscriptions'
+  | 'plans'
+  | 'saas_payments'
+  | 'revenue'
+  | 'bookings'
+  | 'fleet'
+  | 'support'
+  | 'notifications'
+  | 'analytics'
+  | 'integrations'
+  | 'health'
+  | 'security'
+  | 'audit'
+  | 'content'
+  | 'settings'
+  | 'admins';
+
+export interface PlatformAdmin {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  sub_role: SuperAdminSubRole;
+  status: 'Active' | 'Suspended';
+  permissions: Partial<Record<SuperAdminModuleId, AdminPermissionAction[]>>;
+  last_login?: string;
+  sessions_revoked_at?: string;
+  created_at: string;
+}
+
+export interface PlatformPlan {
+  id: string;
+  tier_key: 'trial' | 'starter' | 'growth' | 'enterprise';
+  name: string;
+  target_fleet_size: string;
+  monthly_fee_rwf: number;
+  annual_fee_rwf: number;
+  billing_period: 'Monthly' | 'Annual';
+  trial_days: number;
+  max_vehicles: number;
+  max_employees: number;
+  max_branches: number;
+  max_monthly_bookings: number;
+  is_public: boolean;
+  is_active: boolean;
+  features: string[];
+  updated_at: string;
+}
+
+export type CompanySubscriptionStatus =
+  | 'Trial'
+  | 'Active'
+  | 'Past Due'
+  | 'Suspended'
+  | 'Cancelled'
+  | 'Expired';
+
+export interface CompanySubscription {
+  id: string;
+  company_id: string;
+  company_name: string;
+  plan_id: string;
+  plan_name: string;
+  status: CompanySubscriptionStatus;
+  start_date: string;
+  renewal_date: string;
+  trial_end_date?: string;
+  monthly_fee_rwf: number;
+  auto_renew: boolean;
+  last_adjustment_reason?: string;
+  updated_at: string;
+}
+
+export type SaasPaymentStatus =
+  | 'Pending'
+  | 'Successful'
+  | 'Failed'
+  | 'Cancelled'
+  | 'Refunded'
+  | 'Partially Refunded';
+
+export interface SaasPaymentRecord {
+  id: string;
+  transaction_ref: string;
+  provider_ref: string;
+  company_id: string;
+  company_name: string;
+  subscription_id: string;
+  plan_name: string;
+  amount_rwf: number;
+  refunded_amount_rwf?: number;
+  currency: 'RWF' | 'USD';
+  method: 'MTN Mobile Money' | 'Airtel Money' | 'Bank Transfer' | 'Credit Card';
+  provider: 'MTN Rwanda MoMo' | 'Airtel Money' | 'Bank of Kigali' | 'Flutterwave';
+  status: SaasPaymentStatus;
+  failure_reason?: string;
+  reconciliation_notes?: string;
+  reconciled_by?: string;
+  refund_reason?: string;
+  ebm_invoice_ref?: string;
+  paid_at: string;
+  created_at: string;
+}
+
+export interface PlatformAuditLog {
+  id: string;
+  actor_name: string;
+  actor_email: string;
+  actor_role: string;
+  action: string;
+  affected_entity_type:
+    | 'Company'
+    | 'User'
+    | 'Subscription'
+    | 'Plan'
+    | 'SaasPayment'
+    | 'Booking'
+    | 'SupportTicket'
+    | 'Notification'
+    | 'Integration'
+    | 'Security'
+    | 'Content'
+    | 'Settings'
+    | 'PlatformAdmin';
+  affected_entity_id: string;
+  affected_entity_label: string;
+  reason: string;
+  before_value?: string;
+  after_value?: string;
+  correlation_id: string;
+  timestamp: string;
+}
+
+export interface NotificationTemplate {
+  id: string;
+  name: string;
+  channel: 'Email' | 'SMS' | 'WhatsApp' | 'In-App';
+  event_trigger: string;
+  subject?: string;
+  body: string;
+  variables: string[];
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface NotificationDeliveryLog {
+  id: string;
+  template_id: string;
+  template_name: string;
+  channel: 'Email' | 'SMS' | 'WhatsApp' | 'In-App';
+  recipient: string;
+  company_name?: string;
+  provider: string;
+  status: 'Queued' | 'Provider Accepted' | 'Delivered' | 'Failed';
+  error_detail?: string;
+  sent_at: string;
+}
+
+export interface PlatformIntegration {
+  id: string;
+  name: string;
+  category: 'Payments' | 'Messaging' | 'Compliance' | 'Aviation' | 'Database';
+  provider: string;
+  status: 'Connected' | 'Degraded' | 'Disconnected';
+  is_enabled: boolean;
+  masked_key: string;
+  endpoint_label: string;
+  last_checked_at: string;
+  latency_ms?: number;
+  recent_errors: string[];
+}
+
+export interface BackgroundJob {
+  id: string;
+  name: string;
+  schedule: string;
+  last_run_at: string;
+  next_run_at: string;
+  status: 'Completed' | 'Running' | 'Failed' | 'Queued';
+  records_processed: number;
+  error_message?: string;
+}
+
+export interface SystemErrorLog {
+  id: string;
+  service: string;
+  severity: 'Warning' | 'Error' | 'Critical';
+  message: string;
+  correlation_id: string;
+  resolved: boolean;
+  timestamp: string;
+}
+
+export interface SecurityIncident {
+  id: string;
+  title: string;
+  category:
+    | 'Failed Login Spike'
+    | 'Permission Violation'
+    | 'Suspicious Access'
+    | 'Account Recovery'
+    | 'Session Anomaly';
+  severity: 'Low' | 'Medium' | 'High' | 'Critical';
+  target_email?: string;
+  target_company?: string;
+  source_ip?: string;
+  details: string;
+  status: 'Open' | 'Investigating' | 'Resolved';
+  assigned_to?: string;
+  resolution_notes?: string;
+  created_at: string;
+}
+
+export interface PlatformContentItem {
+  id: string;
+  type:
+    | 'Announcement'
+    | 'Maintenance Banner'
+    | 'FAQ'
+    | 'Terms of Service'
+    | 'Privacy Policy'
+    | 'Subscription Policy';
+  title: string;
+  slug: string;
+  body: string;
+  version: string;
+  status: 'Draft' | 'Published' | 'Scheduled' | 'Archived';
+  effective_date: string;
+  updated_by: string;
+  updated_at: string;
+}
+
+export interface PlatformSettings {
+  platform_name: string;
+  support_email: string;
+  support_phone: string;
+  default_currency: 'RWF' | 'USD';
+  timezone: string;
+  require_company_approval: boolean;
+  allow_public_self_registration: boolean;
+  default_trial_days: number;
+  grace_period_days: number;
+  auto_suspend_after_grace_days: number;
+  momo_merchant_code: string;
+  rra_saas_tin: string;
+  vat_rate_pct: number;
+  maintenance_mode: boolean;
+  maintenance_message: string;
+  updated_at: string;
+}
+

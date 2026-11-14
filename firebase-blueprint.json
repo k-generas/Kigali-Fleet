@@ -16,6 +16,7 @@
         "seating_capacity": { "type": "number" },
         "current_odometer_km": { "type": "number" },
         "location": { "type": "string", "maxLength": 200 },
+        "image_url": { "type": "string", "maxLength": 1000 },
         "year": { "type": "number" },
         "assigned_driver_id": { "type": "string", "maxLength": 128 },
         "assigned_driver_name": { "type": "string", "maxLength": 200 },
@@ -35,8 +36,13 @@
         "id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 200 },
         "phone": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 200 },
+        "national_id": { "type": "string", "maxLength": 32 },
+        "license_expiry": { "type": "string", "maxLength": 20 },
+        "experience_years": { "type": "number" },
+        "emergency_phone": { "type": "string", "maxLength": 50 },
         "language": { "type": "string", "enum": ["EN", "RW", "FR", "EN/RW"] },
-        "status": { "type": "string", "enum": ["Available", "On Trip", "Off Duty"] },
+        "status": { "type": "string", "enum": ["Available", "On Trip", "Off Duty", "On Leave", "Rest Day"] },
         "license_number": { "type": "string", "maxLength": 100 },
         "trips_completed": { "type": "number" },
         "rating": { "type": "number" },
@@ -59,12 +65,19 @@
         "start_date": { "type": "string", "maxLength": 20 },
         "end_date": { "type": "string", "maxLength": 20 },
         "total_rwf": { "type": "number" },
+        "flight_number": { "type": "string", "maxLength": 30 },
+        "flight_status": { "type": "string", "enum": ["On Time", "Delayed", "Landed", "Scheduled"] },
+        "flight_delay_minutes": { "type": "number" },
+        "flight_origin": { "type": "string", "maxLength": 120 },
         "destination": { "type": "string", "maxLength": 200 },
         "status": { "type": "string", "enum": ["Confirmed", "Pending Dispatch", "In Progress", "Completed", "Cancelled"] },
         "dispatch_status": { "type": "string", "enum": ["Not Sent", "Dispatched (SMS)", "Acknowledged by Driver", "Driver at Terminal", "Client Onboard"] },
         "payment_status": { "type": "string", "enum": ["Deposit Paid (MoMo)", "Fully Paid", "Pending Payment"] },
         "payment_method": { "type": "string", "enum": ["MTN Mobile Money", "Airtel Money", "Bank Transfer", "Credit Card"] },
         "notes": { "type": "string", "maxLength": 500 },
+        "source": { "type": "string", "enum": ["Storefront", "Phone Call", "WhatsApp", "Walk-in", "Corporate RFP"] },
+        "handover_pickup_id": { "type": "string", "maxLength": 128 },
+        "handover_return_id": { "type": "string", "maxLength": 128 },
         "created_at": { "type": "string", "maxLength": 50 }
       },
       "required": ["client_name", "vehicle_id", "driver_id", "start_date", "end_date", "total_rwf", "status"]
@@ -77,15 +90,27 @@
         "id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 200 },
         "slug": { "type": "string", "maxLength": 100 },
-        "business_type": { "type": "string", "maxLength": 100 },
+        "business_type": { "type": "string", "enum": ["Car Rental", "Tour Operator", "Airport Shuttle", "Corporate Transport"] },
         "tin_number": { "type": "string", "maxLength": 50 },
         "phone": { "type": "string", "maxLength": 50 },
         "email": { "type": "string", "maxLength": 200 },
         "city": { "type": "string", "maxLength": 100 },
+        "country": { "type": "string", "maxLength": 100 },
+        "currency": { "type": "string", "maxLength": 10 },
         "tier_id": { "type": "string", "enum": ["starter", "growth", "enterprise"] },
+        "status": { "type": "string", "enum": ["Pending", "Pending Verification", "Trial", "Active", "Grace Period", "Suspended", "Restricted", "Inactive", "Closed"] },
+        "renewal_date": { "type": "string", "maxLength": 50 },
+        "trial_ends_at": { "type": "string", "maxLength": 50 },
+        "vehicle_count": { "type": "number" },
+        "branches_count": { "type": "number" },
+        "monthly_fee_rwf": { "type": "number" },
+        "owner_name": { "type": "string", "maxLength": 200 },
+        "assigned_support_admin": { "type": "string", "maxLength": 200 },
+        "last_activity": { "type": "string", "maxLength": 50 },
+        "suspension_reason": { "type": "string", "maxLength": 500 },
         "created_at": { "type": "string", "maxLength": 50 }
       },
-      "required": ["name", "slug", "tin_number", "phone", "email"]
+      "required": ["name", "slug", "tin_number", "phone", "email", "tier_id"]
     },
     "User": {
       "title": "User",
@@ -96,11 +121,90 @@
         "name": { "type": "string", "maxLength": 200 },
         "email": { "type": "string", "maxLength": 200 },
         "phone": { "type": "string", "maxLength": 50 },
-        "role": { "type": "string", "enum": ["owner", "manager", "dispatcher", "driver", "accountant", "mechanic", "receptionist", "superadmin"] },
+        "role": { "type": "string", "enum": ["owner", "manager", "dispatcher", "accountant", "fleet_manager", "mechanic", "driver", "receptionist", "superadmin"] },
         "company_id": { "type": "string", "maxLength": 128 },
-        "driver_id": { "type": "string", "maxLength": 128 }
+        "avatar_url": { "type": "string", "maxLength": 1000 },
+        "driver_id": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["Active", "Invited", "Deactivated", "Suspended"] },
+        "last_login": { "type": "string", "maxLength": 50 },
+        "sessions_revoked_at": { "type": "string", "maxLength": 50 },
+        "recovery_requested_at": { "type": "string", "maxLength": 50 },
+        "suspension_reason": { "type": "string", "maxLength": 500 },
+        "created_at": { "type": "string", "maxLength": 50 }
       },
       "required": ["name", "email", "role", "company_id"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Rental and corporate client record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "enum": ["Individual", "Tourist / Expat", "Corporate", "NGO / Diplomatic", "Travel Agency"] },
+        "organization": { "type": "string", "maxLength": 200 },
+        "tin_number": { "type": "string", "maxLength": 50 },
+        "address": { "type": "string", "maxLength": 300 },
+        "credit_terms": { "type": "string", "enum": ["Immediate MoMo", "Net-15", "Net-30", "Pre-paid 50%"] },
+        "discount_rate_pct": { "type": "number" },
+        "total_spent_rwf": { "type": "number" },
+        "total_bookings_count": { "type": "number" },
+        "outstanding_balance_rwf": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 500 },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["name", "phone", "email", "category"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Booking payment ledger and EBM receipt record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "booking_id": { "type": "string", "maxLength": 128 },
+        "customer_name": { "type": "string", "maxLength": 200 },
+        "customer_phone": { "type": "string", "maxLength": 50 },
+        "organization": { "type": "string", "maxLength": 200 },
+        "amount_rwf": { "type": "number" },
+        "expected_amount_rwf": { "type": "number" },
+        "payment_method": { "type": "string", "enum": ["MTN Mobile Money", "Airtel Money", "Bank Transfer", "Credit Card", "Cash on Delivery"] },
+        "momo_tx_id": { "type": "string", "maxLength": 128 },
+        "ebm_receipt_number": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 30 },
+        "status": { "type": "string", "enum": ["Paid", "Partially Paid", "Pending", "Overdue", "Refunded"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["booking_id", "customer_name", "amount_rwf", "expected_amount_rwf", "payment_method", "date", "status"]
+    },
+    "MaintenanceRecord": {
+      "title": "MaintenanceRecord",
+      "description": "Vehicle workshop and service log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "vehicle_id": { "type": "string", "maxLength": 128 },
+        "vehicle_plate": { "type": "string", "maxLength": 30 },
+        "vehicle_model": { "type": "string", "maxLength": 200 },
+        "service_type": { "type": "string", "maxLength": 100 },
+        "garage_name": { "type": "string", "maxLength": 200 },
+        "garage_phone": { "type": "string", "maxLength": 50 },
+        "garage_location": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "start_date": { "type": "string", "maxLength": 30 },
+        "expected_completion_date": { "type": "string", "maxLength": 30 },
+        "actual_completion_date": { "type": "string", "maxLength": 30 },
+        "odometer_at_service_km": { "type": "number" },
+        "next_service_due_km": { "type": "number" },
+        "cost_rwf": { "type": "number" },
+        "status": { "type": "string", "enum": ["In Garage", "Scheduled", "Completed", "Awaiting Parts"] },
+        "invoice_ref": { "type": "string", "maxLength": 128 },
+        "technician_name": { "type": "string", "maxLength": 200 },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["vehicle_id", "service_type", "garage_name", "start_date", "cost_rwf", "status"]
     },
     "Expense": {
       "title": "Expense",
@@ -108,15 +212,22 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
-        "vehicle_id": { "type": "string", "maxLength": 128 },
-        "category": { "type": "string", "enum": ["Fuel", "Controle Technique", "Insurance", "Tire Replacement", "Routine Service", "Chauffeur Daily Per Diem", "Airport Terminal Toll", "Emergency Roadside Repair"] },
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 100 },
         "amount_rwf": { "type": "number" },
         "date": { "type": "string", "maxLength": 20 },
-        "recorded_by_name": { "type": "string", "maxLength": 200 },
-        "status": { "type": "string", "enum": ["Pending Approval", "Approved", "Paid"] },
-        "description": { "type": "string", "maxLength": 500 }
+        "vehicle_id": { "type": "string", "maxLength": 128 },
+        "vehicle_plate": { "type": "string", "maxLength": 30 },
+        "booking_id": { "type": "string", "maxLength": 128 },
+        "supplier_name": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Paid", "Rejected"] },
+        "recorded_by": { "type": "string", "maxLength": 200 },
+        "approved_by": { "type": "string", "maxLength": 200 },
+        "receipt_ref": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string", "maxLength": 50 }
       },
-      "required": ["category", "amount_rwf", "date", "status"]
+      "required": ["title", "category", "amount_rwf", "date", "status"]
     },
     "Handover": {
       "title": "Handover",
@@ -126,13 +237,41 @@
         "id": { "type": "string", "maxLength": 128 },
         "booking_id": { "type": "string", "maxLength": 128 },
         "vehicle_id": { "type": "string", "maxLength": 128 },
-        "type": { "type": "string", "enum": ["Checkout", "Checkin"] },
+        "vehicle_plate": { "type": "string", "maxLength": 30 },
+        "vehicle_model": { "type": "string", "maxLength": 200 },
+        "client_name": { "type": "string", "maxLength": 200 },
+        "client_phone": { "type": "string", "maxLength": 50 },
+        "inspection_type": { "type": "string", "enum": ["pickup", "return"] },
         "odometer_km": { "type": "number" },
-        "fuel_fraction": { "type": "string", "enum": ["1/8", "1/4", "3/8", "1/2", "5/8", "3/4", "7/8", "Full"] },
-        "performed_by_name": { "type": "string", "maxLength": 200 },
+        "fuel_level_eighths": { "type": "number" },
+        "cleanliness": { "type": "string", "enum": ["Clean", "Moderate", "Dirty"] },
+        "damage_notes": { "type": "string", "maxLength": 1000 },
+        "inspector_name": { "type": "string", "maxLength": 200 },
+        "client_signature_confirmed": { "type": "boolean" },
+        "additional_charges_rwf": { "type": "number" },
+        "additional_charges_reason": { "type": "string", "maxLength": 500 },
         "created_at": { "type": "string", "maxLength": 50 }
       },
-      "required": ["booking_id", "vehicle_id", "type", "odometer_km", "fuel_fraction"]
+      "required": ["booking_id", "vehicle_id", "inspection_type", "odometer_km", "inspector_name"]
+    },
+    "OperationalTask": {
+      "title": "OperationalTask",
+      "description": "Fleet staff operational duty task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "assigned_to_name": { "type": "string", "maxLength": 200 },
+        "assigned_to_role": { "type": "string", "maxLength": 50 },
+        "due_date": { "type": "string", "maxLength": 30 },
+        "priority": { "type": "string", "enum": ["Low", "Normal", "High", "Urgent"] },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Completed", "Cancelled"] },
+        "related_vehicle_id": { "type": "string", "maxLength": 128 },
+        "related_booking_id": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["title", "assigned_to_name", "due_date", "priority", "status"]
     },
     "ActivityLog": {
       "title": "ActivityLog",
@@ -143,9 +282,169 @@
         "timestamp": { "type": "string", "maxLength": 50 },
         "action": { "type": "string", "maxLength": 200 },
         "details": { "type": "string", "maxLength": 500 },
-        "category": { "type": "string", "enum": ["booking", "dispatch", "fleet", "driver"] }
+        "category": { "type": "string", "enum": ["booking", "dispatch", "fleet", "driver", "handover", "expense"] }
       },
       "required": ["timestamp", "action", "details", "category"]
+    },
+    "PlatformAdmin": {
+      "title": "PlatformAdmin",
+      "description": "Platform superadmin or delegated sub-admin profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "email": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "sub_role": { "type": "string", "enum": ["platform_owner", "platform_admin", "finance_admin", "support_admin", "technical_admin", "security_admin"] },
+        "status": { "type": "string", "enum": ["Active", "Suspended"] },
+        "last_login": { "type": "string", "maxLength": 50 },
+        "sessions_revoked_at": { "type": "string", "maxLength": 50 },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["name", "email", "sub_role", "status"]
+    },
+    "PlatformPlan": {
+      "title": "PlatformPlan",
+      "description": "SaaS subscription tier configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tier_key": { "type": "string", "enum": ["trial", "starter", "growth", "enterprise"] },
+        "name": { "type": "string", "maxLength": 120 },
+        "target_fleet_size": { "type": "string", "maxLength": 100 },
+        "monthly_fee_rwf": { "type": "number" },
+        "annual_fee_rwf": { "type": "number" },
+        "billing_period": { "type": "string", "enum": ["Monthly", "Annual"] },
+        "trial_days": { "type": "number" },
+        "max_vehicles": { "type": "number" },
+        "max_employees": { "type": "number" },
+        "max_branches": { "type": "number" },
+        "max_monthly_bookings": { "type": "number" },
+        "is_public": { "type": "boolean" },
+        "is_active": { "type": "boolean" },
+        "updated_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["tier_key", "name", "monthly_fee_rwf", "max_vehicles"]
+    },
+    "CompanySubscription": {
+      "title": "CompanySubscription",
+      "description": "Tenant company SaaS subscription contract",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
+        "company_name": { "type": "string", "maxLength": 200 },
+        "plan_id": { "type": "string", "maxLength": 128 },
+        "plan_name": { "type": "string", "maxLength": 120 },
+        "status": { "type": "string", "enum": ["Trial", "Active", "Past Due", "Suspended", "Cancelled", "Expired"] },
+        "start_date": { "type": "string", "maxLength": 30 },
+        "renewal_date": { "type": "string", "maxLength": 30 },
+        "trial_end_date": { "type": "string", "maxLength": 30 },
+        "monthly_fee_rwf": { "type": "number" },
+        "auto_renew": { "type": "boolean" },
+        "last_adjustment_reason": { "type": "string", "maxLength": 500 },
+        "updated_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["company_id", "company_name", "plan_id", "status", "renewal_date"]
+    },
+    "SaasPaymentRecord": {
+      "title": "SaasPaymentRecord",
+      "description": "Platform SaaS subscription payment and reconciliation record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "transaction_ref": { "type": "string", "maxLength": 128 },
+        "provider_ref": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
+        "company_name": { "type": "string", "maxLength": 200 },
+        "subscription_id": { "type": "string", "maxLength": 128 },
+        "plan_name": { "type": "string", "maxLength": 120 },
+        "amount_rwf": { "type": "number" },
+        "refunded_amount_rwf": { "type": "number" },
+        "currency": { "type": "string", "enum": ["RWF", "USD"] },
+        "method": { "type": "string", "enum": ["MTN Mobile Money", "Airtel Money", "Bank Transfer", "Credit Card"] },
+        "provider": { "type": "string", "enum": ["MTN Rwanda MoMo", "Airtel Money", "Bank of Kigali", "Flutterwave"] },
+        "status": { "type": "string", "enum": ["Pending", "Successful", "Failed", "Cancelled", "Refunded", "Partially Refunded"] },
+        "failure_reason": { "type": "string", "maxLength": 500 },
+        "reconciliation_notes": { "type": "string", "maxLength": 500 },
+        "reconciled_by": { "type": "string", "maxLength": 200 },
+        "refund_reason": { "type": "string", "maxLength": 500 },
+        "ebm_invoice_ref": { "type": "string", "maxLength": 128 },
+        "paid_at": { "type": "string", "maxLength": 50 },
+        "created_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["transaction_ref", "company_id", "amount_rwf", "status"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Company or storefront customer support case",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ticket_ref": { "type": "string", "maxLength": 64 },
+        "requester_type": { "type": "string", "enum": ["Company", "Storefront Customer"] },
+        "company_id": { "type": "string", "maxLength": 128 },
+        "company_name": { "type": "string", "maxLength": 200 },
+        "customer_name": { "type": "string", "maxLength": 200 },
+        "customer_email": { "type": "string", "maxLength": 200 },
+        "customer_phone": { "type": "string", "maxLength": 50 },
+        "booking_ref": { "type": "string", "maxLength": 128 },
+        "issue_category": { "type": "string", "maxLength": 120 },
+        "priority": { "type": "string", "enum": ["Normal", "Urgent", "Emergency"] },
+        "message": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["New", "Open", "In Progress", "Waiting for User", "Escalated", "Resolved", "Closed"] },
+        "assigned_admin_email": { "type": "string", "maxLength": 200 },
+        "escalated": { "type": "boolean" },
+        "response": { "type": "string", "maxLength": 2000 },
+        "created_at": { "type": "string", "maxLength": 50 },
+        "updated_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["ticket_ref", "customer_name", "customer_email", "issue_category", "priority", "message", "status"]
+    },
+    "PlatformAuditLog": {
+      "title": "PlatformAuditLog",
+      "description": "Immutable append-only superadmin audit log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "actor_name": { "type": "string", "maxLength": 200 },
+        "actor_email": { "type": "string", "maxLength": 200 },
+        "actor_role": { "type": "string", "maxLength": 64 },
+        "action": { "type": "string", "maxLength": 200 },
+        "affected_entity_type": { "type": "string", "enum": ["Company", "User", "Subscription", "Plan", "SaasPayment", "Booking", "SupportTicket", "Notification", "Integration", "Security", "Content", "Settings", "PlatformAdmin"] },
+        "affected_entity_id": { "type": "string", "maxLength": 128 },
+        "affected_entity_label": { "type": "string", "maxLength": 250 },
+        "reason": { "type": "string", "maxLength": 500 },
+        "before_value": { "type": "string", "maxLength": 500 },
+        "after_value": { "type": "string", "maxLength": 500 },
+        "correlation_id": { "type": "string", "maxLength": 64 },
+        "timestamp": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["actor_name", "actor_email", "action", "affected_entity_type", "affected_entity_id", "reason", "correlation_id", "timestamp"]
+    },
+    "PlatformSettings": {
+      "title": "PlatformSettings",
+      "description": "Global platform configuration and maintenance settings",
+      "type": "object",
+      "properties": {
+        "platform_name": { "type": "string", "maxLength": 120 },
+        "support_email": { "type": "string", "maxLength": 200 },
+        "support_phone": { "type": "string", "maxLength": 50 },
+        "default_currency": { "type": "string", "enum": ["RWF", "USD"] },
+        "timezone": { "type": "string", "maxLength": 64 },
+        "require_company_approval": { "type": "boolean" },
+        "allow_public_self_registration": { "type": "boolean" },
+        "default_trial_days": { "type": "number" },
+        "grace_period_days": { "type": "number" },
+        "auto_suspend_after_grace_days": { "type": "number" },
+        "momo_merchant_code": { "type": "string", "maxLength": 64 },
+        "rra_saas_tin": { "type": "string", "maxLength": 64 },
+        "vat_rate_pct": { "type": "number" },
+        "maintenance_mode": { "type": "boolean" },
+        "maintenance_message": { "type": "string", "maxLength": 500 },
+        "updated_at": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["platform_name", "support_email", "default_currency", "maintenance_mode"]
     }
   },
   "firestore": {
@@ -169,6 +468,18 @@
       "schema": "User",
       "description": "App users and employees"
     },
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Fleet rental & corporate clients"
+    },
+    "/payments/{paymentId}": {
+      "schema": "PaymentRecord",
+      "description": "Booking payments and EBM tax receipts"
+    },
+    "/maintenance/{maintenanceId}": {
+      "schema": "MaintenanceRecord",
+      "description": "Vehicle workshop and repair history"
+    },
     "/expenses/{expenseId}": {
       "schema": "Expense",
       "description": "Fleet direct operating expenses"
@@ -177,9 +488,41 @@
       "schema": "Handover",
       "description": "Vehicle check-out & check-in inspections"
     },
+    "/tasks/{taskId}": {
+      "schema": "OperationalTask",
+      "description": "Operational duty queue tasks"
+    },
     "/activity_logs/{logId}": {
       "schema": "ActivityLog",
       "description": "Audit and operational activity logs"
+    },
+    "/platform_admins/{adminId}": {
+      "schema": "PlatformAdmin",
+      "description": "Platform Superadmin owners and sub-admins"
+    },
+    "/platform_plans/{planId}": {
+      "schema": "PlatformPlan",
+      "description": "SaaS subscription tier definitions and quotas"
+    },
+    "/company_subscriptions/{subscriptionId}": {
+      "schema": "CompanySubscription",
+      "description": "Tenant SaaS subscription billing records"
+    },
+    "/saas_payments/{paymentId}": {
+      "schema": "SaasPaymentRecord",
+      "description": "SaaS subscription payment ledger"
+    },
+    "/support_tickets/{ticketId}": {
+      "schema": "SupportTicket",
+      "description": "Multi-audience company and storefront support tickets"
+    },
+    "/platform_audit_logs/{logId}": {
+      "schema": "PlatformAuditLog",
+      "description": "Immutable append-only superadmin audit stream"
+    },
+    "/platform_settings/{settingId}": {
+      "schema": "PlatformSettings",
+      "description": "Global platform billing and maintenance configuration"
     }
   }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Driver, DriverLanguage, DriverStatus, Vehicle, Booking } from '../types';
+import { Driver, DriverLanguage, DriverStatus, Vehicle, Booking, User } from '../types';
 import { checkDriverCollision, formatRwf } from '../utils/collision';
 import {
   Plus,
@@ -36,6 +36,7 @@ interface DriversViewProps {
   drivers: Driver[];
   vehicles: Vehicle[];
   bookings: Booking[];
+  currentUser?: User;
   currentTheme?: ColorTheme;
   onAddDriver: (d: Omit<Driver, 'id' | 'trips_completed' | 'rating'>) => void;
   onUpdateStatus: (id: string, status: DriverStatus) => void;
@@ -54,6 +55,7 @@ export const DriversView: React.FC<DriversViewProps> = ({
   drivers,
   vehicles,
   bookings,
+  currentUser,
   currentTheme,
   onAddDriver,
   onUpdateStatus,
@@ -67,8 +69,13 @@ export const DriversView: React.FC<DriversViewProps> = ({
   const activeThemeColor = currentTheme?.hex || '#f59e0b';
   const activeBtnText = currentTheme?.btnText || 'text-slate-950';
 
-  // Navigation tabs
-  const [activeTab, setActiveTab] = useState<'roster' | 'assignments' | 'portal'>('roster');
+  const isDriverUser = currentUser?.role === 'driver';
+  const matchedDriverId = currentUser?.driver_id || drivers.find((d) => d.email === currentUser?.email || d.phone === currentUser?.phone)?.id || drivers[0]?.id || '';
+
+  // Navigation tabs: auto-focus to portal if logged in as driver
+  const [activeTab, setActiveTab] = useState<'roster' | 'assignments' | 'portal'>(
+    isDriverUser ? 'portal' : 'roster'
+  );
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,7 +89,7 @@ export const DriversView: React.FC<DriversViewProps> = ({
   const [assignmentNotice, setAssignmentNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Driver Portal State
-  const [activePortalDriverId, setActivePortalDriverId] = useState<string>(drivers[0]?.id || '');
+  const [activePortalDriverId, setActivePortalDriverId] = useState<string>(matchedDriverId);
   const [driverReportNotice, setDriverReportNotice] = useState<string | null>(null);
   const [isLowSignalMode, setIsLowSignalMode] = useState<boolean>(false);
 

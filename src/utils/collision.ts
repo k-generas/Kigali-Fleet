@@ -1,4 +1,4 @@
-import { Booking, Driver, Vehicle, VehicleCategory } from '../types';
+import { Booking, Driver, Vehicle, VehicleCategory, MaintenanceRecord } from '../types';
 
 /**
  * Checks whether two inclusive date strings (YYYY-MM-DD) overlap
@@ -10,19 +10,21 @@ export function datesOverlap(startA: string, endA: string, startB: string, endB:
 export interface CollisionResult {
   hasCollision: boolean;
   conflictingBooking?: Booking;
+  conflictingMaintenance?: MaintenanceRecord;
   conflictReason?: string;
 }
 
 /**
- * Checks if a vehicle has any conflicting bookings in the given date range.
- * Collision-Guarded Booking Architecture: Verifies physical inventory and avoids double bookings.
+ * Checks if a vehicle has any conflicting bookings or maintenance down-time in the given date range.
+ * Collision-Guarded Booking Architecture: Verifies physical inventory, active bookings, and garage servicing.
  */
 export function checkBookingCollision(
   vehicleId: string,
   startDate: string,
   endDate: string,
   existingBookings: Booking[],
-  excludeBookingId?: string
+  excludeBookingId?: string,
+  maintenanceRecords?: MaintenanceRecord[]
 ): CollisionResult {
   if (!vehicleId || !startDate || !endDate) {
     return { hasCollision: false };
@@ -35,6 +37,26 @@ export function checkBookingCollision(
     };
   }
 
+  // 1. Check against active & scheduled garage maintenance records
+  if (maintenanceRecords && maintenanceRecords.length > 0) {
+    const conflictingMaintenance = maintenanceRecords.find((m) => {
+      if (m.vehicle_id !== vehicleId) return false;
+      if (m.status === 'Completed') return false;
+      const mStart = m.start_date;
+      const mEnd = m.expected_completion_date || m.start_date;
+      return datesOverlap(startDate, endDate, mStart, mEnd);
+    });
+
+    if (conflictingMaintenance) {
+      return {
+        hasCollision: true,
+        conflictingMaintenance,
+        conflictReason: `Vehicle is grounded in garage (${conflictingMaintenance.garage_name} - ${conflictingMaintenance.service_type}) from ${conflictingMaintenance.start_date} to ${conflictingMaintenance.expected_completion_date}.`,
+      };
+    }
+  }
+
+  // 2. Check against active vehicle bookings
   const conflicting = existingBookings.find((b) => {
     if (excludeBookingId && b.id === excludeBookingId) return false;
     if (b.vehicle_id !== vehicleId) return false;
@@ -106,14 +128,15 @@ export function getAvailableVehiclesForClass(
   startDate: string,
   endDate: string,
   vehicles: Vehicle[],
-  existingBookings: Booking[]
+  existingBookings: Booking[],
+  maintenanceRecords?: MaintenanceRecord[]
 ): Vehicle[] {
   return vehicles.filter((v) => {
     if (v.category !== category) return false;
     if (v.status === 'Maintenance') return false;
 
-    // Check collision against all existing active bookings
-    const collision = checkBookingCollision(v.id, startDate, endDate, existingBookings);
+    // Check collision against all existing active bookings and active maintenance
+    const collision = checkBookingCollision(v.id, startDate, endDate, existingBookings, undefined, maintenanceRecords);
     return !collision.hasCollision;
   });
 }
@@ -126,13 +149,14 @@ export function getCategoryAvailabilitySummary(
   startDate: string,
   endDate: string,
   vehicles: Vehicle[],
-  existingBookings: Booking[]
+  existingBookings: Booking[],
+  maintenanceRecords?: MaintenanceRecord[]
 ): CategoryAvailability[] {
   const categories: VehicleCategory[] = ['LandCruiser', 'RAV4', 'Coaster', 'Safari Van', 'Luxury Sedan'];
 
   return categories.map((cat) => {
     const matchingVehicles = vehicles.filter((v) => v.category === cat && v.status !== 'Maintenance');
-    const available = getAvailableVehiclesForClass(cat, startDate, endDate, vehicles, existingBookings);
+    const available = getAvailableVehiclesForClass(cat, startDate, endDate, vehicles, existingBookings, maintenanceRecords);
     const rates = matchingVehicles.map((v) => v.daily_rate_rwf);
     const lowestRate = rates.length > 0 ? Math.min(...rates) : 0;
 
