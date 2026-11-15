@@ -266,15 +266,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {isOpenMobile && (
         <div
-          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40"
           onClick={onCloseMobile}
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 flex flex-col bg-white dark:bg-[#0d1424] border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 flex flex-col bg-white dark:bg-[#0d1424] border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-in-out ${
+          isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
@@ -307,7 +307,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={onCloseMobile}
-            className="lg:hidden p-2 rounded-lg text-slate-500 hover:text-[#0a2540] dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-2 rounded-lg text-slate-500 hover:text-[#0a2540] dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
             aria-label="Close menu"
           >
             <X className="w-5 h-5" />

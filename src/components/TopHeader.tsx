@@ -864,8 +864,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onOpenMobileMenu}
-            className="lg:hidden p-2 -ml-1 text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 -ml-1 text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Open menu"
+            title="Open menu"
           >
             <Menu className="w-5 h-5" />
           </button>

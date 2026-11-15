@@ -305,17 +305,17 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* 1. Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 stripe-card">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-[#0a2540] dark:text-white flex items-center gap-2.5">
-              <Car className="w-6 h-6" style={{ color: activeThemeColor }} />
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 stripe-card">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
+              <Car className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" style={{ color: activeThemeColor }} />
               <span>Cars</span>
             </h2>
             <span
-              className="text-xs font-mono px-3 py-1 rounded-full font-semibold"
+              className="text-xs font-mono px-2.5 py-0.5 rounded-full font-semibold"
               style={{
                 backgroundColor: `${activeThemeColor}18`,
                 color: activeThemeColor,
@@ -324,104 +324,102 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
               {vehicles.length} cars
             </span>
           </div>
-          <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">
+          <p className="hidden sm:block text-sm text-[#425466] dark:text-slate-400 mt-1">
             All your cars, daily prices in RWF, insurance dates, and repair locks.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all shadow-xs active:scale-95 ${activeBtnText}`}
-            style={{ backgroundColor: activeThemeColor }}
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Add Car</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-full transition-all shadow-xs active:scale-95 ${activeBtnText}`}
+          style={{ backgroundColor: activeThemeColor }}
+        >
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+          <span>Add Car</span>
+        </button>
       </div>
 
-      {/* 2. Key Numbers */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-[#425466] dark:text-slate-400">
+      {/* 2. Key Numbers (3x2 on phone/tablet, 6-across on desktop) */}
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+        <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-[#425466] dark:text-slate-400 block truncate">
             All Cars
           </span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-[#0a2540] dark:text-white font-mono">
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-lg sm:text-2xl font-bold text-[#0a2540] dark:text-white font-mono">
               {metrics.totalCount}
             </span>
-            <Car className="w-4 h-4 text-slate-400" />
+            <Car className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 hidden sm:block" />
           </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+        <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 block truncate">
             Ready
           </span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
               {metrics.availableCount}
             </span>
-            <CheckCircle className="w-4 h-4 text-emerald-500" />
+            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 hidden sm:block" />
           </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+        <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400 block truncate">
             Booked
           </span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">
               {metrics.bookedCount}
             </span>
-            <Activity className="w-4 h-4 text-amber-500" />
+            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 hidden sm:block" />
           </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-rose-600 dark:text-rose-400">
+        <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-rose-600 dark:text-rose-400 block truncate">
             In Repair
           </span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono">
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono">
               {metrics.maintenanceCount}
             </span>
-            <Wrench className="w-4 h-4 text-rose-500" />
+            <Wrench className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 hidden sm:block" />
           </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-[#425466] dark:text-slate-400">
+        <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-[#425466] dark:text-slate-400 block truncate">
             Daily Total
           </span>
-          <div className="mt-1.5">
-            <span className="text-base font-bold text-[#0a2540] dark:text-white font-mono truncate block">
+          <div className="mt-1">
+            <span className="text-sm sm:text-base font-bold text-[#0a2540] dark:text-white font-mono truncate block">
               {formatRwf(metrics.dailyPotentialRwf)}
             </span>
-            <span className="text-xs text-[#425466] dark:text-slate-400">per day</span>
+            <span className="hidden sm:block text-xs text-[#425466] dark:text-slate-400">per day</span>
           </div>
         </div>
 
         <div
           onClick={() => setComplianceFilter(complianceFilter === 'Alerts' ? 'All' : 'Alerts')}
-          className={`p-4 border rounded-2xl cursor-pointer transition-colors stripe-card ${
+          className={`p-3 sm:p-4 border rounded-xl sm:rounded-2xl cursor-pointer transition-colors stripe-card ${
             metrics.complianceIssuesCount > 0
               ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 hover:bg-amber-100/70'
               : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+            <span className="text-xs font-medium text-amber-700 dark:text-amber-400 truncate">
               Papers Due
             </span>
-            <ShieldCheck className="w-4 h-4 text-amber-500" />
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-500 hidden sm:block" />
           </div>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-amber-700 dark:text-amber-400 font-mono">
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-lg sm:text-2xl font-bold text-amber-700 dark:text-amber-400 font-mono">
               {metrics.complianceIssuesCount}
             </span>
-            <span className="text-xs font-medium text-[#425466] dark:text-slate-300">
+            <span className="hidden sm:inline text-xs font-medium text-[#425466] dark:text-slate-300">
               {metrics.complianceIssuesCount > 0 ? 'Check soon' : 'All good'}
             </span>
           </div>
@@ -429,8 +427,8 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
       </div>
 
       {/* 3. Search & Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 stripe-card">
-        <div className="flex items-center gap-2 flex-1 max-w-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 stripe-card">
+        <div className="flex items-center gap-2 flex-1">
           <div className="relative w-full">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -452,18 +450,34 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-sm">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            aria-label="Filter by car type"
+            className="sm:hidden bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold outline-none"
+          >
+            {categories.map((cat) => {
+              const count = cat === 'All' ? vehicles.length : vehicles.filter((v) => v.category === cat).length;
+              return (
+                <option key={cat} value={cat}>
+                  {cat} ({count})
+                </option>
+              );
+            })}
+          </select>
+
           <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
             {['All', 'Available', 'Booked', 'Maintenance'].map((st) => (
               <button
                 key={st}
                 onClick={() => setSelectedStatus(st)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
                   selectedStatus === st
                     ? 'bg-white dark:bg-slate-900 text-[#0a2540] dark:text-white shadow-xs'
                     : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
                 }`}
               >
-                {st === 'Available' ? 'Ready' : st === 'Maintenance' ? 'In Repair' : st}
+                {st === 'Available' ? 'Ready' : st === 'Maintenance' ? 'Repair' : st}
               </button>
             ))}
           </div>
@@ -482,8 +496,8 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
       </div>
 
-      {/* Category Filter Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-sm">
+      {/* Category Filter Tabs (Desktop & Tablet) */}
+      <div className="hidden sm:grid grid-cols-3 lg:grid-cols-6 gap-2 text-sm">
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat;
           const count = cat === 'All' ? vehicles.length : vehicles.filter((v) => v.category === cat).length;

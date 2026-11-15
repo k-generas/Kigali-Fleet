@@ -315,8 +315,8 @@ export default function App() {
         currentCompany={store.currentCompany}
       />
 
-      {/* 2. Main Workspace Layout (Offset on Desktop by Sidebar width) */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
+      {/* 2. Main Workspace Layout (Full width across phone, tablet, and PC; menu opens on click) */}
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header with Breadcrumb, Quick Actions, Theme Dropdown & Light/Dark */}
         <TopHeader
           currentTab={currentTab}
