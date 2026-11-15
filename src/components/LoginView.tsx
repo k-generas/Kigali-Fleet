@@ -4,22 +4,11 @@ import {
   Lock,
   Mail,
   ArrowRight,
-  ShieldCheck,
-  UserCheck,
   Check,
   Eye,
   EyeOff,
-  Building2,
-  Sparkles,
-  UserPlus,
   Phone,
   User as UserIcon,
-  Briefcase,
-  Radio,
-  FileText,
-  Wrench,
-  KeyRound,
-  Shield,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 import { User, UserRole } from '../types';
@@ -60,13 +49,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
   onLogFailedLogin,
 }) => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-
-  // Sign In State
   const [email, setEmail] = useState('owner@kigaliexecutive.rw');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Sign Up State
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPhone, setSignupPhone] = useState('+250 788 ');
@@ -80,7 +66,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const activeColor = currentTheme.hex;
   const activeBtnText = currentTheme.btnText;
 
-  // Strict Row-Level Security: Never display Super Admin in public demo roster
+  // Strict privacy: never list super admin accounts in public sample user list
   const publicDemoUsers = users.filter((u) => u.role !== 'superadmin' && !isSuperAdminEmail(u.email));
   const [selectedDemoUser, setSelectedDemoUser] = useState<string>(publicDemoUsers[0]?.id || '');
 
@@ -90,39 +76,35 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setSuccessMessage(null);
 
     if (!email.trim() || !password.trim()) {
-      setErrorMessage('Please enter both email and password.');
+      setErrorMessage('Please enter your email and password.');
       return;
     }
 
     setIsLoading(true);
-
     try {
       if (onLoginWithCredentials) {
         const result = await onLoginWithCredentials(email.trim(), password.trim());
         if (result.success && result.user) {
-          const isSuper = isSuperAdminUser(result.user);
-          onLoginSuccess(isSuper);
+          onLoginSuccess(isSuperAdminUser(result.user));
           return;
         } else {
-          onLogFailedLogin?.(email.trim(), result.error || 'Failed credential authentication attempt');
-          setErrorMessage(result.error || 'Invalid credentials.');
+          onLogFailedLogin?.(email.trim(), result.error || 'Failed login attempt');
+          setErrorMessage(result.error || 'Email or password is not correct.');
           setIsLoading(false);
           return;
         }
       }
 
-      // Fallback in-memory matching
       const normalizedEmail = email.trim().toLowerCase();
       const matchedUser = users.find((u) => u.email.toLowerCase() === normalizedEmail);
       if (matchedUser) {
         onSelectUser(matchedUser.id);
-        const isSuper = isSuperAdminUser(matchedUser);
-        onLoginSuccess(isSuper);
+        onLoginSuccess(isSuperAdminUser(matchedUser));
       } else {
-        setErrorMessage('User not found. Use one of the pre-configured demo staff roles below or create a new account.');
+        setErrorMessage('Account not found. Try a sample account below or create a new one.');
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Login failed. Please verify credentials.');
+      setErrorMessage(err.message || 'Could not sign in. Please check your details.');
     } finally {
       setIsLoading(false);
     }
@@ -134,17 +116,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setSuccessMessage(null);
 
     if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim()) {
-      setErrorMessage('Please provide full name, email, and a secure password.');
+      setErrorMessage('Please enter your name, email, and password.');
       return;
     }
 
     if (signupPassword.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.');
+      setErrorMessage('Password must be at least 6 characters.');
       return;
     }
 
     setIsLoading(true);
-
     try {
       if (onCreateUserAccount) {
         const result = await onCreateUserAccount({
@@ -156,23 +137,20 @@ export const LoginView: React.FC<LoginViewProps> = ({
         });
 
         if (result.success && result.user) {
-          const isSuper = isSuperAdminUser(result.user);
-          setSuccessMessage(`Account created successfully for ${result.user.name}.`);
+          setSuccessMessage(`Welcome, ${result.user.name}. Your account is ready.`);
           setTimeout(() => {
-            onLoginSuccess(isSuper);
+            onLoginSuccess(isSuperAdminUser(result.user));
           }, 400);
           return;
         } else {
-          setErrorMessage(result.error || 'Failed to create account.');
+          setErrorMessage(result.error || 'Could not create account.');
           setIsLoading(false);
           return;
         }
       }
-
-      // Fallback local registration
       onLoginSuccess(false);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Account registration failed.');
+      setErrorMessage(err.message || 'Could not create account.');
     } finally {
       setIsLoading(false);
     }
@@ -185,87 +163,81 @@ export const LoginView: React.FC<LoginViewProps> = ({
     onLoginSuccess(false);
   };
 
-  const getRoleBadge = (role: UserRole) => {
+  const getPlainRoleLabel = (role: UserRole) => {
     switch (role) {
       case 'owner':
-        return { label: 'Company Owner', color: 'text-amber-400 bg-amber-950/40 border-amber-800/60' };
+        return 'Owner';
       case 'manager':
-        return { label: 'Operations Manager', color: 'text-blue-400 bg-blue-950/40 border-blue-800/60' };
+        return 'Manager';
       case 'dispatcher':
-        return { label: 'Booking / Dispatcher', color: 'text-cyan-400 bg-cyan-950/40 border-cyan-800/60' };
+        return 'Booking Staff';
       case 'driver':
-        return { label: 'VIP Chauffeur', color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/60' };
+        return 'Driver';
       case 'accountant':
-        return { label: 'Finance Accountant', color: 'text-purple-400 bg-purple-950/40 border-purple-800/60' };
+        return 'Accountant';
       case 'mechanic':
-        return { label: 'Workshop Mechanic', color: 'text-rose-400 bg-rose-950/40 border-rose-800/60' };
+        return 'Mechanic';
       case 'receptionist':
-        return { label: 'Front Desk Officer', color: 'text-indigo-400 bg-indigo-950/40 border-indigo-800/60' };
+        return 'Front Desk';
       default:
-        return { label: role, color: 'text-slate-400 bg-slate-800 border-slate-700' };
+        return role;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 flex flex-col justify-between transition-colors">
       {/* Top Bar */}
-      <header className="p-4 sm:p-6 flex items-center justify-between border-b border-slate-800/80">
-        <button
-          onClick={onNavigateToLanding}
-          className="flex items-center gap-2.5 text-left group transition-transform"
-        >
+      <header className="px-5 sm:px-8 py-4 flex items-center justify-between bg-white dark:bg-[#0d1424] border-b border-slate-200 dark:border-slate-800">
+        <button onClick={onNavigateToLanding} className="flex items-center gap-2.5 text-left">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center font-extrabold shadow-md ${activeBtnText}`}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold ${activeBtnText}`}
             style={{ backgroundColor: activeColor }}
           >
             <Car className="w-5 h-5" />
           </div>
-          <div>
-            <span className="font-extrabold text-lg text-white font-mono tracking-tight">
-              Kigali<span style={{ color: activeColor }}>Fleet</span>
-            </span>
-            <span className="text-[10px] text-slate-400 block -mt-1">← Return to Homepage</span>
-          </div>
+          <span className="font-extrabold text-xl text-[#0a2540] dark:text-white tracking-tight">
+            Kigali<span style={{ color: activeColor }}>Fleet</span>
+          </span>
         </button>
 
         <button
           onClick={onNavigateToRegister}
-          className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5"
+          className="text-sm sm:text-[15px] font-semibold text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white flex items-center gap-1.5"
         >
-          <span>Register New Transport Company</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <span>Add a New Company</span>
+          <ArrowRight className="w-4 h-4" />
         </button>
       </header>
 
-      {/* Main Center Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="w-full max-w-md space-y-5">
-          <div className="text-center space-y-1.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {authMode === 'signin' ? 'Sign in to Workspace' : 'Create User Account'}
+      {/* Main Center Card */}
+      <main className="flex-1 flex items-center justify-center p-5 sm:p-8">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-extrabold text-[#0a2540] dark:text-white">
+              {authMode === 'signin' ? 'Sign in' : 'Create your account'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400">
+            <p className="text-base text-[#425466] dark:text-slate-300">
               {authMode === 'signin'
-                ? 'Role-based access control for fleet dispatch, drivers & managers.'
-                : 'Choose your system role: Owner, Manager, Dispatcher, Chauffeur or Client.'}
+                ? 'Open your car rental workspace.'
+                : 'Make an account for your job in the company.'}
             </p>
           </div>
 
-          {/* Mode Switcher Tabs */}
-          <div className="grid grid-cols-2 p-1 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold">
+          {/* Tabs */}
+          <div className="grid grid-cols-2 p-1 bg-slate-200/80 dark:bg-slate-900 rounded-xl text-[15px] font-bold">
             <button
               type="button"
               onClick={() => {
                 setAuthMode('signin');
                 setErrorMessage(null);
               }}
-              className={`py-2 rounded-lg transition-all ${
+              className={`py-2.5 rounded-lg transition-all ${
                 authMode === 'signin'
-                  ? 'bg-slate-800 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white shadow-xs'
+                  : 'text-[#425466] dark:text-slate-400'
               }`}
             >
-              Sign In
+              Sign in
             </button>
             <button
               type="button"
@@ -273,34 +245,33 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 setAuthMode('signup');
                 setErrorMessage(null);
               }}
-              className={`py-2 rounded-lg transition-all ${
+              className={`py-2.5 rounded-lg transition-all ${
                 authMode === 'signup'
-                  ? 'bg-slate-800 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white shadow-xs'
+                  : 'text-[#425466] dark:text-slate-400'
               }`}
             >
-              Create Account
+              Create account
             </button>
           </div>
 
           {errorMessage && (
-            <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs animate-in fade-in">
+            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-sm font-medium">
               {errorMessage}
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs animate-in fade-in flex items-center gap-2">
-              <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-200 text-sm font-medium flex items-center gap-2">
+              <Check className="w-5 h-5 shrink-0" />
               <span>{successMessage}</span>
             </div>
           )}
 
-          {/* MODE 1: SIGN IN */}
           {authMode === 'signin' && (
             <form
               onSubmit={handleManualLogin}
-              className="p-6 sm:p-7 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl space-y-4"
+              className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-5"
             >
               {onLoginWithGoogle && (
                 <button
@@ -310,42 +281,41 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     setIsLoading(true);
                     try {
                       const res = await onLoginWithGoogle();
-                      const isSuper = isSuperAdminEmail(res?.user?.email);
-                      onLoginSuccess(isSuper);
-                    } catch (e: any) {
-                      setErrorMessage('Google authentication could not be completed.');
+                      onLoginSuccess(isSuperAdminEmail(res?.user?.email));
+                    } catch {
+                      setErrorMessage('Google sign in did not finish. Please try again.');
                     } finally {
                       setIsLoading(false);
                     }
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-white text-slate-950 font-bold text-xs flex items-center justify-center gap-2.5 hover:bg-slate-100 transition-colors shadow-sm disabled:opacity-50"
+                  className="w-full py-3 px-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-[#0a2540] dark:text-white font-bold text-[15px] flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                   </svg>
-                  <span>Continue with Google Account</span>
+                  <span>Continue with Google</span>
                 </button>
               )}
 
-              <div className="relative flex items-center justify-center my-2">
-                <div className="border-t border-slate-800 w-full" />
-                <span className="bg-slate-900 px-3 text-[10px] text-slate-500 uppercase font-mono">or email credentials</span>
-                <div className="border-t border-slate-800 w-full" />
+              <div className="relative flex items-center justify-center">
+                <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
+                <span className="bg-white dark:bg-slate-900 px-3 text-sm text-[#425466] dark:text-slate-400">or</span>
+                <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Business or Account Email</label>
+                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">Email</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.rw or admin email"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                    placeholder="name@company.rw"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     required
                   />
                 </div>
@@ -353,62 +323,51 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-slate-300">Password</label>
+                  <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200">Password</label>
                   <button
                     type="button"
                     onClick={onOpenForgotPassword}
-                    className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
+                    className="text-sm font-semibold hover:underline"
+                    style={{ color: activeColor }}
                   >
                     Forgot password?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-10 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                    placeholder="••••••••"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-10 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0a2540] dark:hover:text-white"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded bg-slate-800 border-slate-700 text-amber-500" />
-                  <span>Remember this device</span>
-                </label>
-                <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Row-Level Security
-                </span>
-              </div>
-
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full py-2.5 rounded-lg font-bold text-xs shadow-md transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 ${activeBtnText}`}
+                className={`w-full py-3.5 rounded-full font-bold text-base shadow-sm transition-all hover:brightness-105 disabled:opacity-50 ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
-                {isLoading ? 'Authenticating...' : 'Sign In to Workspace'}
+                {isLoading ? 'Signing in...' : 'Sign in'}
               </button>
             </form>
           )}
 
-          {/* MODE 2: CREATE ACCOUNT FOR ANY USER TYPE */}
           {authMode === 'signup' && (
             <form
               onSubmit={handleManualSignUp}
-              className="p-6 sm:p-7 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl space-y-4"
+              className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-4"
             >
               {onLoginWithGoogle && (
                 <button
@@ -418,107 +377,97 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     setIsLoading(true);
                     try {
                       const res = await onLoginWithGoogle();
-                      const isSuper = isSuperAdminEmail(res?.user?.email);
-                      onLoginSuccess(isSuper);
-                    } catch (e: any) {
-                      setErrorMessage('Google registration could not be completed.');
+                      onLoginSuccess(isSuperAdminEmail(res?.user?.email));
+                    } catch {
+                      setErrorMessage('Google sign up did not finish. Please try again.');
                     } finally {
                       setIsLoading(false);
                     }
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-white text-slate-950 font-bold text-xs flex items-center justify-center gap-2.5 hover:bg-slate-100 transition-colors shadow-sm disabled:opacity-50"
+                  className="w-full py-3 px-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-[#0a2540] dark:text-white font-bold text-[15px] flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                   </svg>
-                  <span>Sign up with Google Account</span>
+                  <span>Sign up with Google</span>
                 </button>
               )}
 
-              <div className="relative flex items-center justify-center my-2">
-                <div className="border-t border-slate-800 w-full" />
-                <span className="bg-slate-900 px-3 text-[10px] text-slate-500 uppercase font-mono">or manual details</span>
-                <div className="border-t border-slate-800 w-full" />
-              </div>
-
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Your Full Name</label>
+                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Full name</label>
                 <div className="relative">
-                  <UserIcon className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
-                    placeholder="e.g. Jean-Luc Habimana"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white outline-none focus:border-amber-400"
+                    placeholder="Jean-Luc Habimana"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Email</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Telephone / WhatsApp</label>
+                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Phone number</label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="tel"
                     value={signupPhone}
                     onChange={(e) => setSignupPhone(e.target.value)}
                     placeholder="+250 788 000 000"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">System Role & Access Tier</label>
+                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Your job</label>
                 <select
                   value={signupRole}
                   onChange={(e) => setSignupRole(e.target.value as UserRole)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-xs text-white outline-none focus:border-amber-400"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                 >
-                  <option value="owner">Transport Company Owner (Director)</option>
-                  <option value="manager">Operations Manager (Fleet Oversight)</option>
-                  <option value="dispatcher">Booking Agent & Dispatcher</option>
-                  <option value="driver">VIP Chauffeur & Field Driver</option>
-                  <option value="accountant">Financial Accountant</option>
-                  <option value="mechanic">Workshop & Garage Mechanic</option>
-                  <option value="receptionist">Front Desk Receptionist</option>
+                  <option value="owner">Company Owner</option>
+                  <option value="manager">Manager</option>
+                  <option value="dispatcher">Booking Staff</option>
+                  <option value="driver">Driver</option>
+                  <option value="accountant">Accountant</option>
+                  <option value="mechanic">Mechanic</option>
+                  <option value="receptionist">Front Desk</option>
                 </select>
-                <span className="text-[10px] text-slate-500 block mt-1">
-                  Row-level access rules will restrict data to your assigned role.
-                </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Set Account Password</label>
+                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Password</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="password"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="Minimum 6 characters"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                    placeholder="At least 6 letters or numbers"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     required
                   />
                 </div>
@@ -527,55 +476,42 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full py-2.5 rounded-lg font-bold text-xs shadow-md transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 ${activeBtnText}`}
+                className={`w-full py-3.5 rounded-full font-bold text-base shadow-sm transition-all hover:brightness-105 disabled:opacity-50 ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
-                {isLoading ? 'Creating Account...' : 'Create Account & Enter Platform'}
+                {isLoading ? 'Creating...' : 'Create account'}
               </button>
             </form>
           )}
 
-          {/* Quick Staff Demo Selector (Strict RLS: Only company staff, NO super admin announced) */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Operational Staff Demo Profiles:</span>
-              </span>
-              <span className="text-[10px] text-slate-500 font-mono">One-click test</span>
+          {/* Quick Demo Accounts */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-bold text-[#0a2540] dark:text-white">Try a sample account</span>
+              <span className="text-[#425466] dark:text-slate-400">Tap once</span>
             </div>
 
-            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
               {publicDemoUsers.map((u) => {
-                const badge = getRoleBadge(u.role);
                 const isCurrent = selectedDemoUser === u.id;
                 return (
                   <button
                     key={u.id}
                     type="button"
                     onClick={() => handleQuickRoleSelect(u)}
-                    className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-colors ${
                       isCurrent
-                        ? 'bg-slate-800 border-amber-500/60 shadow-xs'
-                        : 'bg-slate-950/70 border-slate-800/80 hover:bg-slate-800/50 hover:border-slate-700'
+                        ? 'bg-slate-100 dark:bg-slate-800 border-amber-500'
+                        : 'bg-[#f6f9fc] dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
-                    <div className="min-w-0 flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center font-bold text-xs text-white font-mono">
-                        {u.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate">{u.name}</div>
-                        <div className="text-[10px] text-slate-400 truncate font-mono">{u.email}</div>
+                    <div className="min-w-0">
+                      <div className="text-[15px] font-bold text-[#0a2540] dark:text-white truncate">{u.name}</div>
+                      <div className="text-sm text-[#425466] dark:text-slate-400 truncate">
+                        {getPlainRoleLabel(u.role)}
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${badge.color}`}>
-                        {badge.label}
-                      </span>
-                      <ArrowRight className="w-3 h-3 text-slate-500" />
-                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-400 shrink-0" />
                   </button>
                 );
               })}
@@ -584,9 +520,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="p-4 text-center text-xs text-slate-500 border-t border-slate-800/80">
-        © 2026 KigaliFleet. All rights reserved. Enterprise Row-Level Security & Multi-Tenant Dispatch.
+      <footer className="p-5 text-center text-sm text-[#425466] dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
+        © 2026 KigaliFleet · Kigali, Rwanda
       </footer>
     </div>
   );

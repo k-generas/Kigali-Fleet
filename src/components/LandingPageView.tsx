@@ -5,36 +5,22 @@ import {
   Calendar,
   Radio,
   Globe,
-  Layers,
   ArrowRight,
   Check,
-  Zap,
-  Phone,
   MapPin,
-  Users,
-  Award,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
-  Sun,
-  Moon,
-  Laptop,
-  Smartphone,
-  Building2,
   Plane,
   AlertTriangle,
-  Play,
-  RotateCcw,
   CheckCircle2,
   Clock,
   DollarSign,
-  Palette,
   Menu,
   X,
 } from 'lucide-react';
-import { ColorTheme, COLOR_THEMES } from '../theme';
+import { ColorTheme } from '../theme';
 import { Vehicle, Driver, Booking } from '../types';
-import { formatRwf, checkBookingCollision, generateDriverSMS } from '../utils/collision';
+import { checkBookingCollision } from '../utils/collision';
 import { ThemeAppearanceMenu } from './ThemeAppearanceMenu';
 
 interface LandingPageViewProps {
@@ -67,140 +53,88 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   const activeColor = currentTheme.hex;
   const activeBtnText = currentTheme.btnText;
 
-  // State for interactive platform tabs
-  const [activePlatformTab, setActivePlatformTab] = useState<'operator' | 'dispatch' | 'storefront'>('operator');
-
-  // Interactive playground state
+  const [activeToolTab, setActiveToolTab] = useState<'calendar' | 'sms' | 'booking_page'>('calendar');
   const [demoVehicleCategory, setDemoVehicleCategory] = useState<string>('LandCruiser');
   const [demoStartDate, setDemoStartDate] = useState<string>('2026-11-05');
   const [demoEndDate, setDemoEndDate] = useState<string>('2026-11-08');
-  const [demoCollisionChecked, setDemoCollisionChecked] = useState<boolean>(true);
-
-  // SMS preview state
   const [smsLanguage, setSmsLanguage] = useState<'RW' | 'EN'>('RW');
-
-  // Pricing calculator state
   const [calculatorCars, setCalculatorCars] = useState<number>(12);
-
-  // FAQ accordion state
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Check collision for demo
   const sampleVehicle = vehicles.find((v) => v.category === demoVehicleCategory) || vehicles[0];
   const demoCollisionResult = sampleVehicle
     ? checkBookingCollision(sampleVehicle.id, demoStartDate, demoEndDate, bookings)
     : { hasCollision: false };
 
-  // Calculate pricing based on slider
-  const getCalculatedTier = (count: number) => {
-    if (count <= 5) {
-      return {
-        name: 'Starter Plan',
-        priceRwf: 35000,
-        desc: 'Ideal for boutique rental desks and owner-operators with up to 5 cars.',
-        features: ['Up to 5 vehicles', 'Collision-guarded calendar', 'Africa’s Talking SMS alerts', 'Standard email support'],
-      };
-    } else if (count <= 20) {
-      return {
-        name: 'Growth Plan',
-        priceRwf: 75000,
-        desc: 'Best for growing Kigali car rentals and tour agencies managing up to 20 cars.',
-        features: [
-          'Up to 20 vehicles',
-          'Live 7-Day fleet scheduling grid',
-          'Dual-language SMS dispatch (RW/EN)',
-          'Public branded B2B storefront link',
-          'Automated KIA flight delay tracking',
-          'Priority phone & WhatsApp support',
-        ],
-      };
-    } else {
-      return {
-        name: 'Enterprise Plan',
-        priceRwf: 150000,
-        desc: 'Built for large safari fleets, corporate transport providers, and multi-branch operators.',
-        features: [
-          'Unlimited vehicles & drivers',
-          'Multi-depot & upcountry branch support',
-          'Custom RRA EBM tax invoice exports',
-          'Dedicated account manager in Kigali',
-          'Custom telematics & GPS webhooks',
-          '99.9% uptime SLA',
-        ],
-      };
-    }
-  };
-
-  const calculatedTier = getCalculatedTier(calculatorCars);
-
-  const toggleFaq = (idx: number) => {
-    setOpenFaqIndex(openFaqIndex === idx ? null : idx);
+  const getRecommendedPlanName = (count: number) => {
+    if (count <= 5) return 'Small Fleet (35,000 RWF)';
+    if (count <= 20) return 'Growing Fleet (75,000 RWF)';
+    return 'Large Fleet (150,000 RWF)';
   };
 
   const faqs = [
     {
-      q: 'How does KigaliFleet prevent double bookings on the same car?',
-      a: 'Unlike generic spreadsheets or shared calendars, KigaliFleet enforces a physical-inventory collision engine. Every vehicle (e.g., Toyota Land Cruiser Prado TXL with plate RAD 789 C) is tracked as a physical asset. If a booking already locks November 5–8, any new attempt to schedule the same vehicle or category within that window is flagged in red and blocked before confirmation.',
+      q: 'How does it stop double bookings?',
+      a: 'Each car in your garage is tracked by its plate number. If a car is already booked from Nov 5 to Nov 8, nobody can book that same car on those days.',
     },
     {
-      q: 'Do drivers need smartphones or internet to receive dispatches?',
-      a: 'No! KigaliFleet integrates natively with Africa’s Talking SMS gateways. Drivers receive concise, structured SMS instructions directly on basic feature phones or smartphones in both Kinyarwanda and English. They can acknowledge assignments and report arrival at Kigali International Airport using zero-data SMS reply codes (e.g., YES 101 or ARRIVED).',
+      q: 'Do drivers need a smartphone or internet?',
+      a: 'No. Your driver gets a normal text message (SMS) in Kinyarwanda or English on any simple phone. They can reply YES or ARRIVED without internet.',
     },
     {
-      q: 'How do customers and corporate clients book online?',
-      a: 'Every operator gets a dedicated public storefront link (e.g. kigalifleet.app/rent or custom slug). Tourists, NGOs, and corporate event planners can view live category availability, select dates, choose chauffeur or self-drive, and reserve immediately. The reservation immediately syncs to your operator dashboard.',
+      q: 'How do customers book a car online?',
+      a: 'You get your own simple website link. Tourists and companies see which cars are free, pick their dates, and book in a few taps.',
     },
     {
-      q: 'Can we accept MTN Mobile Money and Airtel Money payments?',
-      a: 'Yes. KigaliFleet is tailored specifically for the Rwandan financial ecosystem. Bookings support MTN MoMo (*182#), Airtel Money, Bank Transfers (Bank of Kigali, I&M Bank), and Credit Cards, with automated deposit and balance tracking in Rwandan Francs (RWF).',
+      q: 'Can customers pay with Mobile Money?',
+      a: 'Yes. It works with MTN MoMo, Airtel Money, Bank Transfer, and Card, with all prices clearly shown in RWF.',
     },
     {
-      q: 'How does Kigali International Airport (KIA) flight delay tracking work?',
-      a: 'When an airport pickup booking includes a flight number (such as RwandAir WB 402 or Kenya Airways KQ 448), KigaliFleet monitors schedule changes. If a flight is delayed, the system alerts the operations team and can automatically dispatch an updated SMS to the assigned chauffeur so they arrive right on time without waiting in the terminal parking lot.',
+      q: 'What happens if a flight at Kigali Airport is late?',
+      a: 'When you add a flight number, the app watches the plane time. If the flight is late, it alerts your office and updates your driver.',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
-      {/* 1. Global Navigation Header (Clean, Professional, SaaS Standard) */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-slate-800/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-2.5 shrink-0">
+    <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 transition-colors">
+      {/* 1. Clean Stripe-Style 3-Zone Top Bar */}
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-white/90 dark:bg-[#0a0f1c]/90 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 sm:h-18 flex items-center justify-between gap-6">
+          {/* Zone 1: Brand */}
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-center gap-2.5 shrink-0 text-left"
+          >
             <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center font-extrabold shadow-sm ${activeBtnText}`}
+              className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold shadow-xs ${activeBtnText}`}
               style={{ backgroundColor: activeColor }}
             >
-              <Car className="w-4 h-4 stroke-[2.2]" />
+              <Car className="w-5 h-5" />
             </div>
-            <span className="text-lg font-bold tracking-tight text-white font-mono">
+            <span className="text-xl font-extrabold tracking-tight text-[#0a2540] dark:text-white whitespace-nowrap">
               Kigali<span style={{ color: activeColor }}>Fleet</span>
             </span>
-          </div>
+          </button>
 
-          {/* Center Navigation Links (Clean, SaaS Standard) */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-xs sm:text-sm font-medium text-slate-400">
-            <a href="#platforms" className="hover:text-white transition-colors">
-              Platform
+          {/* Zone 2: 4 Short Everyday Navigation Links */}
+          <nav className="hidden md:flex items-center gap-8 text-[15px] font-semibold text-[#425466] dark:text-slate-300">
+            <a href="#how-it-works" className="hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap">
+              How it works
             </a>
-            <a href="#features" className="hover:text-white transition-colors">
-              Features
+            <a href="#try-it" className="hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap">
+              Try it
             </a>
-            <a href="#demo" className="hover:text-white transition-colors">
-              Live Demo
+            <a href="#prices" className="hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap">
+              Prices
             </a>
-            <a href="#pricing" className="hover:text-white transition-colors">
-              Pricing
-            </a>
-            <a href="#faq" className="hover:text-white transition-colors">
-              FAQ
+            <a href="#help" className="hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap">
+              Help
             </a>
           </nav>
 
-          {/* Right Action Controls: Unified Appearance Menu + Clean Sign In + Primary CTA + Mobile Toggle */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Unified Appearance Button (Palette + Dark/Light Mode in ONE compact icon) */}
+          {/* Zone 3: Theme Picker + Sign in + Primary Action */}
+          <div className="flex items-center gap-3 shrink-0">
             <ThemeAppearanceMenu
               currentTheme={currentTheme}
               accentColorId={accentColorId}
@@ -211,249 +145,204 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
             <button
               onClick={() => onSelectTab('login')}
-              className="text-xs sm:text-sm font-semibold text-slate-300 hover:text-white px-2 py-1 transition-colors"
+              className="hidden sm:inline-flex items-center text-[15px] font-semibold text-[#425466] dark:text-slate-200 hover:text-[#0a2540] dark:hover:text-white px-3 py-2 transition-colors whitespace-nowrap"
             >
-              Sign In
+              Sign in
             </button>
 
             <button
               onClick={onEnterApp}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold shadow-sm transition-all hover:brightness-105 active:scale-95 ${activeBtnText}`}
+              className={`inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-full text-[15px] font-bold shadow-xs transition-all hover:brightness-105 active:scale-[0.98] whitespace-nowrap ${activeBtnText}`}
               style={{ backgroundColor: activeColor }}
             >
-              <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Start now</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
 
-            {/* Mobile Menu Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 md:hidden transition-colors"
-              aria-label="Toggle navigation"
+              className="p-2 rounded-lg text-[#425466] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden transition-colors"
+              aria-label="Open menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-800/80 bg-slate-950/95 px-4 py-3 space-y-2 text-xs font-semibold text-slate-300">
-            <a
-              href="#platforms"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
-            >
-              Platform Ecosystem
+          <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0a0f1c] px-5 py-4 space-y-2 text-base font-semibold text-[#0a2540] dark:text-slate-200">
+            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="block py-2">
+              How it works
             </a>
-            <a
-              href="#features"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
-            >
-              Features & Collision Guard
+            <a href="#try-it" onClick={() => setMobileMenuOpen(false)} className="block py-2">
+              Try it
             </a>
-            <a
-              href="#demo"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
-            >
-              Live Interactive Demo
+            <a href="#prices" onClick={() => setMobileMenuOpen(false)} className="block py-2">
+              Prices
             </a>
-            <a
-              href="#pricing"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
-            >
-              Pricing in RWF
+            <a href="#help" onClick={() => setMobileMenuOpen(false)} className="block py-2">
+              Help
             </a>
-            <a
-              href="#faq"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-2.5 rounded-md hover:bg-slate-900 hover:text-white"
-            >
-              Frequently Asked Questions
-            </a>
-            <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-3">
               <button
                 onClick={() => {
                   onSelectTab('login');
                   setMobileMenuOpen(false);
                 }}
-                className="w-1/2 py-2 text-center rounded-lg border border-slate-700 text-slate-200"
+                className="py-2.5 rounded-full border border-slate-300 dark:border-slate-700 text-center"
               >
-                Sign In
+                Sign in
               </button>
               <button
                 onClick={() => {
                   onEnterApp();
                   setMobileMenuOpen(false);
                 }}
-                className={`w-1/2 py-2 text-center rounded-lg font-bold ${activeBtnText}`}
+                className={`py-2.5 rounded-full font-bold text-center ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
-                Launch
+                Start now
               </button>
             </div>
           </div>
         )}
       </header>
 
-      {/* 2. Hero Section */}
-      <section className="relative pt-16 pb-20 lg:pt-20 lg:pb-28 overflow-hidden border-b border-slate-800/80">
-        {/* Subtle background glow */}
+      {/* 2. Hero Section — Stripe-Inspired Split Layout (Understood in 5 seconds) */}
+      <section className="relative overflow-hidden bg-white dark:bg-[#0d1424] border-b border-slate-200/80 dark:border-slate-800/80">
+        {/* Subtle Stripe-style angled soft color wash */}
         <div
-          className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[350px] rounded-full blur-[140px] pointer-events-none opacity-20"
+          className="absolute -top-36 -right-36 w-[620px] h-[620px] rounded-full blur-[130px] pointer-events-none opacity-15"
           style={{ backgroundColor: activeColor }}
         />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto">
-            {/* Tagline kicker */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 mb-6 shadow-inner">
-              <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: activeColor }} />
-              <span className="font-mono uppercase tracking-wider text-[11px]">
-                Built for Rwandan Car Rentals & Safari Operators
-              </span>
-            </div>
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-20 lg:py-24 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+            {/* Left Copy Column */}
+            <div className="lg:col-span-6 space-y-6">
+              <p className="text-sm sm:text-base font-bold tracking-wide" style={{ color: activeColor }}>
+                Made for car rentals &amp; tour companies in Rwanda
+              </p>
 
-            {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
-              Manage Your Fleet.{' '}
-              <span className="block mt-1 sm:mt-2" style={{ color: activeColor }}>
-                Control Your Bookings.
-              </span>{' '}
-              Never Lose Track.
-            </h1>
+              <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold text-[#0a2540] dark:text-white leading-[1.08] tracking-tight">
+                Run your car rental business in one simple place.
+              </h1>
 
-            {/* Supporting paragraph */}
-            <p className="mt-6 text-lg sm:text-xl text-slate-300 font-normal leading-relaxed">
-              The centralized operating system for Kigali car rental companies, tour agencies, and airport transfer
-              chauffeurs. Stop double-bookings with physical collision guards, dispatch drivers instantly via Africa’s
-              Talking SMS, and share branded live booking storefronts.
-            </p>
+              <p className="text-lg sm:text-xl text-[#425466] dark:text-slate-300 leading-relaxed max-w-xl">
+                See which cars are free, stop double bookings, send trip messages to drivers by SMS, and accept Mobile Money.
+              </p>
 
-            {/* Focused 2-Button Hero CTA */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-              <button
-                onClick={onEnterApp}
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm sm:text-base shadow-lg transition-all hover:brightness-105 active:scale-95 ${activeBtnText}`}
-                style={{ backgroundColor: activeColor }}
-              >
-                <Laptop className="w-4 h-4" />
-                <span>Launch Operator Platform</span>
-              </button>
-
-              <button
-                onClick={onOpenStorefront}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm sm:text-base text-slate-200 bg-slate-900 hover:bg-slate-850 hover:text-white border border-slate-700/80 transition-colors shadow-sm"
-              >
-                <Globe className="w-4 h-4 text-emerald-400" />
-                <span>View Guest Storefront</span>
-              </button>
-            </div>
-
-            {/* Unboxed Metadata badges (Clean Typography as per Constitution) */}
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-slate-400">
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>Zero Double-Bookings Guard</span>
-              </div>
-              <span className="text-slate-700">·</span>
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>Africa’s Talking SMS in Kinyarwanda</span>
-              </div>
-              <span className="text-slate-700">·</span>
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>MTN Mobile Money Ready</span>
-              </div>
-              <span className="text-slate-700">·</span>
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>Kigali Airport (KIA) Flight Delay Sync</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Live Preview Teaser Card */}
-          <div className="mt-14 max-w-5xl mx-auto rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-4 sm:p-6 overflow-hidden">
-            {/* Top Window Bar */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 text-xs text-slate-400">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-                <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-                <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                <span className="ml-2 font-mono text-[11px] text-slate-500">
-                  kigalifleet.app/dispatch-console (Live Kigali Fleet Instance)
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 text-emerald-400 font-mono text-[11px]">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Fleet Connected: {vehicles.length} Vehicles · {drivers.length} Chauffeurs
-                </span>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
                 <button
                   onClick={onEnterApp}
-                  className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1"
+                  className={`inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-base font-bold shadow-sm transition-all hover:brightness-105 active:scale-[0.98] ${activeBtnText}`}
+                  style={{ backgroundColor: activeColor }}
                 >
-                  <span>Enter</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open App</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
+
+                <button
+                  onClick={onOpenStorefront}
+                  className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-base font-bold text-[#0a2540] dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <Globe className="w-4 h-4" style={{ color: activeColor }} />
+                  <span>Book a Car</span>
+                </button>
+              </div>
+
+              <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[15px] font-medium text-[#425466] dark:text-slate-300">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>No double bookings</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Works on basic driver phones</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>MTN &amp; Airtel MoMo ready</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Airport flight alerts</span>
+                </div>
               </div>
             </div>
 
-            {/* Teaser Grid Preview */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Snapshot 1: Real Fleet Asset */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80">
-                <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                  <span className="font-mono text-amber-400 font-semibold">Toyota Land Cruiser</span>
-                  <span className="text-[11px] font-mono">RAD 789 C</span>
-                </div>
-                <div className="text-sm font-bold text-white mb-1">Volcanoes NP Safari Trip</div>
-                <div className="text-xs text-slate-400 flex items-center gap-1.5 mb-3">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Nov 05 – Nov 08 (4 Days)</span>
-                </div>
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Chauffeur: Jean-Paul M.</span>
-                  <span className="text-emerald-400 font-mono font-bold">720,000 RWF</span>
-                </div>
-              </div>
-
-              {/* Snapshot 2: Airport Transfer with Flight Status */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80">
-                <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                  <span className="font-mono text-cyan-400 font-semibold">Toyota RAV4 AWD</span>
-                  <span className="text-[11px] font-mono">RAC 452 B</span>
-                </div>
-                <div className="text-sm font-bold text-white mb-1">KIA Airport Pickup → Kiyovu</div>
-                <div className="text-xs text-amber-400 flex items-center gap-1.5 mb-3">
-                  <Plane className="w-3.5 h-3.5" />
-                  <span>Flight WB 402 (Delayed +35m)</span>
-                </div>
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Chauffeur: Emmanuel K.</span>
-                  <span className="text-emerald-400 font-mono font-bold">45,000 RWF</span>
-                </div>
-              </div>
-
-              {/* Snapshot 3: Physical Collision Guard Shield */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 mb-1">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Active Collision Guard</span>
+            {/* Right Stripe-Style Live Preview Card Stack */}
+            <div className="lg:col-span-6">
+              <div className="rounded-2xl bg-[#f6f9fc] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-7 stripe-card space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+                  <div>
+                    <div className="text-sm font-bold text-[#0a2540] dark:text-white">Today&apos;s Cars &amp; Trips</div>
+                    <div className="text-sm text-[#425466] dark:text-slate-400">
+                      {vehicles.length} cars · {drivers.length} drivers
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-300 leading-snug mt-1">
-                    Physical inventory is locked across dates. Double-bookings are impossible at the database layer.
-                  </p>
+                  <button
+                    onClick={onEnterApp}
+                    className="text-sm font-bold hover:underline flex items-center gap-1"
+                    style={{ color: activeColor }}
+                  >
+                    <span>See all</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
-                <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Dispatch Status</span>
-                  <span className="text-amber-400 font-medium">Africa’s Talking Connected</span>
+
+                <div className="space-y-3">
+                  {/* Card 1 */}
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-base font-bold text-[#0a2540] dark:text-white truncate">
+                        Toyota Land Cruiser · RAD 789 C
+                      </div>
+                      <div className="text-sm text-[#425466] dark:text-slate-400 mt-0.5 flex items-center gap-2">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        <span>Volcanoes Trip · Nov 05 – Nov 08 · Driver: Jean-Paul</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                        720,000 RWF
+                      </div>
+                      <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Paid</div>
+                    </div>
+                  </div>
+
+                  {/* Card 2 */}
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-base font-bold text-[#0a2540] dark:text-white truncate">
+                        Toyota RAV4 · RAC 452 B
+                      </div>
+                      <div className="text-sm text-amber-700 dark:text-amber-400 mt-0.5 flex items-center gap-2 font-medium">
+                        <Plane className="w-4 h-4 shrink-0" />
+                        <span>Airport Pickup · Flight WB 402 is 35 min late</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-base font-bold font-mono text-[#0a2540] dark:text-white">
+                        45,000 RWF
+                      </div>
+                      <div className="text-xs font-semibold text-amber-600 dark:text-amber-400">Driver alerted</div>
+                    </div>
+                  </div>
+
+                  {/* Card 3 */}
+                  <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-3">
+                    <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="text-base font-bold text-emerald-950 dark:text-emerald-200">
+                        Double bookings are blocked automatically
+                      </div>
+                      <div className="text-sm text-emerald-800 dark:text-emerald-300">
+                        If a car is booked, no one else can book it on the same day.
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -461,356 +350,266 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
         </div>
       </section>
 
-      {/* 3. The Three Connected Platforms Section (As requested: "adding landingpage as add platiforms") */}
-      <section id="platforms" className="py-20 lg:py-28 bg-slate-950 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-14">
-            <span
-              className="text-xs font-mono font-bold uppercase tracking-wider px-3 py-1 rounded bg-slate-900 border border-slate-800"
-              style={{ color: activeColor }}
-            >
-              Unified Architecture
-            </span>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Three Connected Platforms in One Software Business
+      {/* 3. How It Works — 3 Simple Tools */}
+      <section id="how-it-works" className="py-16 sm:py-24 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="max-w-2xl mb-10">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0a2540] dark:text-white">
+              Three simple tools in one place
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-slate-300">
-              KigaliFleet bridges the gap between the agency back-office, on-the-ground drivers in Kigali, and international
-              tourists booking online.
+            <p className="mt-3 text-lg text-[#425466] dark:text-slate-300">
+              Everything your office, your drivers, and your customers need.
             </p>
           </div>
 
-          {/* Platform Tab Switcher */}
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 p-1.5 bg-slate-900/90 border border-slate-800 rounded-xl max-w-3xl mx-auto mb-10">
+          {/* Interactive Tool Tabs */}
+          <div className="inline-flex flex-wrap gap-2 p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mb-8 stripe-card">
             <button
-              onClick={() => setActivePlatformTab('operator')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-                activePlatformTab === 'operator'
-                  ? 'bg-white text-slate-950 shadow-md'
-                  : 'text-slate-400 hover:text-white'
+              onClick={() => setActiveToolTab('calendar')}
+              className={`px-4 py-2.5 rounded-lg text-[15px] font-bold transition-colors flex items-center gap-2 ${
+                activeToolTab === 'calendar'
+                  ? `${activeBtnText}`
+                  : 'text-[#425466] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
+              style={activeToolTab === 'calendar' ? { backgroundColor: activeColor } : undefined}
             >
-              <Laptop className="w-4 h-4" />
-              <span>1. Operator Command Center</span>
+              <Calendar className="w-4 h-4" />
+              <span>1. Trip Calendar</span>
             </button>
             <button
-              onClick={() => setActivePlatformTab('dispatch')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-                activePlatformTab === 'dispatch'
-                  ? 'bg-white text-slate-950 shadow-md'
-                  : 'text-slate-400 hover:text-white'
+              onClick={() => setActiveToolTab('sms')}
+              className={`px-4 py-2.5 rounded-lg text-[15px] font-bold transition-colors flex items-center gap-2 ${
+                activeToolTab === 'sms'
+                  ? `${activeBtnText}`
+                  : 'text-[#425466] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
+              style={activeToolTab === 'sms' ? { backgroundColor: activeColor } : undefined}
             >
-              <Radio className="w-4 h-4 text-amber-500" />
-              <span>2. Driver Dispatch & SMS Hub</span>
+              <Radio className="w-4 h-4" />
+              <span>2. Driver SMS</span>
             </button>
             <button
-              onClick={() => setActivePlatformTab('storefront')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-                activePlatformTab === 'storefront'
-                  ? 'bg-white text-slate-950 shadow-md'
-                  : 'text-slate-400 hover:text-white'
+              onClick={() => setActiveToolTab('booking_page')}
+              className={`px-4 py-2.5 rounded-lg text-[15px] font-bold transition-colors flex items-center gap-2 ${
+                activeToolTab === 'booking_page'
+                  ? `${activeBtnText}`
+                  : 'text-[#425466] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
+              style={activeToolTab === 'booking_page' ? { backgroundColor: activeColor } : undefined}
             >
-              <Globe className="w-4 h-4 text-emerald-500" />
-              <span>3. Public Customer Storefront</span>
+              <Globe className="w-4 h-4" />
+              <span>3. Booking Website</span>
             </button>
           </div>
 
-          {/* Platform Content Showcase */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-10">
-            {/* Left Description Column */}
-            <div className="lg:col-span-5 space-y-6">
-              {activePlatformTab === 'operator' && (
+          {/* Tool Showcase Card */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-10 stripe-card">
+            <div className="lg:col-span-5 space-y-5">
+              {activeToolTab === 'calendar' && (
                 <>
-                  <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
-                    <Laptop className="w-4 h-4" />
-                    <span>Back-Office Operations</span>
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-                    Operator Command Center & Live Fleet Timeline
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
+                    See every car on one calendar
                   </h3>
-                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                    Designed for rental desk managers and dispatchers. View your entire fleet across a 7-day timeline
-                    grid, drag to allocate, track vehicle maintenance, and lock reservations with mathematical collision
-                    safety.
+                  <p className="text-base sm:text-lg text-[#425466] dark:text-slate-300 leading-relaxed">
+                    Look at your whole week in seconds. Know right away which car is out on a trip, which car is in repair, and which car is ready.
                   </p>
-                  <ul className="space-y-3 text-sm text-slate-300">
+                  <ul className="space-y-3 text-base text-[#0a2540] dark:text-slate-200">
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Live 7-Day interactive timeline grid for every car</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>Blocks double bookings before they happen</span>
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Physical inventory collision detection avoids double bookings</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>Hides cars that are in the garage for repair</span>
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Maintenance locking for routine 5,000 km oil & brake service</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>One-click chauffeur assignment and trip rate calculator in RWF</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>Calculates total price in RWF automatically</span>
                     </li>
                   </ul>
-                  <div className="pt-2">
-                    <button
-                      onClick={() => onSelectTab('calendar')}
-                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold shadow-md transition-all ${activeBtnText}`}
-                      style={{ backgroundColor: activeColor }}
-                    >
-                      <span>Explore Timeline Demo</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => onSelectTab('calendar')}
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-[15px] font-bold ${activeBtnText}`}
+                    style={{ backgroundColor: activeColor }}
+                  >
+                    <span>Open Calendar</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </>
               )}
 
-              {activePlatformTab === 'dispatch' && (
+              {activeToolTab === 'sms' && (
                 <>
-                  <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-400">
-                    <Radio className="w-4 h-4" />
-                    <span>Zero-Data Driver Operations</span>
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-                    Africa’s Talking SMS Hub & Kigali Airport Sync
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
+                    Send trips to drivers by text message
                   </h3>
-                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                    Solve the driver communication gap without forcing expensive data bundles. Send automated SMS trip
-                    vouchers in Kinyarwanda or English, track driver arrival at KIA, and auto-adjust for delayed flights.
+                  <p className="text-base sm:text-lg text-[#425466] dark:text-slate-300 leading-relaxed">
+                    Your drivers do not need internet bundles or an app. One click sends the pickup place, time, and customer name by normal SMS.
                   </p>
-                  <ul className="space-y-3 text-sm text-slate-300">
+                  <ul className="space-y-3 text-base text-[#0a2540] dark:text-slate-200">
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Localized SMS templates in Kinyarwanda (`Muraho Jean-Paul...`)</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>Messages in Kinyarwanda or English</span>
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Zero-data driver check-in via simple SMS reply codes</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>Drivers confirm by simple SMS reply</span>
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Live flight delay alerts for RwandAir, Kenya Airways & Ethiopian</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Full dispatch audit trail with delivery timestamps</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>Updates drivers when a flight is late</span>
                     </li>
                   </ul>
-                  <div className="pt-2">
-                    <button
-                      onClick={() => onSelectTab('simulator')}
-                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold shadow-md transition-all ${activeBtnText}`}
-                      style={{ backgroundColor: activeColor }}
-                    >
-                      <span>Open Dispatch Simulator</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => onSelectTab('simulator')}
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-[15px] font-bold ${activeBtnText}`}
+                    style={{ backgroundColor: activeColor }}
+                  >
+                    <span>Try SMS Sender</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </>
               )}
 
-              {activePlatformTab === 'storefront' && (
+              {activeToolTab === 'booking_page' && (
                 <>
-                  <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                    <Globe className="w-4 h-4" />
-                    <span>Client-Facing Commerce</span>
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-                    Instant B2B & Tourist Storefront Portal
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
+                    Let customers book online anytime
                   </h3>
-                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                    Give your car rental agency a modern public booking storefront. Share direct links with tourists,
-                    embassies, NGOs, and conference attendees. Customers check real-time availability and book with MTN
-                    MoMo or card.
+                  <p className="text-base sm:text-lg text-[#425466] dark:text-slate-300 leading-relaxed">
+                    Share your booking page link on WhatsApp or your website. Tourists and NGOs see free cars and pay with Mobile Money or Card.
                   </p>
-                  <ul className="space-y-3 text-sm text-slate-300">
+                  <ul className="space-y-3 text-base text-[#0a2540] dark:text-slate-200">
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Instant public link: `kigalifleet.app/rent` or your company slug</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>Shows only cars that are really free</span>
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Live inventory checks: Only shows vehicles physically available</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>Clear daily prices in RWF or USD</span>
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Transparent daily pricing in Rwandan Francs (RWF)</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>MTN Mobile Money (*182#), Airtel Money & Card capture</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <span>MTN MoMo, Airtel Money &amp; Card</span>
                     </li>
                   </ul>
-                  <div className="pt-2">
-                    <button
-                      onClick={onOpenStorefront}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 shadow-md transition-all"
-                    >
-                      <Globe className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>View Live Storefront</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={onOpenStorefront}
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-[15px] font-bold ${activeBtnText}`}
+                    style={{ backgroundColor: activeColor }}
+                  >
+                    <span>Open Booking Website</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </>
               )}
             </div>
 
-            {/* Right Interactive Mockup Column */}
             <div className="lg:col-span-7">
-              {activePlatformTab === 'operator' && (
-                <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 shadow-xl space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs text-slate-400">
-                    <div className="flex items-center gap-2 font-mono">
-                      <Calendar className="w-4 h-4 text-amber-400" />
-                      <span className="font-bold text-white">7-Day Fleet Availability Matrix</span>
-                    </div>
-                    <span className="text-[11px] bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                      Week of Nov 04 – Nov 10
-                    </span>
+              {activeToolTab === 'calendar' && (
+                <div className="p-5 sm:p-6 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between text-sm font-bold text-[#0a2540] dark:text-white">
+                    <span>Weekly Car Schedule</span>
+                    <span className="text-[#425466] dark:text-slate-400 font-normal">Nov 04 – Nov 10</span>
                   </div>
-
-                  {/* Micro timeline bars */}
-                  <div className="space-y-3 font-mono text-xs">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="space-y-4 text-sm">
+                    <div>
+                      <div className="flex justify-between mb-1.5 font-medium text-[#425466] dark:text-slate-300">
                         <span>Toyota Prado (RAD 789 C)</span>
-                        <span className="text-emerald-400">Available Nov 09</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Free Nov 09</span>
                       </div>
-                      <div className="grid grid-cols-7 gap-1 h-6">
-                        <div className="col-span-1 bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-500">
+                      <div className="grid grid-cols-7 gap-1.5 h-9 text-xs font-bold">
+                        <div className="col-span-1 bg-slate-200 dark:bg-slate-800 rounded flex items-center justify-center text-[#425466] dark:text-slate-400">
                           04
                         </div>
-                        <div className="col-span-4 bg-amber-500/20 border border-amber-500/40 rounded flex items-center justify-center text-[10px] text-amber-300 font-bold">
-                          UNHCR Safari (Locked)
+                        <div className="col-span-4 bg-amber-100 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-500/40 rounded flex items-center justify-center text-amber-900 dark:text-amber-300">
+                          Safari Trip (Booked)
                         </div>
-                        <div className="col-span-2 bg-emerald-500/10 border border-emerald-500/30 rounded flex items-center justify-center text-[10px] text-emerald-400">
+                        <div className="col-span-2 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 rounded flex items-center justify-center text-emerald-800 dark:text-emerald-300">
                           Free
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <div>
+                      <div className="flex justify-between mb-1.5 font-medium text-[#425466] dark:text-slate-300">
                         <span>Toyota RAV4 (RAC 452 B)</span>
-                        <span className="text-cyan-400">KIA Airport Run</span>
+                        <span className="text-sky-600 dark:text-sky-400 font-semibold">Airport Transfer</span>
                       </div>
-                      <div className="grid grid-cols-7 gap-1 h-6">
-                        <div className="col-span-2 bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-500">
+                      <div className="grid grid-cols-7 gap-1.5 h-9 text-xs font-bold">
+                        <div className="col-span-2 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 rounded flex items-center justify-center text-emerald-800 dark:text-emerald-300">
                           Free
                         </div>
-                        <div className="col-span-3 bg-cyan-500/20 border border-cyan-500/40 rounded flex items-center justify-center text-[10px] text-cyan-300 font-bold">
-                          Kiyovu Hotel Transfer
+                        <div className="col-span-3 bg-sky-100 dark:bg-sky-500/20 border border-sky-300 dark:border-sky-500/40 rounded flex items-center justify-center text-sky-900 dark:text-sky-300">
+                          Hotel Pickup
                         </div>
-                        <div className="col-span-2 bg-emerald-500/10 border border-emerald-500/30 rounded flex items-center justify-center text-[10px] text-emerald-400">
+                        <div className="col-span-2 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 rounded flex items-center justify-center text-emerald-800 dark:text-emerald-300">
                           Free
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Toyota Coaster Bus (RAD 310 F)</span>
-                        <span className="text-rose-400">Maintenance</span>
+                    <div>
+                      <div className="flex justify-between mb-1.5 font-medium text-[#425466] dark:text-slate-300">
+                        <span>Toyota Coaster (RAD 310 F)</span>
+                        <span className="text-rose-600 dark:text-rose-400 font-semibold">In Repair</span>
                       </div>
-                      <div className="grid grid-cols-7 gap-1 h-6">
-                        <div className="col-span-3 bg-rose-500/20 border border-rose-500/40 rounded flex items-center justify-center text-[10px] text-rose-300 font-bold">
-                          Brake Inspection
+                      <div className="grid grid-cols-7 gap-1.5 h-9 text-xs font-bold">
+                        <div className="col-span-3 bg-rose-100 dark:bg-rose-500/20 border border-rose-300 dark:border-rose-500/40 rounded flex items-center justify-center text-rose-800 dark:text-rose-300">
+                          Brake Repair
                         </div>
-                        <div className="col-span-4 bg-emerald-500/10 border border-emerald-500/30 rounded flex items-center justify-center text-[10px] text-emerald-400">
-                          Available for Booking
+                        <div className="col-span-4 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 rounded flex items-center justify-center text-emerald-800 dark:text-emerald-300">
+                          Ready to Book
                         </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Double-Booking Collision Engine:</span>
-                    <span className="text-emerald-400 font-semibold font-mono flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4" />
-                      100% Guaranteed Physical Safety
-                    </span>
                   </div>
                 </div>
               )}
 
-              {activePlatformTab === 'dispatch' && (
-                <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 shadow-xl space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs text-slate-400">
-                    <div className="flex items-center gap-2 font-mono">
-                      <Radio className="w-4 h-4 text-cyan-400" />
-                      <span className="font-bold text-white">Africa’s Talking SMS Dispatch Gateway</span>
-                    </div>
-                    <span className="text-[11px] text-emerald-400 font-mono">Gateway: LIVE (KGL-AT-01)</span>
+              {activeToolTab === 'sms' && (
+                <div className="p-5 sm:p-6 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
+                  <div className="text-sm font-bold text-[#0a2540] dark:text-white">
+                    Example text message sent to driver&apos;s phone:
                   </div>
-
-                  <div className="p-4 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs leading-relaxed text-slate-200">
-                    <div className="text-[11px] text-slate-500 mb-2">To: +250 788 456 789 (Jean-Paul M.)</div>
-                    <p className="text-amber-300">
-                      Muraho Jean-Paul, ufite urugendo rushya rwemejwe! Imodoka: Toyota Prado (RAD 789 C). Umukiriya:
-                      Dr. Sarah Jenkins. Aho guhagurukira: Kigali International Airport (KIA). Igihe: 09:30 AM.
+                  <div className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-base leading-relaxed space-y-3">
+                    <div className="text-sm text-[#425466] dark:text-slate-400">
+                      To: Jean-Paul M. (+250 788 456 789)
+                    </div>
+                    <p className="font-medium text-[#0a2540] dark:text-slate-100">
+                      Muraho Jean-Paul, ufite urugendo rushya! Imodoka: Toyota Prado (RAD 789 C). Umukiriya: Dr. Sarah Jenkins. Aho guhagurukira: Kigali Airport (09:30 AM).
                     </p>
-                    <div className="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-                      <span>Zero-Data Reply Code:</span>
-                      <span className="text-emerald-400 font-bold">Subiza &quot;YEGO 101&quot; kwemeza</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="p-2.5 rounded bg-slate-900 border border-slate-800">
-                      <div className="text-slate-400 text-[11px]">Kigali Flight Status</div>
-                      <div className="font-bold text-amber-400 mt-0.5">WB 402 · Delayed +35m</div>
-                    </div>
-                    <div className="p-2.5 rounded bg-slate-900 border border-slate-800">
-                      <div className="text-slate-400 text-[11px]">Chauffeur Check-In</div>
-                      <div className="font-bold text-emerald-400 mt-0.5">Acknowledged via SMS</div>
-                    </div>
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                      Reply &quot;YEGO 101&quot; to confirm
+                    </p>
                   </div>
                 </div>
               )}
 
-              {activePlatformTab === 'storefront' && (
-                <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 shadow-xl space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs text-slate-400">
-                    <div className="flex items-center gap-2 font-mono">
-                      <Globe className="w-4 h-4 text-emerald-400" />
-                      <span className="font-bold text-white">Public Guest Storefront Demo</span>
-                    </div>
-                    <span className="text-[11px] text-slate-500 font-mono">kigalifleet.app/rent</span>
+              {activeToolTab === 'booking_page' && (
+                <div className="p-5 sm:p-6 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="text-sm font-bold text-[#0a2540] dark:text-white mb-2">
+                    What your customers see online:
                   </div>
-
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-bold text-white">Toyota Land Cruiser Prado TXL</div>
-                        <div className="text-[11px] text-slate-400">7 Seats · Diesel · Automatic · Safari Roof Rack</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-amber-400 font-mono">180,000 RWF</div>
-                        <div className="text-[10px] text-slate-500">per day</div>
-                      </div>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-base font-bold text-[#0a2540] dark:text-white">Toyota Land Cruiser Prado</div>
+                      <div className="text-sm text-[#425466] dark:text-slate-400">7 Seats · Diesel · Automatic</div>
                     </div>
-
-                    <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-bold text-white">Toyota RAV4 AWD</div>
-                        <div className="text-[11px] text-slate-400">5 Seats · Petrol · Automatic · Kigali City & Upcountry</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-amber-400 font-mono">60,000 RWF</div>
-                        <div className="text-[10px] text-slate-500">per day</div>
-                      </div>
+                    <div className="text-right">
+                      <div className="text-lg font-extrabold font-mono text-[#0a2540] dark:text-white">180,000 RWF</div>
+                      <div className="text-xs text-[#425466] dark:text-slate-400">per day</div>
                     </div>
                   </div>
-
-                  <div className="pt-2 flex items-center justify-between text-xs text-slate-400">
-                    <span>Payment Methods: MTN MoMo, Airtel, Visa/Mastercard</span>
-                    <button
-                      onClick={onOpenStorefront}
-                      className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1"
-                    >
-                      <span>Open Customer Wizard</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-base font-bold text-[#0a2540] dark:text-white">Toyota RAV4</div>
+                      <div className="text-sm text-[#425466] dark:text-slate-400">5 Seats · Petrol · Automatic</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-extrabold font-mono text-[#0a2540] dark:text-white">60,000 RWF</div>
+                      <div className="text-xs text-[#425466] dark:text-slate-400">per day</div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -819,221 +618,179 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
         </div>
       </section>
 
-      {/* 4. Interactive Live Playground Section */}
-      <section id="demo" className="py-20 lg:py-28 bg-slate-900/40 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-14">
-            <span
-              className="text-xs font-mono font-bold uppercase tracking-wider px-3 py-1 rounded bg-slate-900 border border-slate-800"
-              style={{ color: activeColor }}
-            >
-              Live Engine Test
-            </span>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Test Drive the Collision & Dispatch Engines
+      {/* 4. Try It Live — Plain, Instant Demo */}
+      <section id="try-it" className="py-16 sm:py-24 bg-white dark:bg-[#0d1424] border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="max-w-2xl mb-12">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0a2540] dark:text-white">
+              Try it right here
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-slate-300">
-              Interact directly with the algorithms that protect Rwandan operators from double bookings and missed airport
-              pickups.
+            <p className="mt-3 text-lg text-[#425466] dark:text-slate-300">
+              Pick dates to test double-booking protection, or switch the driver SMS language.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Playground 1: Live Collision Test */}
-            <div className="p-6 sm:p-8 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-amber-400" />
-                    <h3 className="font-bold text-white text-lg">Physical Collision Detector</h3>
-                  </div>
-                  <span className="text-xs font-mono text-slate-400">Algorithm: O(1) Physical Lock</span>
-                </div>
-
-                <p className="text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed">
-                  Select vehicle category and test date ranges against active bookings to see how the engine instantly detects
-                  conflicts.
-                </p>
+            {/* Test 1: Check Car Availability */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-[#f6f9fc] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-6">
+              <div className="space-y-5">
+                <h3 className="text-xl font-extrabold text-[#0a2540] dark:text-white">
+                  1. Check if a car is free
+                </h3>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Vehicle Category</label>
+                    <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">
+                      Pick a car
+                    </label>
                     <select
                       value={demoVehicleCategory}
                       onChange={(e) => setDemoVehicleCategory(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-base text-[#0a2540] dark:text-white outline-none"
                     >
-                      <option value="LandCruiser">Toyota Land Cruiser Prado TXL (180,000 RWF/day)</option>
-                      <option value="RAV4">Toyota RAV4 AWD (60,000 RWF/day)</option>
-                      <option value="Coaster">Toyota Coaster Safari 30-Seater (250,000 RWF/day)</option>
-                      <option value="Safari Van">Toyota HiAce Custom Safari Van (120,000 RWF/day)</option>
+                      <option value="LandCruiser">Toyota Land Cruiser Prado</option>
+                      <option value="RAV4">Toyota RAV4</option>
+                      <option value="Coaster">Toyota Coaster Bus</option>
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">Rental Start Date</label>
+                      <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">
+                        Start date
+                      </label>
                       <input
                         type="date"
                         value={demoStartDate}
                         onChange={(e) => setDemoStartDate(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-base text-[#0a2540] dark:text-white outline-none font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">Rental End Date</label>
+                      <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">
+                        End date
+                      </label>
                       <input
                         type="date"
                         value={demoEndDate}
                         onChange={(e) => setDemoEndDate(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-base text-[#0a2540] dark:text-white outline-none font-mono"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Collision Result Display */}
-                <div className="mt-6 p-4 rounded-xl border transition-all">
-                  {demoCollisionResult.hasCollision ? (
-                    <div className="space-y-2 border-rose-500/30 bg-rose-950/20 text-rose-200">
-                      <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
-                        <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span>COLLISION DETECTED — BOOKING BLOCKED</span>
-                      </div>
-                      <p className="text-xs text-slate-300">
-                        {demoCollisionResult.conflictReason ||
-                          'Vehicle is already booked on overlapping dates. System prevents confirmation.'}
-                      </p>
-                      <div className="text-[11px] font-mono text-rose-300">
-                        Conflicting Client:{' '}
-                        <span className="font-bold">{demoCollisionResult.conflictingBooking?.client_name}</span> (
-                        {demoCollisionResult.conflictingBooking?.start_date} →{' '}
-                        {demoCollisionResult.conflictingBooking?.end_date})
-                      </div>
+                {demoCollisionResult.hasCollision ? (
+                  <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-700 space-y-1.5">
+                    <div className="flex items-center gap-2 text-base font-bold text-rose-700 dark:text-rose-300">
+                      <AlertTriangle className="w-5 h-5 shrink-0" />
+                      <span>Already booked on these dates</span>
                     </div>
-                  ) : (
-                    <div className="space-y-2 border-emerald-500/30 bg-emerald-950/20 text-emerald-200">
-                      <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
-                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>100% AVAILABLE — SAFE TO LOCK INVENTORY</span>
-                      </div>
-                      <p className="text-xs text-slate-300">
-                        Zero conflicts found across all active company bookings. Vehicle is cleared for instant dispatch.
-                      </p>
+                    <p className="text-sm text-rose-800 dark:text-rose-200">
+                      Booked by {demoCollisionResult.conflictingBooking?.client_name} (
+                      {demoCollisionResult.conflictingBooking?.start_date} to{' '}
+                      {demoCollisionResult.conflictingBooking?.end_date}). Choose other dates.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 space-y-1.5">
+                    <div className="flex items-center gap-2 text-base font-bold text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="w-5 h-5 shrink-0" />
+                      <span>Car is free — Ready to book</span>
                     </div>
-                  )}
-                </div>
+                    <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                      No other trip on these days. Safe to confirm.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                <span>Try Nov 05–08 to see collision detection in action</span>
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-sm">
+                <span className="text-[#425466] dark:text-slate-400">Try Nov 05–08 to see a blocked date</span>
                 <button
                   onClick={() => {
                     setDemoStartDate('2026-11-12');
                     setDemoEndDate('2026-11-15');
                   }}
-                  className="text-amber-400 hover:text-amber-300 font-semibold"
+                  className="font-bold hover:underline"
+                  style={{ color: activeColor }}
                 >
-                  Set Free Dates
+                  Pick free dates
                 </button>
               </div>
             </div>
 
-            {/* Playground 2: Dual-Language Africa’s Talking SMS Generator */}
-            <div className="p-6 sm:p-8 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
-                  <div className="flex items-center gap-2">
-                    <Radio className="w-5 h-5 text-cyan-400" />
-                    <h3 className="font-bold text-white text-lg">Africa’s Talking SMS Dispatch Generator</h3>
-                  </div>
-                  <div className="flex items-center gap-1.5 p-1 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono">
+            {/* Test 2: Driver SMS Preview */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-[#f6f9fc] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-6">
+              <div className="space-y-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-xl font-extrabold text-[#0a2540] dark:text-white">
+                    2. Driver text message (SMS)
+                  </h3>
+                  <div className="inline-flex p-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm font-bold">
                     <button
                       onClick={() => setSmsLanguage('RW')}
-                      className={`px-2 py-0.5 rounded ${
-                        smsLanguage === 'RW' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-400'
+                      className={`px-3 py-1.5 rounded-md transition-colors ${
+                        smsLanguage === 'RW' ? `${activeBtnText}` : 'text-[#425466] dark:text-slate-400'
                       }`}
+                      style={smsLanguage === 'RW' ? { backgroundColor: activeColor } : undefined}
                     >
                       Kinyarwanda
                     </button>
                     <button
                       onClick={() => setSmsLanguage('EN')}
-                      className={`px-2 py-0.5 rounded ${
-                        smsLanguage === 'EN' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-400'
+                      className={`px-3 py-1.5 rounded-md transition-colors ${
+                        smsLanguage === 'EN' ? `${activeBtnText}` : 'text-[#425466] dark:text-slate-400'
                       }`}
+                      style={smsLanguage === 'EN' ? { backgroundColor: activeColor } : undefined}
                     >
                       English
                     </button>
                   </div>
                 </div>
 
-                <p className="text-xs sm:text-sm text-slate-300 mb-4 leading-relaxed">
-                  Preview how drivers in Kigali receive automated trip dispatches on their standard phones with zero internet
-                  needed.
-                </p>
-
-                {/* Simulated SMS Bubble */}
-                <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-200 shadow-inner space-y-3">
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pb-2 border-b border-slate-800">
-                    <span>Sender: KIGALIFLEET (Shortcode 4040)</span>
-                    <span>Direct Chauffeur SMS</span>
+                <div className="p-5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-base leading-relaxed space-y-3">
+                  <div className="text-sm font-medium text-[#425466] dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
+                    Message sent to driver&apos;s phone
                   </div>
-
                   {smsLanguage === 'RW' ? (
-                    <div className="space-y-2 text-slate-200 leading-relaxed">
-                      <p className="text-amber-300 font-semibold">
-                        Muraho Jean-Paul, ufite urugendo rushya rwa KigaliFleet:
-                      </p>
-                      <p>
-                        • Imodoka: Toyota Prado (RAD 789 C)
-                        <br />
-                        • Umukiriya: Dr. Sarah Jenkins (UNHCR)
-                        <br />
-                        • Aho guhagurukira: Kigali International Airport (KIA)
-                        <br />
+                    <div className="space-y-2 text-[#0a2540] dark:text-slate-100">
+                      <p className="font-bold">Muraho Jean-Paul, ufite urugendo rushya:</p>
+                      <p className="text-[15px] text-[#425466] dark:text-slate-300">
+                        • Imodoka: Toyota Prado (RAD 789 C)<br />
+                        • Umukiriya: Dr. Sarah Jenkins<br />
+                        • Aho guhagurukira: Kigali Airport (09:30 AM)<br />
                         • Aho kwerekeza: Musanze (Volcanoes NP)
-                        <br />• Igihe cyo guhaguruka: 09:30 AM
                       </p>
-                      <p className="text-emerald-400 text-[11px] pt-1">
-                        Subiza &quot;YEGO 101&quot; kwemeza cyangwa &quot;AGEZE&quot; ukimara kugera ku kibuga cy&apos;indege.
+                      <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        Subiza &quot;YEGO 101&quot; kwemeza
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-2 text-slate-200 leading-relaxed">
-                      <p className="text-amber-300 font-semibold">Hello Jean-Paul, you have a new KigaliFleet dispatch:</p>
-                      <p>
-                        • Vehicle: Toyota Prado (RAD 789 C)
-                        <br />
-                        • Client: Dr. Sarah Jenkins (UNHCR)
-                        <br />
-                        • Pickup Location: Kigali International Airport (KIA)
-                        <br />
-                        • Destination: Musanze (Volcanoes NP)
-                        <br />• Departure Time: 09:30 AM
+                    <div className="space-y-2 text-[#0a2540] dark:text-slate-100">
+                      <p className="font-bold">Hello Jean-Paul, you have a new trip:</p>
+                      <p className="text-[15px] text-[#425466] dark:text-slate-300">
+                        • Car: Toyota Prado (RAD 789 C)<br />
+                        • Client: Dr. Sarah Jenkins<br />
+                        • Pickup: Kigali Airport (09:30 AM)<br />
+                        • Going to: Musanze (Volcanoes NP)
                       </p>
-                      <p className="text-emerald-400 text-[11px] pt-1">
-                        Reply &quot;YES 101&quot; to acknowledge or &quot;ARRIVED&quot; upon reaching terminal.
+                      <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        Reply &quot;YES 101&quot; to confirm
                       </p>
                     </div>
                   )}
                 </div>
-
-                <div className="mt-4 p-3 rounded-lg bg-slate-950/60 border border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                  <span className="flex items-center gap-1.5">
-                    <Plane className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Flight Delay Auto-Alert Hook:</span>
-                  </span>
-                  <span className="text-emerald-400 font-semibold">WB 402 Monitored</span>
-                </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                <span>Integrated with Africa’s Talking Rwanda Telco Rails</span>
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-sm">
+                <span className="text-[#425466] dark:text-slate-400">No internet needed on driver&apos;s phone</span>
                 <button
                   onClick={() => onSelectTab('simulator')}
-                  className="text-cyan-400 hover:text-cyan-300 font-semibold"
+                  className="font-bold hover:underline"
+                  style={{ color: activeColor }}
                 >
-                  Open Simulator
+                  Open full SMS tester
                 </button>
               </div>
             </div>
@@ -1041,97 +798,75 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
         </div>
       </section>
 
-      {/* 5. Rwandan Operating Realities: Built specifically for Kigali */}
-      <section className="py-20 lg:py-28 bg-slate-950 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span
-              className="text-xs font-mono font-bold uppercase tracking-wider px-3 py-1 rounded bg-slate-900 border border-slate-800"
-              style={{ color: activeColor }}
-            >
-              Domestic Market Focus
-            </span>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Tailored for Rwanda’s Transport Realities
+      {/* 5. Built for Rwanda — 3 Clear Benefits */}
+      <section className="py-16 sm:py-24 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="max-w-2xl mb-12">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0a2540] dark:text-white">
+              Made for how transport works in Rwanda
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-slate-300">
-              Generic global software fails in Kigali because it ignores local phone infrastructure, cash/MoMo payment
-              mechanisms, and upcountry safari road dynamics.
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Feature 1 */}
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-colors">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-7 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-3">
               <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold mb-5 shadow-lg ${activeBtnText}`}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
                 <DollarSign className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">MTN MoMo & Local Payment Rails</h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Accept deposits and balance settlements via MTN Mobile Money (*182#), Airtel Money, Bank of Kigali (BK),
-                and I&M Bank transfers with auditable reconciliation.
+              <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">Mobile Money &amp; Bank Pay</h3>
+              <p className="text-base text-[#425466] dark:text-slate-300 leading-relaxed">
+                Track MTN MoMo, Airtel Money, bank transfers, and cards cleanly in RWF.
               </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-colors">
+            <div className="p-7 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-3">
               <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold mb-5 shadow-lg ${activeBtnText}`}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
                 <Plane className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Kigali Airport (KIA / HRYR) Sync</h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Automatic tracking of RwandAir (WB), Kenya Airways (KQ), Ethiopian Airlines (ET), and Qatar Airways arrivals
-                so chauffeurs never get stranded at Kanombe.
+              <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">Airport Flight Alerts</h3>
+              <p className="text-base text-[#425466] dark:text-slate-300 leading-relaxed">
+                Know when a plane is late at Kigali Airport so drivers wait at the right time.
               </p>
             </div>
 
-            {/* Feature 3 */}
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-colors">
+            <div className="p-7 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-3">
               <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold mb-5 shadow-lg ${activeBtnText}`}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
                 <MapPin className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Safari Routes & Upcountry Fleets</h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Pre-configured for popular routes: Musanze Volcanoes National Park, Akagera Game Reserve, Nyungwe Canopy
-                Walk, and Rubavu/Lake Kivu expeditions.
+              <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">City &amp; Safari Trips</h3>
+              <p className="text-base text-[#425466] dark:text-slate-300 leading-relaxed">
+                Ready for Kigali city rides, Volcanoes, Akagera, Nyungwe, and Lake Kivu trips.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 6. Pricing Section (In Rwandan Francs - RWF) */}
-      <section id="pricing" className="py-20 lg:py-28 bg-slate-900/40 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-14">
-            <span
-              className="text-xs font-mono font-bold uppercase tracking-wider px-3 py-1 rounded bg-slate-900 border border-slate-800"
-              style={{ color: activeColor }}
-            >
-              Transparent Pricing in RWF
-            </span>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Predictable Plans for Any Fleet Size
+      {/* 6. Simple Monthly Prices */}
+      <section id="prices" className="py-16 sm:py-24 bg-white dark:bg-[#0d1424] border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0a2540] dark:text-white">
+              Simple monthly prices
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-slate-300">
-              No hidden percentage fees on your car rentals. Pay a simple flat monthly subscription in Rwandan Francs.
+            <p className="mt-3 text-lg text-[#425466] dark:text-slate-300">
+              One flat monthly price in RWF. No extra booking fees.
             </p>
           </div>
 
-          {/* Interactive Fleet Size Slider */}
-          <div className="max-w-xl mx-auto mb-16 p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg text-center">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-400">Calculate for your fleet size:</span>
-              <span className="text-sm font-bold text-white font-mono">{calculatorCars} Vehicles</span>
+          {/* Car Count Slider */}
+          <div className="max-w-xl mx-auto mb-14 p-6 rounded-2xl bg-[#f6f9fc] dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-base font-semibold text-[#425466] dark:text-slate-300">How many cars do you have?</span>
+              <span className="text-lg font-extrabold font-mono text-[#0a2540] dark:text-white">{calculatorCars} cars</span>
             </div>
             <input
               type="range"
@@ -1139,223 +874,118 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               max="40"
               value={calculatorCars}
               onChange={(e) => setCalculatorCars(Number(e.target.value))}
-              className="w-full accent-amber-400 h-2 bg-slate-950 rounded-lg cursor-pointer"
+              className="w-full accent-amber-500 h-2.5 rounded-lg cursor-pointer"
             />
-            <div className="mt-3 flex items-center justify-between text-xs text-slate-400 font-mono">
-              <span>1 Car</span>
-              <span>Recommended: {calculatedTier.name}</span>
-              <span>40+ Cars</span>
+            <div className="mt-3 flex items-center justify-between text-sm font-medium text-[#425466] dark:text-slate-400">
+              <span>1 car</span>
+              <span className="font-bold text-[#0a2540] dark:text-white">Best for you: {getRecommendedPlanName(calculatorCars)}</span>
+              <span>40+ cars</span>
             </div>
           </div>
 
-          {/* 3 Pricing Tier Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Tier 1: Starter */}
-            <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all">
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Starter Plan</div>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-3xl font-extrabold text-white font-mono">35,000</span>
-                  <span className="text-sm text-slate-400 font-mono">RWF / mo</span>
+            {/* Plan 1 */}
+            <div className="p-8 rounded-2xl bg-[#f6f9fc] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="text-base font-bold text-[#425466] dark:text-slate-300">Small Fleet</div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-extrabold text-[#0a2540] dark:text-white font-mono">35,000</span>
+                  <span className="text-base text-[#425466] dark:text-slate-400 font-mono">RWF / mo</span>
                 </div>
-                <p className="text-xs text-slate-300 mb-6">
-                  Up to 5 cars. Ideal for boutique rental desks and independent owners.
-                </p>
-                <ul className="space-y-3 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Up to 5 physical vehicles</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Collision-guarded schedule</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Standard driver directory</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Basic SMS notifications</span>
-                  </li>
+                <p className="text-base text-[#425466] dark:text-slate-300">For small owners with up to 5 cars.</p>
+                <ul className="space-y-3 pt-2 text-[15px] text-[#0a2540] dark:text-slate-200">
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Up to 5 cars</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />No double bookings</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Driver list &amp; SMS alerts</li>
                 </ul>
               </div>
               <button
                 onClick={onEnterApp}
-                className="mt-8 w-full py-2.5 rounded-lg text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+                className="mt-8 w-full py-3 rounded-full text-base font-bold bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
-                Choose Starter
+                Choose Small
               </button>
             </div>
 
-            {/* Tier 2: Growth (Featured) */}
+            {/* Plan 2 */}
             <div
-              className="p-8 rounded-2xl bg-slate-900 border-2 shadow-2xl relative flex flex-col justify-between scale-105"
+              className="p-8 rounded-2xl bg-white dark:bg-slate-900 border-2 stripe-card flex flex-col justify-between relative"
               style={{ borderColor: activeColor }}
             >
-              <div
-                className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase shadow-md ${activeBtnText}`}
-                style={{ backgroundColor: activeColor }}
-              >
-                Most Popular in Kigali
-              </div>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">Growth Plan</div>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-3xl font-extrabold text-white font-mono">75,000</span>
-                  <span className="text-sm text-slate-400 font-mono">RWF / mo</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-base font-bold" style={{ color: activeColor }}>Growing Fleet</span>
+                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: activeColor }}>
+                    Most popular
+                  </span>
                 </div>
-                <p className="text-xs text-slate-300 mb-6">
-                  Up to 20 cars. Best for expanding rental businesses and tour operators.
-                </p>
-                <ul className="space-y-3 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Up to 20 physical vehicles</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Live 7-Day fleet scheduling grid</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Dual-language SMS dispatch (RW/EN)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Public branded storefront link</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Kigali Airport (KIA) delay monitoring</span>
-                  </li>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-extrabold text-[#0a2540] dark:text-white font-mono">75,000</span>
+                  <span className="text-base text-[#425466] dark:text-slate-400 font-mono">RWF / mo</span>
+                </div>
+                <p className="text-base text-[#425466] dark:text-slate-300">For rental companies with up to 20 cars.</p>
+                <ul className="space-y-3 pt-2 text-[15px] text-[#0a2540] dark:text-slate-200">
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Up to 20 cars</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Weekly trip calendar</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Driver SMS (Kinyarwanda &amp; English)</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Online booking website</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Airport flight alerts</li>
                 </ul>
               </div>
               <button
                 onClick={onEnterApp}
-                className={`mt-8 w-full py-2.5 rounded-lg text-xs font-bold shadow-md transition-all hover:brightness-110 ${activeBtnText}`}
+                className={`mt-8 w-full py-3 rounded-full text-base font-bold shadow-sm transition-all hover:brightness-105 ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
-                Launch with Growth
+                Start with Growing
               </button>
             </div>
 
-            {/* Tier 3: Enterprise */}
-            <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all">
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Enterprise Plan</div>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-3xl font-extrabold text-white font-mono">150,000</span>
-                  <span className="text-sm text-slate-400 font-mono">RWF / mo</span>
+            {/* Plan 3 */}
+            <div className="p-8 rounded-2xl bg-[#f6f9fc] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="text-base font-bold text-[#425466] dark:text-slate-300">Large Fleet</div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-extrabold text-[#0a2540] dark:text-white font-mono">150,000</span>
+                  <span className="text-base text-[#425466] dark:text-slate-400 font-mono">RWF / mo</span>
                 </div>
-                <p className="text-xs text-slate-300 mb-6">
-                  Unlimited fleet. Large safari expeditions, corporate fleets, and airport limousines.
-                </p>
-                <ul className="space-y-3 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Unlimited vehicles & drivers</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Multi-depot & upcountry branches</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Custom RRA EBM tax invoice exports</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Dedicated account manager in Kigali</span>
-                  </li>
+                <p className="text-base text-[#425466] dark:text-slate-300">For big safari &amp; company fleets with unlimited cars.</p>
+                <ul className="space-y-3 pt-2 text-[15px] text-[#0a2540] dark:text-slate-200">
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Unlimited cars &amp; drivers</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Multiple offices &amp; towns</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Tax &amp; payment reports</li>
+                  <li className="flex items-center gap-2.5"><Check className="w-4 h-4 text-emerald-500 shrink-0" />Direct help in Kigali</li>
                 </ul>
               </div>
               <button
                 onClick={onEnterApp}
-                className="mt-8 w-full py-2.5 rounded-lg text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+                className="mt-8 w-full py-3 rounded-full text-base font-bold bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
-                Choose Enterprise
+                Choose Large
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 7. Operator Testimonials from Rwanda */}
-      <section className="py-20 lg:py-28 bg-slate-950 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span
-              className="text-xs font-mono font-bold uppercase tracking-wider px-3 py-1 rounded bg-slate-900 border border-slate-800"
-              style={{ color: activeColor }}
-            >
-              Client Stories
-            </span>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Trusted by Kigali’s Top Transport Operators
-            </h2>
-          </div>
+      {/* 7. Common Questions */}
+      <section id="help" className="py-16 sm:py-24 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="max-w-3xl mx-auto px-5 sm:px-8">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0a2540] dark:text-white text-center mb-10">
+            Common questions
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col justify-between">
-              <p className="text-xs sm:text-sm text-slate-300 italic leading-relaxed mb-6">
-                &quot;We used to manage 18 Land Cruisers with a whiteboard and WhatsApp. Double bookings were a weekly nightmare
-                during high safari season. KigaliFleet’s collision engine completely eliminated the problem.&quot;
-              </p>
-              <div>
-                <div className="font-bold text-white text-sm">Jean-Damascene K.</div>
-                <div className="text-xs text-amber-400">Managing Director, Kigali Executive Tours (Remera)</div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col justify-between">
-              <p className="text-xs sm:text-sm text-slate-300 italic leading-relaxed mb-6">
-                &quot;The Africa’s Talking SMS in Kinyarwanda is brilliant. Our older drivers don’t use WhatsApp data on the road,
-                but they instantly receive their client details and pickup times right on their phones.&quot;
-              </p>
-              <div>
-                <div className="font-bold text-white text-sm">Claire M.</div>
-                <div className="text-xs text-cyan-400">Operations Head, Volcanoes Safari Fleet (Musanze)</div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col justify-between">
-              <p className="text-xs sm:text-sm text-slate-300 italic leading-relaxed mb-6">
-                &quot;The live flight delay monitoring for Kigali International Airport saved us dozens of wasted parking fees.
-                Our drivers are dispatched only when the plane actually touches down.&quot;
-              </p>
-              <div>
-                <div className="font-bold text-white text-sm">Patrick U.</div>
-                <div className="text-xs text-emerald-400">Chauffeur Dispatch Lead, Great Lakes VIP (Kanombe)</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 8. FAQ Section */}
-      <section id="faq" className="py-20 lg:py-28 bg-slate-900/40 border-b border-slate-800">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <span
-              className="text-xs font-mono font-bold uppercase tracking-wider px-3 py-1 rounded bg-slate-900 border border-slate-800"
-              style={{ color: activeColor }}
-            >
-              Frequently Asked Questions
-            </span>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Everything You Need to Know
-            </h2>
-          </div>
-
-          <div className="space-y-4">
+          <div className="space-y-3">
             {faqs.map((faq, index) => {
               const isOpen = openFaqIndex === index;
               return (
-                <div key={index} className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+                <div
+                  key={index}
+                  className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden"
+                >
                   <button
-                    onClick={() => toggleFaq(index)}
-                    className="w-full p-5 text-left flex items-center justify-between text-sm sm:text-base font-bold text-white hover:text-amber-400 transition-colors"
+                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                    className="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 text-base sm:text-lg font-bold text-[#0a2540] dark:text-white"
                   >
                     <span>{faq.q}</span>
                     {isOpen ? (
@@ -1365,7 +995,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                     )}
                   </button>
                   {isOpen && (
-                    <div className="p-5 pt-0 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 mt-1">
+                    <div className="px-5 sm:px-6 pb-5 sm:pb-6 text-base text-[#425466] dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-4">
                       {faq.a}
                     </div>
                   )}
@@ -1376,82 +1006,59 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
         </div>
       </section>
 
-      {/* 9. Final Call to Action */}
-      <section className="py-20 lg:py-28 bg-slate-950 relative overflow-hidden">
-        <div
-          className="absolute bottom-0 right-1/4 w-[500px] h-[300px] rounded-full blur-[160px] pointer-events-none opacity-20"
-          style={{ backgroundColor: activeColor }}
-        />
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
-            Ready to Streamline Your Kigali Transport Fleet?
+      {/* 8. Bottom Call to Action & Quiet Footer */}
+      <section className="py-16 sm:py-20 bg-white dark:bg-[#0d1424]">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8 text-center space-y-6">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0a2540] dark:text-white">
+            Ready to try KigaliFleet?
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-300 max-w-2xl mx-auto">
-            Join Rwandan car rentals and safari operators running 100% collision-free bookings and automated driver
-            dispatch.
+          <p className="text-lg text-[#425466] dark:text-slate-300">
+            Open the app now or see how your customers book a car online.
           </p>
-
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <button
               onClick={onEnterApp}
-              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-base shadow-xl transition-all hover:brightness-110 active:scale-95 ${activeBtnText}`}
+              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-bold text-base shadow-sm ${activeBtnText}`}
               style={{ backgroundColor: activeColor }}
             >
-              <span>Launch Platform Workspace</span>
+              <span>Open App</span>
               <ArrowRight className="w-5 h-5" />
             </button>
             <button
               onClick={onOpenStorefront}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-4 rounded-xl font-bold text-base text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 transition-colors shadow-sm"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-bold text-base text-[#0a2540] dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
-              <Globe className="w-5 h-5 text-emerald-400" />
-              <span>Customer Storefront</span>
+              <Globe className="w-5 h-5" style={{ color: activeColor }} />
+              <span>Book a Car</span>
             </button>
           </div>
         </div>
       </section>
 
-      {/* 10. Footer */}
-      <footer className="bg-slate-950 border-t border-slate-800/80 py-12 text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      <footer className="bg-[#f6f9fc] dark:bg-[#0a0f1c] border-t border-slate-200 dark:border-slate-800 py-10 text-sm text-[#425466] dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div
-              className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-slate-950`}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${activeBtnText}`}
               style={{ backgroundColor: activeColor }}
             >
               <Car className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-white font-mono text-sm">KigaliFleet SaaS</span>
-              <p className="text-[11px] text-slate-500">KN 3 Rd, Remera & Kigali International Airport, Rwanda</p>
+              <span className="font-bold text-[#0a2540] dark:text-white text-base">KigaliFleet</span>
+              <p className="text-sm text-[#425466] dark:text-slate-400">Kigali, Rwanda</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 text-slate-400">
-            <a href="#platforms" className="hover:text-white transition-colors">
-              Platforms
-            </a>
-            <a href="#features" className="hover:text-white transition-colors">
-              Features
-            </a>
-            <a href="#demo" className="hover:text-white transition-colors">
-              Collision Demo
-            </a>
-            <a href="#pricing" className="hover:text-white transition-colors">
-              Pricing in RWF
-            </a>
-            <button onClick={onOpenStorefront} className="hover:text-white transition-colors">
-              Public Storefront
-            </button>
-            <button onClick={onEnterApp} className="text-amber-400 hover:text-amber-300 font-bold">
-              Operator Workspace →
-            </button>
+          <div className="flex flex-wrap items-center justify-center gap-6 font-medium">
+            <a href="#how-it-works" className="hover:text-[#0a2540] dark:hover:text-white">How it works</a>
+            <a href="#try-it" className="hover:text-[#0a2540] dark:hover:text-white">Try it</a>
+            <a href="#prices" className="hover:text-[#0a2540] dark:hover:text-white">Prices</a>
+            <button onClick={onOpenStorefront} className="hover:text-[#0a2540] dark:hover:text-white">Book a Car</button>
+            <button onClick={onEnterApp} className="font-bold" style={{ color: activeColor }}>Open App</button>
           </div>
 
-          <div className="text-[11px] text-slate-500 text-center md:text-right">
-            © 2026 KigaliFleet. All rights reserved. Built for Rwandan Transport Operations.
-          </div>
+          <div className="text-sm">© 2026 KigaliFleet</div>
         </div>
       </footer>
     </div>

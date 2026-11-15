@@ -33,7 +33,7 @@ import { HandoversView } from './components/HandoversView';
 import { ExpensesView } from './components/ExpensesView';
 import { TasksView } from './components/TasksView';
 import { RentalAgreementModal } from './components/RentalAgreementModal';
-import { Booking, Vehicle } from './types';
+import { Booking, SuperAdminModuleId, Vehicle } from './types';
 import { RotateCcw, ShieldAlert, Lock } from 'lucide-react';
 import { isSuperAdminUser } from './utils/auth';
 
@@ -118,6 +118,7 @@ export default function App() {
   const [isRentalAgreementOpen, setIsRentalAgreementOpen] = useState(false);
   const [agreementBooking, setAgreementBooking] = useState<Booking | null>(null);
   const [agreementVehicle, setAgreementVehicle] = useState<Vehicle | null>(null);
+  const [requestedAdminModule, setRequestedAdminModule] = useState<SuperAdminModuleId | null>(null);
 
   const handleOpenRentalAgreement = (booking: Booking, vehicle: Vehicle) => {
     setAgreementBooking(booking);
@@ -175,7 +176,7 @@ export default function App() {
 
   if (currentTab === 'login') {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+      <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 font-sans antialiased">
         <LoginView
           onLoginSuccess={(isSuper) => handleSelectTab(isSuper ? 'super-admin' : 'overview')}
           onNavigateToRegister={() => handleSelectTab('register')}
@@ -201,7 +202,7 @@ export default function App() {
 
   if (currentTab === 'register') {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+      <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 font-sans antialiased">
         <RegisterView
           onRegisterSuccess={() => handleSelectTab('overview')}
           onNavigateToLogin={() => handleSelectTab('login')}
@@ -215,7 +216,7 @@ export default function App() {
 
   if (currentTab === 'landing') {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+      <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 font-sans antialiased">
         <LandingPageView
           onEnterApp={() => handleSelectTab('overview')}
           onOpenStorefront={() => handleSelectTab('storefront')}
@@ -230,7 +231,7 @@ export default function App() {
           bookings={store.bookings}
         />
 
-        {/* Collision-Guarded New Booking Modal */}
+        {/* Booking Modal */}
         <NewBookingModal
           isOpen={isNewBookingOpen}
           onClose={() => {
@@ -248,7 +249,7 @@ export default function App() {
           currentTheme={store.currentTheme}
         />
 
-        {/* Africa's Talking SMS Dispatch Modal */}
+        {/* Driver SMS Modal */}
         <SMSDispatchModal
           isOpen={!!smsDispatchBookingId}
           onClose={() => setSmsDispatchBookingId(null)}
@@ -261,7 +262,7 @@ export default function App() {
           currentTheme={store.currentTheme}
         />
 
-        {/* Instant B2B / Tourist Storefront Modal */}
+        {/* Share Booking Link Modal */}
         <StorefrontModal
           isOpen={isStorefrontOpen}
           onClose={() => setIsStorefrontOpen(false)}
@@ -274,7 +275,7 @@ export default function App() {
 
   if (currentTab === 'storefront') {
     return (
-      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-950 text-slate-100 font-sans antialiased">
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 font-sans antialiased">
         <PublicStorefrontView
           vehicles={store.vehicles}
           drivers={store.drivers}
@@ -291,7 +292,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans transition-colors antialiased">
+    <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 flex font-sans transition-colors antialiased">
       {/* 1. Left Sidebar Navigation Menu */}
       <Sidebar
         currentTab={currentTab}
@@ -315,7 +316,7 @@ export default function App() {
       />
 
       {/* 2. Main Workspace Layout (Offset on Desktop by Sidebar width) */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
         {/* Top Header with Breadcrumb, Quick Actions, Theme Dropdown & Light/Dark */}
         <TopHeader
           currentTab={currentTab}
@@ -334,6 +335,13 @@ export default function App() {
           isFirebaseConnected={store.isFirebaseConnected}
           onLoginWithGoogle={store.loginWithGoogle}
           onNavigateTab={handleSelectTab}
+          onOpenSuperAdminModule={(mod) => {
+            if (store.currentUser.role !== 'superadmin') {
+              store.switchRole('superadmin');
+            }
+            setRequestedAdminModule(mod);
+            handleSelectTab('super-admin');
+          }}
           onLogout={() => {
             store.logout();
             handleSelectTab('landing');
@@ -341,7 +349,7 @@ export default function App() {
         />
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 w-full max-w-[1440px] mx-auto p-4 sm:p-6 lg:p-8 min-w-0">
           {currentTab === 'overview' && (
             <OverviewView
               vehicles={store.vehicles}
@@ -634,30 +642,33 @@ export default function App() {
                 onCreatePlatformAdmin={store.createPlatformAdmin}
                 onUpdatePlatformAdmin={store.updatePlatformAdmin}
                 onNavigateToTab={handleSelectTab}
+                requestedModule={requestedAdminModule}
+                onClearRequestedModule={() => setRequestedAdminModule(null)}
               />
             ) : (
-              <div className="max-w-xl mx-auto my-16 p-8 rounded-2xl bg-slate-900 border border-rose-800/80 text-center space-y-4 shadow-2xl">
-                <div className="w-14 h-14 rounded-2xl bg-rose-950/80 border border-rose-800 flex items-center justify-center mx-auto text-rose-400">
+              <div className="max-w-xl mx-auto my-16 p-8 rounded-2xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800/80 text-center space-y-5 stripe-card">
+                <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 flex items-center justify-center mx-auto text-rose-500">
                   <ShieldAlert className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Row-Level Security: Access Restricted</h3>
-                  <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                    Super Admin privileges are strictly restricted to designated platform administrators. Your account (<code className="text-amber-400 font-mono">{store.currentUser.email}</code>, role: <code className="text-white font-mono">{store.currentUser.role}</code>) does not hold cross-tenant administrative permissions.
+                  <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">Private Admin Area</h3>
+                  <p className="text-sm text-[#425466] dark:text-slate-300 mt-2 leading-relaxed">
+                    This page is only for platform admins. Your account (<code className="font-mono font-semibold text-[#0a2540] dark:text-white">{store.currentUser.email}</code>) does not have admin access.
                   </p>
                 </div>
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
                     onClick={() => handleSelectTab('overview')}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition-colors"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-white font-semibold text-sm border border-slate-200 dark:border-slate-700 transition-colors"
                   >
-                    Return to Workspace
+                    Return Home
                   </button>
                   <button
                     onClick={() => handleSelectTab('login')}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-sm transition-colors"
+                    className={`w-full sm:w-auto px-6 py-2.5 rounded-full font-semibold text-sm shadow-xs transition-colors ${store.currentTheme.btnText}`}
+                    style={{ backgroundColor: store.currentTheme.hex }}
                   >
-                    Authenticate with Admin Key
+                    Sign in as Admin
                   </button>
                 </div>
               </div>
@@ -666,31 +677,23 @@ export default function App() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 text-slate-500 text-xs py-5 px-6">
+        <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1424] text-[#425466] dark:text-slate-400 text-sm py-5 px-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">KigaliFleet SaaS</span>
+              <span className="font-semibold text-[#0a2540] dark:text-white">KigaliFleet</span>
               <span>·</span>
               <span>Kigali, Rwanda</span>
-              <span>·</span>
-              <span
-                className="font-medium font-mono"
-                style={{ color: store.currentTheme.hex }}
-              >
-                Africa's Talking & MoMo Ready
-              </span>
             </div>
 
             <div className="flex items-center gap-4">
               <button
                 onClick={store.resetToDefaults}
-                className="inline-flex items-center gap-1.5 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
-                title="Reset all sample bookings, vehicles and drivers to initial state"
+                className="inline-flex items-center gap-1.5 hover:text-[#0a2540] dark:hover:text-white transition-colors font-medium"
+                title="Restore sample cars, drivers, and bookings"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Demo Seed Data</span>
+                <RotateCcw className="w-4 h-4" />
+                <span>Start Over</span>
               </button>
-              <span>v1.0.0 Production Prototype</span>
             </div>
           </div>
         </footer>

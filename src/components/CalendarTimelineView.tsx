@@ -4,8 +4,6 @@ import { datesOverlap, formatRwf, checkDriverCollision, calculateDays } from '..
 import {
   ChevronLeft,
   ChevronRight,
-  Calendar as CalendarIcon,
-  User,
   ShieldCheck,
   AlertTriangle,
   Plane,
@@ -16,15 +14,10 @@ import {
   Sparkles,
   Mountain,
   Search,
-  Filter,
   Ban,
-  Clock,
   Phone,
   CheckCircle,
-  Maximize2,
-  Minimize2,
   Wrench,
-  Info,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -41,7 +34,6 @@ interface CalendarTimelineViewProps {
   onSelectBookingForDispatch?: (booking: Booking) => void;
 }
 
-// Vehicle nickname mapper for authentic fleet identity (matches screenshot style)
 export function getVehicleNickname(vehicle: Vehicle): { nickname: string; subtitle: string } {
   if (vehicle.category === 'LandCruiser') {
     if (vehicle.model_name.includes('V8')) {
@@ -51,67 +43,65 @@ export function getVehicleNickname(vehicle: Vehicle): { nickname: string; subtit
   }
   if (vehicle.category === 'RAV4') {
     if (vehicle.model_name.includes('Hybrid')) {
-      return { nickname: 'Blanco Hybrid', subtitle: `Toyota RAV4 AWD Hybrid ${vehicle.year || 2022}` };
+      return { nickname: 'Blanco Hybrid', subtitle: `Toyota RAV4 Hybrid ${vehicle.year || 2022}` };
     }
-    return { nickname: 'Blueberry 4x4', subtitle: `Toyota RAV4 Expedition ${vehicle.year || 2023}` };
+    return { nickname: 'Blueberry 4x4', subtitle: `Toyota RAV4 4x4 ${vehicle.year || 2023}` };
   }
   if (vehicle.category === 'Safari Van') {
-    return { nickname: 'Casper Safari', subtitle: `Safari Pop-Top Land Cruiser ${vehicle.year || 2023}` };
+    return { nickname: 'Casper Safari', subtitle: `Safari Land Cruiser ${vehicle.year || 2023}` };
   }
   if (vehicle.category === 'Coaster') {
-    return { nickname: 'Clifford Bus', subtitle: `Toyota Coaster 30-Passenger ${vehicle.year || 2023}` };
+    return { nickname: 'Clifford Bus', subtitle: `Toyota Coaster 30-Seat ${vehicle.year || 2023}` };
   }
   if (vehicle.category === 'Luxury Sedan') {
-    return { nickname: 'Frost VIP', subtitle: `Mercedes-Benz E-Class VIP ${vehicle.year || 2023}` };
+    return { nickname: 'Frost VIP', subtitle: `Mercedes-Benz E-Class ${vehicle.year || 2023}` };
   }
-  // Fallback
-  const firstWord = vehicle.model_name.split(' ')[0] || 'Unit';
+  const firstWord = vehicle.model_name.split(' ')[0] || 'Car';
   return { nickname: `${firstWord} #${vehicle.plate_number.slice(-3)}`, subtitle: vehicle.model_name };
 }
 
-// Visual category icons & badges (exported for VehiclesView & Storefront)
 export function getCategoryBadge(category: VehicleCategory) {
   switch (category) {
     case 'LandCruiser':
       return {
         label: 'Land Cruiser 4x4',
         icon: Mountain,
-        badgeClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+        badgeClass: 'bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
         blockClass: 'bg-amber-600/90 text-white border-amber-400',
       };
     case 'RAV4':
       return {
         label: 'RAV4 AWD',
         icon: Car,
-        badgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+        badgeClass: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30',
         blockClass: 'bg-emerald-600/90 text-white border-emerald-400',
       };
     case 'Coaster':
       return {
         label: 'Coaster Bus (30-Seat)',
         icon: Bus,
-        badgeClass: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+        badgeClass: 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30',
         blockClass: 'bg-indigo-600/90 text-white border-indigo-400',
       };
     case 'Safari Van':
       return {
         label: 'Safari Pop-Top',
         icon: Compass,
-        badgeClass: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+        badgeClass: 'bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-500/30',
         blockClass: 'bg-cyan-600/90 text-white border-cyan-400',
       };
     case 'Luxury Sedan':
       return {
-        label: 'VIP Luxury Sedan',
+        label: 'VIP Luxury Car',
         icon: Sparkles,
-        badgeClass: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+        badgeClass: 'bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/30',
         blockClass: 'bg-purple-600/90 text-white border-purple-400',
       };
     default:
       return {
         label: category,
         icon: Car,
-        badgeClass: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+        badgeClass: 'bg-slate-100 dark:bg-slate-700/40 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600',
         blockClass: 'bg-slate-600/90 text-white border-slate-400',
       };
   }
@@ -133,43 +123,37 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
   onUpdateBookingStatus,
   onSelectBookingForDispatch,
 }) => {
-  const activeThemeColor = currentTheme?.hex || '#3b82f6';
-  
-  // Base month date - defaults to November 2026 (matching dataset) with quick toggle
+  const activeThemeColor = currentTheme?.hex || '#635bff';
+  const activeBtnText = currentTheme?.btnText || 'text-white';
+
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date('2026-11-01T00:00:00'));
-  
-  // View controls matching screenshot: Mode, Zoom, Search, Filters
   const [viewMode, setViewMode] = useState<'Fleet' | 'Vehicle' | 'Booked'>('Fleet');
-  const [zoomLevel, setZoomLevel] = useState<number>(100); // 75, 100, 125 %
+  const [rangeMode, setRangeMode] = useState<'month' | 'first_half' | 'second_half'>('month');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [statusFilter, setStatusFilter] = useState<string>('All'); // 'All' | 'Completed' | 'Booked' | 'In Progress' | 'Cancelled'
-  
-  // Modals state
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [assignmentNotice, setAssignmentNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isBlockVehicleModalOpen, setIsBlockVehicleModalOpen] = useState(false);
   const [blockSelectedVehicleId, setBlockSelectedVehicleId] = useState<string>(vehicles[0]?.id || '');
-  const [blockReason, setBlockReason] = useState<string>('Contrôle Technique (RNP Mandatory Inspection)');
+  const [blockReason, setBlockReason] = useState<string>('Police Safety Check');
   const [blockNotes, setBlockNotes] = useState<string>('');
 
-  // Calculate year, month, days in current month
   const currentYear = currentMonthDate.getFullYear();
-  const currentMonth = currentMonthDate.getMonth(); // 0-indexed
+  const currentMonth = currentMonthDate.getMonth();
   const monthName = currentMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const shortMonthName = currentMonthDate.toLocaleDateString('en-US', { month: 'short' });
 
-  // Number of days in this month
   const daysInMonth = useMemo(() => {
     return new Date(currentYear, currentMonth + 1, 0).getDate();
   }, [currentYear, currentMonth]);
 
-  // Generate array of day objects
   const daysList = useMemo(() => {
     const list: {
-      dayIndex: number; // 1..daysInMonth
-      dateStr: string;  // YYYY-MM-DD
-      weekdayShort: string; // FRI, SAT, SUN
+      dayIndex: number;
+      dateStr: string;
+      weekdayShort: string;
       isToday: boolean;
       isWeekend: boolean;
     }[] = [];
@@ -181,45 +165,34 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
       const dateStr = `${currentYear}-${padMonth}-${padDay}`;
       const weekdayShort = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-      // Define 'today' anchor as Nov 1, 2026 for demo or current system date
       const isToday = dateStr === '2026-11-01';
 
-      list.push({
-        dayIndex: day,
-        dateStr,
-        weekdayShort,
-        isToday,
-        isWeekend,
-      });
+      list.push({ dayIndex: day, dateStr, weekdayShort, isToday, isWeekend });
     }
     return list;
   }, [currentYear, currentMonth, daysInMonth]);
 
-  // Navigate months
   const shiftMonth = (delta: number) => {
-    const newDate = new Date(currentYear, currentMonth + delta, 1);
-    setCurrentMonthDate(newDate);
+    setCurrentMonthDate(new Date(currentYear, currentMonth + delta, 1));
   };
 
   const jumpToToday = () => {
     setCurrentMonthDate(new Date('2026-11-01T00:00:00'));
   };
 
-  // Zoom column width in pixels
-  const colWidth = useMemo(() => {
-    if (zoomLevel === 75) return 46;
-    if (zoomLevel === 125) return 72;
-    return 58; // 100% default
-  }, [zoomLevel]);
+  const visibleDaysList = useMemo(() => {
+    if (rangeMode === 'first_half') return daysList.slice(0, 15);
+    if (rangeMode === 'second_half') return daysList.slice(15);
+    return daysList;
+  }, [daysList, rangeMode]);
 
-  // Month date range boundaries
   const monthStartStr = daysList[0]?.dateStr || '';
   const monthEndStr = daysList[daysList.length - 1]?.dateStr || '';
+  const windowStartStr = visibleDaysList[0]?.dateStr || monthStartStr;
+  const windowEndStr = visibleDaysList[visibleDaysList.length - 1]?.dateStr || monthEndStr;
 
-  // Calculate monthly utilization per vehicle
   const vehicleStats = useMemo(() => {
     const map = new Map<string, { daysBooked: number; ratePct: number }>();
-    
     vehicles.forEach((veh) => {
       let daysCount = 0;
       daysList.forEach((d) => {
@@ -238,9 +211,7 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     return map;
   }, [vehicles, bookings, daysList, daysInMonth]);
 
-  // Global fleet utilization metrics for top bar (matching screenshot)
   const fleetMetrics = useMemo(() => {
-    // 1. On trips today count
     const todayStr = '2026-11-01';
     const activeTodayCount = vehicles.filter((v) =>
       bookings.some(
@@ -254,7 +225,6 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
 
     const tripsTodayPct = vehicles.length > 0 ? Math.round((activeTodayCount / vehicles.length) * 100) : 0;
 
-    // 2. Total days booked across fleet in this month
     let totalFleetDaysBooked = 0;
     vehicleStats.forEach((stat) => {
       totalFleetDaysBooked += stat.daysBooked;
@@ -272,13 +242,9 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     };
   }, [vehicles, bookings, vehicleStats, daysInMonth]);
 
-  // Filter vehicles based on search, category, and viewMode
   const filteredVehicles = useMemo(() => {
     return vehicles.filter((v) => {
-      // Category filter
       if (categoryFilter !== 'All' && v.category !== categoryFilter) return false;
-      
-      // View Mode filter
       if (viewMode === 'Booked') {
         const hasBookingsInMonth = bookings.some(
           (b) =>
@@ -288,26 +254,25 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
         );
         if (!hasBookingsInMonth) return false;
       }
-
-      // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const { nickname, subtitle } = getVehicleNickname(v);
-        const matchNick = nickname.toLowerCase().includes(q);
-        const matchSub = subtitle.toLowerCase().includes(q);
-        const matchPlate = v.plate_number.toLowerCase().includes(q);
-        const matchModel = v.model_name.toLowerCase().includes(q);
-        if (!matchNick && !matchSub && !matchPlate && !matchModel) return false;
+        if (
+          !nickname.toLowerCase().includes(q) &&
+          !subtitle.toLowerCase().includes(q) &&
+          !v.plate_number.toLowerCase().includes(q) &&
+          !v.model_name.toLowerCase().includes(q)
+        ) {
+          return false;
+        }
       }
-
       return true;
     });
   }, [vehicles, bookings, categoryFilter, viewMode, searchQuery, monthStartStr, monthEndStr]);
 
-  // Status counts for pills
   const statusCounts = useMemo(() => {
-    const monthBookings = bookings.filter(
-      (b) => datesOverlap(monthStartStr, monthEndStr, b.start_date, b.end_date)
+    const monthBookings = bookings.filter((b) =>
+      datesOverlap(monthStartStr, monthEndStr, b.start_date, b.end_date)
     );
     return {
       Completed: monthBookings.filter((b) => b.status === 'Completed').length,
@@ -317,14 +282,20 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     };
   }, [bookings, monthStartStr, monthEndStr]);
 
-  // Conflict scanner
   const detectedConflicts = useMemo(() => {
     const conflicts: { vehicle: Vehicle; bookings: [Booking, Booking] }[] = [];
     vehicles.forEach((veh) => {
       const vehBookings = bookings.filter((b) => b.vehicle_id === veh.id && b.status !== 'Cancelled');
       for (let i = 0; i < vehBookings.length; i++) {
         for (let j = i + 1; j < vehBookings.length; j++) {
-          if (datesOverlap(vehBookings[i].start_date, vehBookings[i].end_date, vehBookings[j].start_date, vehBookings[j].end_date)) {
+          if (
+            datesOverlap(
+              vehBookings[i].start_date,
+              vehBookings[i].end_date,
+              vehBookings[j].start_date,
+              vehBookings[j].end_date
+            )
+          ) {
             conflicts.push({ vehicle: veh, bookings: [vehBookings[i], vehBookings[j]] });
           }
         }
@@ -333,20 +304,18 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     return conflicts;
   }, [vehicles, bookings]);
 
-  // Chauffeur assignment handler
   const handleReassignDriver = (bookingId: string, driverId: string) => {
     setAssignmentNotice(null);
     const res = onAssignDriver(bookingId, driverId);
     if (res.success) {
-      setAssignmentNotice({ type: 'success', message: 'Driver linked successfully to this mission!' });
+      setAssignmentNotice({ type: 'success', message: 'Driver saved to this trip!' });
       const updated = bookings.find((b) => b.id === bookingId);
       if (updated) setSelectedBooking({ ...updated, driver_id: driverId });
     } else {
-      setAssignmentNotice({ type: 'error', message: res.error || 'Failed to assign driver.' });
+      setAssignmentNotice({ type: 'error', message: res.error || 'Could not assign driver.' });
     }
   };
 
-  // Submit vehicle block
   const handleConfirmBlockVehicle = () => {
     if (onToggleMaintenance && blockSelectedVehicleId) {
       const combinedNotes = `${blockReason}${blockNotes ? ` - ${blockNotes}` : ''}`;
@@ -357,60 +326,54 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Real-time Fleet Conflict Alert Strip */}
+    <div className="space-y-5">
+      {/* Safety Banner */}
       {detectedConflicts.length > 0 ? (
-        <div className="bg-rose-950/80 border border-rose-600 rounded-xl p-3.5 text-rose-200 flex items-start gap-3 shadow-md">
-          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-          <div className="text-xs space-y-1">
-            <div className="font-bold uppercase tracking-wider text-rose-300">
-              Double-Booking Overlap Alert Detected!
-            </div>
+        <div className="bg-rose-50 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-700 rounded-2xl p-4 text-rose-900 dark:text-rose-200 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+          <div className="text-sm space-y-1">
+            <div className="font-bold">Same Car Booked Twice on Same Days!</div>
             {detectedConflicts.map((c, idx) => (
               <p key={idx}>
-                Conflict on <strong>{c.vehicle.model_name} ({c.vehicle.plate_number})</strong> between client "{c.bookings[0].client_name}" and "{c.bookings[1].client_name}".
+                Check <strong>{c.vehicle.model_name} ({c.vehicle.plate_number})</strong>: "{c.bookings[0].client_name}" and "{c.bookings[1].client_name}".
               </p>
             ))}
           </div>
         </div>
       ) : (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 flex items-center justify-between text-xs backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-emerald-400 font-medium">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Collision Guard Active · 0 Overlapping Assignments Across Kigali Fleet</span>
+        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-3 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2.5 text-emerald-700 dark:text-emerald-400 font-semibold">
+            <ShieldCheck className="w-5 h-5 shrink-0" />
+            <span>Zero Double Bookings · All cars have clear schedules</span>
           </div>
-          <span className="text-slate-400 font-mono text-[11px] hidden sm:inline">
-            Timeline active: {monthStartStr} to {monthEndStr}
+          <span className="text-[#425466] dark:text-slate-400 font-mono text-xs hidden sm:inline">
+            {monthStartStr} to {monthEndStr}
           </span>
         </div>
       )}
 
-      {/* Main Calendar Navigation & Control Bar (Exact match to screenshot) */}
-      <div className="bg-[#0b0f17] border border-slate-800/90 rounded-2xl p-4 shadow-xl space-y-3.5">
-        {/* Top Row: Title, Month Selector, Block Vehicle, View Mode, Zoom, Search, Filters */}
+      {/* Control Bar */}
+      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Left Side: Calendar ✨ + Month Navigator */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-xl font-extrabold text-white tracking-tight">Calendar</h1>
-              <Sparkles className="w-4 h-4 text-blue-400" />
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-extrabold text-[#0a2540] dark:text-white tracking-tight">
+              Trip Calendar
+            </h1>
 
-            {/* Month Navigator: < May 2026 > */}
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+            <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1">
               <button
                 onClick={() => shiftMonth(-1)}
-                className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full text-[#425466] dark:text-slate-300 transition-colors"
                 title="Previous month"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-bold px-3 text-slate-100 whitespace-nowrap min-w-[110px] text-center">
+              <span className="text-sm font-bold px-3 text-[#0a2540] dark:text-white whitespace-nowrap min-w-[130px] text-center">
                 {monthName}
               </span>
               <button
                 onClick={() => shiftMonth(1)}
-                className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full text-[#425466] dark:text-slate-300 transition-colors"
                 title="Next month"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -419,169 +382,141 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
 
             <button
               onClick={jumpToToday}
-              className="text-xs px-2.5 py-1 bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white rounded-md border border-slate-700/60 font-medium transition-colors hidden sm:inline-block"
+              className="text-sm px-3.5 py-2 bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full border border-slate-200 dark:border-slate-700 font-semibold transition-colors hidden sm:inline-block"
             >
               Today
             </button>
           </div>
 
-          {/* Right Side: Block Vehicle, View Mode, Zoom, Search, Filters */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Block Vehicle Button */}
             <button
               onClick={() => setIsBlockVehicleModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 rounded-lg text-xs font-semibold shadow-xs transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-500/15 hover:bg-rose-100 dark:hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-full text-sm font-bold transition-colors"
             >
-              <Ban className="w-3.5 h-3.5 text-rose-400" />
-              <span>Block Vehicle</span>
+              <Ban className="w-4 h-4" />
+              <span>Block a Car</span>
             </button>
 
-            {/* View Mode Segmented Controls: [ Fleet | Vehicle | Booked ] */}
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-medium">
-              <button
-                onClick={() => setViewMode('Fleet')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-all ${
-                  viewMode === 'Fleet'
-                    ? 'bg-blue-600 text-white font-bold shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>Fleet</span>
-              </button>
-              <button
-                onClick={() => setViewMode('Vehicle')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-all ${
-                  viewMode === 'Vehicle'
-                    ? 'bg-blue-600 text-white font-bold shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>Vehicle</span>
-              </button>
-              <button
-                onClick={() => setViewMode('Booked')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-all ${
-                  viewMode === 'Booked'
-                    ? 'bg-blue-600 text-white font-bold shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>Booked</span>
-              </button>
+            <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 text-sm font-semibold">
+              {[
+                { id: 'Fleet' as const, label: 'All Cars' },
+                { id: 'Booked' as const, label: 'Booked Only' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setViewMode(m.id)}
+                  className={`px-3.5 py-1 rounded-full transition-all ${
+                    viewMode === m.id
+                      ? `${activeBtnText} shadow-xs`
+                      : 'text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white'
+                  }`}
+                  style={viewMode === m.id ? { backgroundColor: activeThemeColor } : undefined}
+                >
+                  {m.label}
+                </button>
+              ))}
             </div>
 
-            {/* Zoom Controls: — 100% + */}
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs text-slate-300">
-              <button
-                onClick={() => setZoomLevel((z) => Math.max(75, z - 25))}
-                disabled={zoomLevel <= 75}
-                className="px-2 py-1 hover:bg-slate-800 disabled:opacity-40 rounded text-slate-400 hover:text-white font-bold"
-                title="Zoom out"
-              >
-                —
-              </button>
-              <span className="px-2 font-mono text-[11px] font-semibold text-slate-200">
-                {zoomLevel}%
-              </span>
-              <button
-                onClick={() => setZoomLevel((z) => Math.min(125, z + 25))}
-                disabled={zoomLevel >= 125}
-                className="px-2 py-1 hover:bg-slate-800 disabled:opacity-40 rounded text-slate-400 hover:text-white font-bold"
-                title="Zoom in"
-              >
-                +
-              </button>
+            <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 text-xs font-semibold">
+              {[
+                { id: 'month' as const, label: 'Full Month' },
+                { id: 'first_half' as const, label: 'Days 1–15' },
+                { id: 'second_half' as const, label: `Days 16–${daysInMonth}` },
+              ].map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setRangeMode(r.id)}
+                  className={`px-3 py-1 rounded-full transition-all whitespace-nowrap ${
+                    rangeMode === r.id
+                      ? `${activeBtnText} shadow-xs`
+                      : 'text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white'
+                  }`}
+                  style={rangeMode === r.id ? { backgroundColor: activeThemeColor } : undefined}
+                >
+                  {r.label}
+                </button>
+              ))}
             </div>
 
-            {/* Quick Search */}
-            <div className="relative min-w-[200px]">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <div className="relative min-w-0 sm:min-w-[200px]">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search nickname, plate, model..."
+                placeholder="Search car or plate..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full pl-9 pr-8 py-2 text-sm text-[#0a2540] dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Category Dropdown */}
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-800 text-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-500 font-medium"
+              className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500 font-semibold"
             >
               <option value="All">All Types ({vehicles.length})</option>
               <option value="LandCruiser">Land Cruiser 4x4</option>
-              <option value="RAV4">RAV4 AWD</option>
+              <option value="RAV4">RAV4</option>
               <option value="Coaster">Coaster Bus</option>
-              <option value="Safari Van">Safari Pop-Top</option>
-              <option value="Luxury Sedan">VIP Sedan</option>
+              <option value="Safari Van">Safari Van</option>
+              <option value="Luxury Sedan">VIP Car</option>
             </select>
           </div>
         </div>
 
-        {/* Second Row: Status Filter Pills + Real-Time Fleet Utilization Banner (Matching screenshot) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-800/60">
-          {/* Status Pills */}
-          <div className="flex items-center gap-1.5 text-xs font-semibold">
-            {/* Completed: Green #10b981 */}
+        {/* Status Filter Pills + Quick Summary */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
             <button
               onClick={() => setStatusFilter(statusFilter === 'Completed' ? 'All' : 'Completed')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-2 ${
                 statusFilter === 'Completed'
-                  ? 'bg-emerald-500 text-slate-950 font-bold ring-2 ring-emerald-400'
-                  : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                  : 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Completed</span>
-              <span className="font-mono text-[10px] opacity-80">({statusCounts.Completed})</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>Done ({statusCounts.Completed})</span>
             </button>
 
-            {/* Booked: Blue #3b82f6 */}
             <button
               onClick={() => setStatusFilter(statusFilter === 'Booked' ? 'All' : 'Booked')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-2 ${
                 statusFilter === 'Booked'
-                  ? 'bg-blue-600 text-white font-bold ring-2 ring-blue-400'
-                  : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                  : 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-              <span>Booked</span>
-              <span className="font-mono text-[10px] opacity-80">({statusCounts.Booked})</span>
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span>Booked ({statusCounts.Booked})</span>
             </button>
 
-            {/* In Progress: Amber #f59e0b */}
             <button
               onClick={() => setStatusFilter(statusFilter === 'In Progress' ? 'All' : 'In Progress')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-2 ${
                 statusFilter === 'In Progress'
-                  ? 'bg-amber-500 text-slate-950 font-bold ring-2 ring-amber-400'
-                  : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                  : 'bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-              <span>In Progress</span>
-              <span className="font-mono text-[10px] opacity-80">({statusCounts.InProgress})</span>
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>On Trip ({statusCounts.InProgress})</span>
             </button>
 
-            {/* Cancelled: Slate */}
             <button
               onClick={() => setStatusFilter(statusFilter === 'Cancelled' ? 'All' : 'Cancelled')}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              className={`px-3.5 py-1.5 rounded-full transition-all ${
                 statusFilter === 'Cancelled'
-                  ? 'bg-slate-700 text-white font-bold ring-2 ring-slate-500'
-                  : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-700 text-white font-bold'
+                  : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300 border border-slate-200 dark:border-slate-700'
               }`}
             >
               <span>Cancelled ({statusCounts.Cancelled})</span>
@@ -590,409 +525,452 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
             {statusFilter !== 'All' && (
               <button
                 onClick={() => setStatusFilter('All')}
-                className="text-[11px] text-slate-400 hover:text-white underline ml-1"
+                className="text-sm text-[#425466] dark:text-slate-300 hover:underline ml-1"
               >
-                Clear
+                Show All
               </button>
             )}
           </div>
 
-          {/* Metric Banner: Exactly matches screenshot text: "24 vehicles shown | 21/24 on trips today (88%) | Fleet utilization — 612/744 days (82%) · May 2026" */}
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="text-slate-400 font-medium">
-              {filteredVehicles.length} vehicles shown
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-[#425466] dark:text-slate-400 font-medium">
+              {filteredVehicles.length} cars
             </span>
-            <span className="text-slate-600">·</span>
-            <span className="text-emerald-400 font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              {fleetMetrics.activeTodayCount}/{fleetMetrics.totalVehicles} on trips today ({fleetMetrics.tripsTodayPct}%)
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+              {fleetMetrics.activeTodayCount}/{fleetMetrics.totalVehicles} out today ({fleetMetrics.tripsTodayPct}%)
             </span>
-            <span className="text-slate-600 hidden md:inline">·</span>
-            <span className="text-slate-300 font-medium hidden md:inline">
-              Fleet utilization — <strong className="text-emerald-400">{fleetMetrics.totalFleetDaysBooked}/{fleetMetrics.totalPossibleFleetDays} days</strong> ({fleetMetrics.fleetUtilPct}%) · {shortMonthName} {currentYear}
+            <span className="text-slate-300 dark:text-slate-700 hidden md:inline">|</span>
+            <span className="text-[#425466] dark:text-slate-300 font-medium hidden md:inline">
+              Booked {fleetMetrics.fleetUtilPct}% in {shortMonthName} {currentYear}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Main Interactive Fleet Grid Container */}
-      <div className="bg-[#0b0f17] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <div
-            className="inline-block min-w-full align-middle"
-            style={{ width: `${230 + daysList.length * colWidth}px` }}
-          >
-            {/* Header Row: Sticky Left Vehicle Column + Day Headers */}
-            <div className="flex border-b border-slate-800 bg-[#0f172a] sticky top-0 z-20">
-              {/* Left Column Header: "24 vehicles" */}
-              <div className="w-[230px] shrink-0 px-4 py-3 border-r border-slate-800 font-bold text-white text-xs flex items-center justify-between">
-                <span>{filteredVehicles.length} vehicles</span>
-                <span className="text-[10px] text-slate-500 font-mono uppercase">Status · Util</span>
-              </div>
+      {/* Desktop Fluid Fit-Screen Horizontal Timeline Grid (Zero Horizontal Scroll) */}
+      <div className="hidden lg:block stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+        {/* Header Row */}
+        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-[#f6f9fc] dark:bg-slate-800/90 sticky top-0 z-20">
+          <div className="w-[205px] xl:w-[225px] shrink-0 px-3.5 py-3 border-r border-slate-200 dark:border-slate-800 font-bold text-[#0a2540] dark:text-white text-sm flex items-center justify-between">
+            <span>{filteredVehicles.length} Cars</span>
+            <span className="text-xs text-[#425466] dark:text-slate-400 font-mono">Days Booked</span>
+          </div>
 
-              {/* Day Headers (FRI 1, SAT 2, SUN 3 ...) */}
-              <div className="flex">
-                {daysList.map((d) => (
-                  <div
-                    key={d.dateStr}
-                    style={{ width: `${colWidth}px` }}
-                    className={`shrink-0 py-2 text-center border-r border-slate-800/60 flex flex-col items-center justify-center transition-colors ${
-                      d.isToday ? 'bg-blue-600/10' : d.isWeekend ? 'bg-slate-900/40' : ''
-                    }`}
-                  >
-                    <div className="text-[10px] font-bold tracking-wider uppercase text-slate-400 font-mono">
-                      {d.weekdayShort}
+          <div
+            className="flex-1 min-w-0 grid"
+            style={{ gridTemplateColumns: `repeat(${visibleDaysList.length}, minmax(0, 1fr))` }}
+          >
+            {visibleDaysList.map((d) => (
+              <div
+                key={d.dateStr}
+                className={`py-2 text-center border-r border-slate-200/80 dark:border-slate-800 flex flex-col items-center justify-center min-w-0 ${
+                  d.isToday
+                    ? 'bg-blue-50 dark:bg-blue-600/15'
+                    : d.isWeekend
+                    ? 'bg-slate-100/70 dark:bg-slate-900/40'
+                    : ''
+                }`}
+              >
+                <div className="text-xs font-bold uppercase text-[#425466] dark:text-slate-400 font-mono leading-none">
+                  {rangeMode === 'month' ? d.weekdayShort.slice(0, 1) : d.weekdayShort}
+                </div>
+
+                {d.isToday ? (
+                  <div className="w-6 h-6 mt-1 rounded-full bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
+                    {d.dayIndex}
+                  </div>
+                ) : (
+                  <div className="text-xs font-bold text-[#0a2540] dark:text-slate-200 mt-1 tabular-nums">
+                    {d.dayIndex}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Vehicle Rows */}
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          {filteredVehicles.map((vehicle) => {
+            const { nickname, subtitle } = getVehicleNickname(vehicle);
+            const stats = vehicleStats.get(vehicle.id) || { daysBooked: 0, ratePct: 0 };
+
+            const vehBookings = bookings
+              .filter(
+                (b) =>
+                  b.vehicle_id === vehicle.id &&
+                  (statusFilter === 'All'
+                    ? b.status !== 'Cancelled'
+                    : statusFilter === 'Completed'
+                    ? b.status === 'Completed'
+                    : statusFilter === 'Booked'
+                    ? b.status === 'Confirmed' || b.status === 'Pending Dispatch'
+                    : statusFilter === 'In Progress'
+                    ? b.status === 'In Progress'
+                    : b.status === 'Cancelled')
+              )
+              .sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+            const turnaroundAlerts: { prevBooking: Booking; nextBooking: Booking; dateStr: string; gapHours: number }[] = [];
+            for (let i = 0; i < vehBookings.length - 1; i++) {
+              const curr = vehBookings[i];
+              const next = vehBookings[i + 1];
+              if (curr.end_date === next.start_date) {
+                turnaroundAlerts.push({ prevBooking: curr, nextBooking: next, dateStr: curr.end_date, gapHours: 2 });
+              } else {
+                const diffDays = Math.round(
+                  (new Date(next.start_date).getTime() - new Date(curr.end_date).getTime()) / (1000 * 3600 * 24)
+                );
+                if (diffDays === 1) {
+                  turnaroundAlerts.push({ prevBooking: curr, nextBooking: next, dateStr: curr.end_date, gapHours: 4 });
+                }
+              }
+            }
+
+            const totalVisibleDays = Math.max(1, visibleDaysList.length);
+
+            return (
+              <div
+                key={vehicle.id}
+                className="flex hover:bg-[#f6f9fc]/70 dark:hover:bg-slate-800/30 transition-colors group relative"
+              >
+                {/* Left Car Column */}
+                <div className="w-[205px] xl:w-[225px] shrink-0 p-3 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-center min-w-0">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-[#0a2540] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                        {nickname}
+                      </div>
+                      <div className="text-xs text-[#425466] dark:text-slate-400 truncate mt-0.5">
+                        {subtitle}
+                      </div>
                     </div>
 
-                    {d.isToday ? (
-                      /* Today highlighted with vibrant blue rounded pill matching screenshot */
-                      <div className="w-6 h-6 mt-0.5 rounded-md bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
-                        {d.dayIndex}
+                    <div className="text-right shrink-0">
+                      <span
+                        className={`text-xs font-bold font-mono tabular-nums ${
+                          stats.ratePct >= 60
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : stats.ratePct >= 30
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-[#425466] dark:text-slate-400'
+                        }`}
+                      >
+                        {stats.ratePct}%
+                      </span>
+                      <div className="text-xs text-[#425466] dark:text-slate-500 font-mono tabular-nums">
+                        {stats.daysBooked}/{daysInMonth}d
                       </div>
-                    ) : (
-                      <div className="text-xs font-bold text-slate-200 mt-0.5">
-                        {d.dayIndex}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-[#425466] dark:text-slate-400 mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 gap-2">
+                    <span className="font-mono text-[#0a2540] dark:text-amber-300 font-bold whitespace-nowrap">
+                      {vehicle.plate_number}
+                    </span>
+                    <span className="font-mono whitespace-nowrap tabular-nums">
+                      {formatRwf(vehicle.daily_rate_rwf)}/d
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fluid Percentage Timeline Grid */}
+                <div
+                  className="flex-1 min-w-0 grid relative h-[72px]"
+                  style={{ gridTemplateColumns: `repeat(${visibleDaysList.length}, minmax(0, 1fr))` }}
+                >
+                  {visibleDaysList.map((d) => (
+                    <div
+                      key={d.dateStr}
+                      onClick={() => onOpenBookingForVehicle(vehicle.id, d.dateStr)}
+                      className={`h-full border-r border-slate-100 dark:border-slate-800/70 relative cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-600/10 group/cell transition-colors min-w-0 ${
+                        d.isWeekend ? 'bg-slate-50/70 dark:bg-slate-900/30' : ''
+                      }`}
+                      title={`Click to book ${vehicle.model_name} on ${d.dateStr}`}
+                    >
+                      <span className="opacity-0 group-hover/cell:opacity-100 absolute inset-0 flex items-center justify-center text-xs text-blue-600 dark:text-blue-400 font-bold pointer-events-none">
+                        +
+                      </span>
+                    </div>
+                  ))}
+
+                  {turnaroundAlerts.map((alert, idx) => {
+                    const alertPos = visibleDaysList.findIndex((d) => d.dateStr === alert.dateStr);
+                    if (alertPos < 0) return null;
+                    const leftPct = Math.min(92, ((alertPos + 0.5) / totalVisibleDays) * 100);
+
+                    return (
+                      <div
+                        key={`turnaround-${idx}`}
+                        style={{ left: `${leftPct}%`, top: '3px' }}
+                        className="absolute z-15 pointer-events-none"
+                      >
+                        <span className="bg-amber-400 text-slate-950 font-bold text-xs px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+                          {alert.gapHours}h wash
+                        </span>
                       </div>
-                    )}
+                    );
+                  })}
+
+                  {vehBookings.map((bk) => {
+                    if (bk.end_date < windowStartStr || bk.start_date > windowEndStr) return null;
+
+                    const effectiveStartStr = bk.start_date < windowStartStr ? windowStartStr : bk.start_date;
+                    const effectiveEndStr = bk.end_date > windowEndStr ? windowEndStr : bk.end_date;
+
+                    const startIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveStartStr);
+                    const endIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveEndStr);
+                    if (startIndex < 0 || endIndex < 0) return null;
+
+                    const spanDays = Math.max(1, endIndex - startIndex + 1);
+                    const leftPct = (startIndex / totalVisibleDays) * 100;
+                    const widthPct = (spanDays / totalVisibleDays) * 100;
+
+                    const isCompleted = bk.status === 'Completed';
+                    const isInProgress = bk.status === 'In Progress';
+                    const isCancelled = bk.status === 'Cancelled';
+
+                    let barBg = 'bg-blue-600 hover:bg-blue-500 text-white';
+                    if (isCompleted) {
+                      barBg = 'bg-emerald-600 hover:bg-emerald-500 text-white';
+                    } else if (isInProgress) {
+                      barBg = 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold';
+                    } else if (isCancelled) {
+                      barBg = 'bg-slate-400 dark:bg-slate-700 text-white';
+                    }
+
+                    const hasTurnaround = turnaroundAlerts.some(
+                      (t) => t.prevBooking.id === bk.id || t.nextBooking.id === bk.id
+                    );
+                    const totalDays = calculateDays(bk.start_date, bk.end_date);
+
+                    return (
+                      <div
+                        key={bk.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedBooking(bk);
+                        }}
+                        style={{
+                          left: `calc(${leftPct}% + 2px)`,
+                          width: `calc(${widthPct}% - 4px)`,
+                          top: '16px',
+                          height: '40px',
+                        }}
+                        className={`absolute z-10 rounded-xl px-2 flex items-center justify-between text-xs font-semibold cursor-pointer shadow-sm transition-transform hover:-translate-y-0.5 select-none overflow-hidden ${barBg} ${
+                          hasTurnaround ? 'ring-2 ring-amber-300' : ''
+                        }`}
+                        title={`#${bk.id} · ${bk.client_name} · ${bk.destination} (${bk.start_date} to ${bk.end_date})`}
+                      >
+                        <div className="flex items-center gap-1 min-w-0 truncate">
+                          <span className="font-bold whitespace-nowrap tabular-nums">
+                            {spanDays >= 2 ? `${totalDays}d · ${formatRwf(bk.total_rwf)}` : `${totalDays}d`}
+                          </span>
+                          {spanDays >= 4 && (
+                            <span className="opacity-90 font-medium truncate">
+                              · {bk.client_name.split(' ')[0]}
+                            </span>
+                          )}
+                        </div>
+
+                        {spanDays >= 3 && (
+                          <div className="flex items-center gap-1 shrink-0 ml-1">
+                            {bk.flight_number && <Plane className="w-3.5 h-3.5 opacity-90" />}
+                            {hasTurnaround && <Sparkles className="w-3.5 h-3.5 text-amber-200" />}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {maintenance
+                    .filter(
+                      (m) =>
+                        m.vehicle_id === vehicle.id &&
+                        m.status !== 'Completed' &&
+                        datesOverlap(windowStartStr, windowEndStr, m.start_date, m.expected_completion_date || m.start_date)
+                    )
+                    .map((m) => {
+                      const mEnd = m.expected_completion_date || m.start_date;
+                      const effectiveStartStr = m.start_date < windowStartStr ? windowStartStr : m.start_date;
+                      const effectiveEndStr = mEnd > windowEndStr ? windowEndStr : mEnd;
+
+                      const startIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveStartStr);
+                      const endIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveEndStr);
+                      if (startIndex < 0 || endIndex < 0) return null;
+
+                      const spanDays = Math.max(1, endIndex - startIndex + 1);
+                      const leftPct = (startIndex / totalVisibleDays) * 100;
+                      const widthPct = (spanDays / totalVisibleDays) * 100;
+
+                      return (
+                        <div
+                          key={m.id}
+                          style={{
+                            left: `calc(${leftPct}% + 2px)`,
+                            width: `calc(${widthPct}% - 4px)`,
+                            top: '16px',
+                            height: '40px',
+                          }}
+                          className="absolute z-20 rounded-xl px-2 flex items-center justify-between text-xs font-bold shadow-sm bg-rose-600 text-white border border-rose-400 select-none overflow-hidden"
+                          title={`In Garage: ${m.garage_name} (${m.service_type})`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0 truncate">
+                            <Wrench className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">In Garage: {m.service_type}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tablet & Mobile Horizontal Car Schedule Grid (Zero Horizontal Scroll) */}
+      <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {filteredVehicles.map((vehicle) => {
+          const { nickname, subtitle } = getVehicleNickname(vehicle);
+          const stats = vehicleStats.get(vehicle.id) || { daysBooked: 0, ratePct: 0 };
+          const vehBookings = bookings
+            .filter(
+              (b) =>
+                b.vehicle_id === vehicle.id &&
+                datesOverlap(monthStartStr, monthEndStr, b.start_date, b.end_date) &&
+                (statusFilter === 'All'
+                  ? b.status !== 'Cancelled'
+                  : statusFilter === 'Completed'
+                  ? b.status === 'Completed'
+                  : statusFilter === 'Booked'
+                  ? b.status === 'Confirmed' || b.status === 'Pending Dispatch'
+                  : statusFilter === 'In Progress'
+                  ? b.status === 'In Progress'
+                  : b.status === 'Cancelled')
+            )
+            .sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+          const activeMaint = maintenance.filter(
+            (m) =>
+              m.vehicle_id === vehicle.id &&
+              m.status !== 'Completed' &&
+              datesOverlap(monthStartStr, monthEndStr, m.start_date, m.expected_completion_date || m.start_date)
+          );
+
+          return (
+            <div
+              key={vehicle.id}
+              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between"
+            >
+              <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold text-[#0a2540] dark:text-white truncate">{nickname}</div>
+                  <div className="text-xs text-[#425466] dark:text-slate-400 truncate">{subtitle}</div>
+                  <div className="flex items-center gap-2 mt-1 text-xs font-mono">
+                    <span className="font-bold text-[#0a2540] dark:text-amber-300">{vehicle.plate_number}</span>
+                    <span className="text-[#425466] dark:text-slate-400">{formatRwf(vehicle.daily_rate_rwf)}/d</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    {stats.ratePct}%
+                  </div>
+                  <div className="text-xs text-[#425466] dark:text-slate-400 font-mono tabular-nums">
+                    {stats.daysBooked}/{daysInMonth}d
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 flex-1">
+                {activeMaint.map((m) => (
+                  <div
+                    key={m.id}
+                    className="p-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold flex items-center justify-between gap-2"
+                  >
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Wrench className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">In Garage: {m.service_type}</span>
+                    </span>
+                    <span className="font-mono whitespace-nowrap shrink-0">{m.start_date}</span>
                   </div>
                 ))}
-              </div>
-            </div>
 
-            {/* Vehicle Rows */}
-            <div className="divide-y divide-slate-800/80">
-              {filteredVehicles.map((vehicle) => {
-                const { nickname, subtitle } = getVehicleNickname(vehicle);
-                const stats = vehicleStats.get(vehicle.id) || { daysBooked: 0, ratePct: 0 };
-                const IconComp = getCategoryIcon(vehicle.category);
-
-                // Bookings for this vehicle
-                const vehBookings = bookings
-                  .filter(
-                    (b) =>
-                      b.vehicle_id === vehicle.id &&
-                      (statusFilter === 'All'
-                        ? b.status !== 'Cancelled'
-                        : statusFilter === 'Completed'
-                        ? b.status === 'Completed'
-                        : statusFilter === 'Booked'
-                        ? b.status === 'Confirmed' || b.status === 'Pending Dispatch'
-                        : statusFilter === 'In Progress'
-                        ? b.status === 'In Progress'
-                        : b.status === 'Cancelled')
-                  )
-                  .sort((a, b) => a.start_date.localeCompare(b.start_date));
-
-                // Turnaround buffer detection: check back-to-back rentals on this vehicle
-                const turnaroundAlerts: { prevBooking: Booking; nextBooking: Booking; dateStr: string; gapHours: number }[] = [];
-                for (let i = 0; i < vehBookings.length - 1; i++) {
-                  const curr = vehBookings[i];
-                  const next = vehBookings[i + 1];
-                  // If next booking starts on the same day or next day after curr ends
-                  if (curr.end_date === next.start_date) {
-                    turnaroundAlerts.push({
-                      prevBooking: curr,
-                      nextBooking: next,
-                      dateStr: curr.end_date,
-                      gapHours: 2, // 2-4 hour turnaround buffer window
-                    });
-                  } else {
-                    const d1 = new Date(curr.end_date).getTime();
-                    const d2 = new Date(next.start_date).getTime();
-                    const diffDays = Math.round((d2 - d1) / (1000 * 3600 * 24));
-                    if (diffDays === 1) {
-                      turnaroundAlerts.push({
-                        prevBooking: curr,
-                        nextBooking: next,
-                        dateStr: curr.end_date,
-                        gapHours: 4,
-                      });
-                    }
-                  }
-                }
-
-                return (
-                  <div
-                    key={vehicle.id}
-                    className="flex hover:bg-slate-900/40 transition-colors group relative"
-                  >
-                    {/* Left Sticky Column: Vehicle Details, Plate, Utilization Badge */}
-                    <div className="w-[230px] shrink-0 p-3 border-r border-slate-800 bg-[#0b0f17] flex flex-col justify-center">
-                      <div className="flex items-start justify-between gap-1">
-                        <div className="truncate">
-                          <div className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors truncate">
-                            {nickname}
-                          </div>
-                          <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                            {subtitle}
-                          </div>
-                        </div>
-
-                        {/* Utilization Badge (e.g. 68% · 21/31d) matching screenshot */}
-                        <div className="text-right shrink-0">
-                          <span
-                            className={`text-[11px] font-bold font-mono ${
-                              stats.ratePct >= 60
-                                ? 'text-emerald-400'
-                                : stats.ratePct >= 30
-                                ? 'text-amber-400'
-                                : 'text-slate-400'
-                            }`}
-                          >
-                            {stats.ratePct}%
-                          </span>
-                          <div className="text-[9px] text-slate-500 font-mono">
-                            {stats.daysBooked}/{daysInMonth}d
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Plate number & daily rate */}
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 pt-1 border-t border-slate-800/40">
-                        <span className="font-mono text-amber-300 font-semibold">
-                          {vehicle.plate_number}
-                        </span>
-                        <span className="text-slate-400 font-mono">
-                          {formatRwf(vehicle.daily_rate_rwf)}/d
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Timeline Grid: Day Cells and Spanning Booking Bars */}
-                    <div className="flex relative h-[62px] items-center">
-                      {/* Underlying Day Grid Cells (Clickable to create new booking) */}
-                      {daysList.map((d) => (
-                        <div
-                          key={d.dateStr}
-                          style={{ width: `${colWidth}px` }}
-                          onClick={() => onOpenBookingForVehicle(vehicle.id, d.dateStr)}
-                          className={`h-full shrink-0 border-r border-slate-800/60 relative cursor-pointer hover:bg-blue-600/10 group/cell transition-colors ${
-                            d.isWeekend ? 'bg-slate-900/30' : ''
-                          }`}
-                          title={`Click to book ${vehicle.model_name} on ${d.dateStr}`}
-                        >
-                          <span className="opacity-0 group-hover/cell:opacity-100 absolute inset-0 flex items-center justify-center text-[10px] text-blue-400 font-bold pointer-events-none">
-                            +
-                          </span>
-                        </div>
-                      ))}
-
-                      {/* Turnaround Buffer Badges (Between adjacent bookings) */}
-                      {turnaroundAlerts.map((alert, idx) => {
-                        const alertDay = daysList.find((d) => d.dateStr === alert.dateStr);
-                        if (!alertDay) return null;
-                        const alertColIndex = alertDay.dayIndex - 1;
-                        const leftPx = alertColIndex * colWidth + colWidth - 28;
-
-                        return (
-                          <div
-                            key={`turnaround-${idx}`}
-                            style={{ left: `${leftPx}px`, top: '4px' }}
-                            className="absolute z-15 pointer-events-none flex items-center justify-center"
-                          >
-                            <span className="bg-amber-500/90 text-slate-950 font-extrabold text-[9px] px-1.5 py-0.5 rounded shadow-lg ring-1 ring-amber-300 uppercase tracking-tighter whitespace-nowrap">
-                              {alert.gapHours}h turnaround
-                            </span>
-                          </div>
-                        );
-                      })}
-
-                      {/* Continuous Spanning Booking Bars (Absolute positioned across dates) */}
-                      {vehBookings.map((bk) => {
-                        // Find start day index and end day index in current month
-                        const bkStart = new Date(bk.start_date);
-                        const bkEnd = new Date(bk.end_date);
-                        
-                        // Check if booking touches this month
-                        if (bk.end_date < monthStartStr || bk.start_date > monthEndStr) {
-                          return null;
-                        }
-
-                        // Bound within visible month
-                        const effectiveStartStr = bk.start_date < monthStartStr ? monthStartStr : bk.start_date;
-                        const effectiveEndStr = bk.end_date > monthEndStr ? monthEndStr : bk.end_date;
-
-                        const startDayObj = daysList.find((d) => d.dateStr === effectiveStartStr);
-                        const endDayObj = daysList.find((d) => d.dateStr === effectiveEndStr);
-
-                        if (!startDayObj || !endDayObj) return null;
-
-                        const startIndex = startDayObj.dayIndex - 1; // 0-indexed column
-                        const endIndex = endDayObj.dayIndex - 1;
-                        const spanDays = endIndex - startIndex + 1;
-
-                        const leftOffset = startIndex * colWidth + 4;
-                        const barWidth = Math.max(36, spanDays * colWidth - 8);
-
-                        // Color theme matching screenshot:
-                        // Completed = emerald green (#10b981)
-                        // Booked = vibrant blue (#3b82f6)
-                        // In Progress = warm amber (#f59e0b)
-                        // Cancelled = slate
-                        const isCompleted = bk.status === 'Completed';
-                        const isInProgress = bk.status === 'In Progress';
-                        const isCancelled = bk.status === 'Cancelled';
-                        const isBooked = !isCompleted && !isInProgress && !isCancelled;
-
-                        let barBg = 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/40';
-                        if (isCompleted) {
-                          barBg = 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40';
-                        } else if (isInProgress) {
-                          barBg = 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-900/40 font-bold';
-                        } else if (isCancelled) {
-                          barBg = 'bg-slate-700 hover:bg-slate-600 text-slate-300';
-                        }
-
-                        // Has adjacent turnaround buffer
-                        const hasTurnaround = turnaroundAlerts.some(
-                          (t) => t.prevBooking.id === bk.id || t.nextBooking.id === bk.id
-                        );
-
-                        const totalDays = calculateDays(bk.start_date, bk.end_date);
-                        const driver = drivers.find((d) => d.id === bk.driver_id);
-
-                        return (
-                          <div
-                            key={bk.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedBooking(bk);
-                            }}
-                            style={{
-                              left: `${leftOffset}px`,
-                              width: `${barWidth}px`,
-                              top: '12px',
-                              height: '38px',
-                            }}
-                            className={`absolute z-10 rounded-lg px-2.5 flex items-center justify-between text-xs font-semibold cursor-pointer shadow-md transition-transform hover:-translate-y-0.5 select-none ${barBg} ${
-                              hasTurnaround ? 'ring-2 ring-amber-400/90' : ''
-                            }`}
-                            title={`#${bk.id} · ${bk.client_name} · ${bk.destination} · ${totalDays} days · ${formatRwf(bk.total_rwf)}`}
-                          >
-                            <div className="flex items-center gap-1.5 truncate">
-                              <span className="font-bold text-[11px] whitespace-nowrap">
-                                {totalDays}d · {formatRwf(bk.total_rwf)}
-                              </span>
-                              {barWidth > 120 && (
-                                <span className="opacity-90 font-medium truncate text-[10px]">
-                                  · {bk.client_name.split(' ')[0]}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Icons on right side of bar */}
-                            <div className="flex items-center gap-1 shrink-0 ml-1">
-                              {bk.flight_number && (
-                                <span title={`Flight: ${bk.flight_number}`}>
-                                  <Plane className="w-3 h-3 opacity-90" />
-                                </span>
-                              )}
-                              {hasTurnaround && (
-                                <Sparkles className="w-3 h-3 text-amber-200" />
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Maintenance & Workshop Service Bars */}
-                      {(() => {
-                        const vehMaintenance = maintenance.filter(
-                          (m) =>
-                            m.vehicle_id === vehicle.id &&
-                            m.status !== 'Completed' &&
-                            datesOverlap(monthStartStr, monthEndStr, m.start_date, m.expected_completion_date || m.start_date)
-                        );
-                        return vehMaintenance.map((m) => {
-                          const mEnd = m.expected_completion_date || m.start_date;
-                          const effectiveStartStr = m.start_date < monthStartStr ? monthStartStr : m.start_date;
-                          const effectiveEndStr = mEnd > monthEndStr ? monthEndStr : mEnd;
-
-                          const startDayObj = daysList.find((d) => d.dateStr === effectiveStartStr);
-                          const endDayObj = daysList.find((d) => d.dateStr === effectiveEndStr);
-                          if (!startDayObj || !endDayObj) return null;
-
-                          const startIndex = startDayObj.dayIndex - 1;
-                          const endIndex = endDayObj.dayIndex - 1;
-                          const spanDays = Math.max(1, endIndex - startIndex + 1);
-                          const leftOffset = startIndex * colWidth + 4;
-                          const barWidth = Math.max(36, spanDays * colWidth - 8);
-
-                          return (
-                            <div
-                              key={m.id}
-                              style={{
-                                left: `${leftOffset}px`,
-                                width: `${barWidth}px`,
-                                top: '12px',
-                                height: '38px',
-                              }}
-                              className="absolute z-20 rounded-lg px-2.5 flex items-center justify-between text-xs font-bold cursor-pointer shadow-lg bg-gradient-to-r from-rose-700 via-amber-700 to-rose-700 text-white border border-amber-300/80 transition-transform hover:-translate-y-0.5 select-none"
-                              title={`Grounded in Garage: ${m.garage_name} (${m.service_type}) · ${m.start_date} to ${m.expected_completion_date} · ${formatRwf(m.cost_rwf)}`}
-                            >
-                              <div className="flex items-center gap-1.5 truncate">
-                                <Wrench className="w-3.5 h-3.5 text-amber-200 shrink-0" />
-                                <span className="text-[10px] uppercase font-mono tracking-wider truncate">
-                                  {m.garage_name.split(' ')[0]}: {m.service_type}
-                                </span>
-                              </div>
-                              <span className="text-[9px] bg-slate-950/80 text-amber-300 font-mono px-1.5 py-0.5 rounded shrink-0 ml-1">
-                                {formatRwf(m.cost_rwf)}
-                              </span>
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
+                {vehBookings.length === 0 && activeMaint.length === 0 ? (
+                  <div className="text-xs text-[#425466] dark:text-slate-400 py-2">
+                    Free all {shortMonthName} {currentYear}
                   </div>
-                );
-              })}
+                ) : (
+                  vehBookings.map((bk) => (
+                    <button
+                      key={bk.id}
+                      onClick={() => setSelectedBooking(bk)}
+                      className="w-full text-left p-2.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 text-xs hover:border-indigo-400 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-[#0a2540] dark:text-white truncate">{bk.client_name}</div>
+                        <div className="text-[#425466] dark:text-slate-400 font-mono whitespace-nowrap">
+                          {bk.start_date} → {bk.end_date}
+                        </div>
+                      </div>
+                      <span className="font-mono font-bold text-[#0a2540] dark:text-amber-400 whitespace-nowrap shrink-0">
+                        {formatRwf(bk.total_rwf)}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <button
+                onClick={() => onOpenBookingForVehicle(vehicle.id, monthStartStr)}
+                className={`w-full py-2 rounded-xl text-xs font-bold ${activeBtnText}`}
+                style={{ backgroundColor: activeThemeColor }}
+              >
+                + Book {nickname}
+              </button>
             </div>
-          </div>
+          );
+        })}
+      </div>
+
+      {/* Footer Guidance */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[#425466] dark:text-slate-400 px-1">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="font-bold text-[#0a2540] dark:text-slate-200">Colors:</span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-emerald-600"></span> Done
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-blue-600"></span> Booked
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-amber-400"></span> On Trip
+          </span>
+          <span className="flex items-center gap-1.5 font-semibold text-rose-600 dark:text-rose-400">
+            <Wrench className="w-4 h-4" /> In Garage
+          </span>
+        </div>
+
+        <div className="text-xs text-[#425466] dark:text-slate-400">
+          Click any empty day to book a car · Click a colored bar to see trip details
         </div>
       </div>
 
-      {/* Footer Guidance Strip */}
-      <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 px-2 py-1">
-        <div className="flex items-center gap-4">
-          <span className="font-semibold text-slate-300">Status Keys:</span>
-          <span className="flex items-center gap-1 text-emerald-400">
-            <span className="w-2.5 h-2.5 rounded bg-emerald-500"></span> Completed
-          </span>
-          <span className="flex items-center gap-1 text-blue-400">
-            <span className="w-2.5 h-2.5 rounded bg-blue-600"></span> Booked / Confirmed
-          </span>
-          <span className="flex items-center gap-1 text-amber-400">
-            <span className="w-2.5 h-2.5 rounded bg-amber-500"></span> In Progress
-          </span>
-          <span className="flex items-center gap-1 text-amber-300">
-            <span className="w-2.5 h-2.5 rounded border border-amber-400"></span> 2h/4h Turnaround Prep
-          </span>
-          <span className="flex items-center gap-1 text-rose-400 font-semibold">
-            <Wrench className="w-3.5 h-3.5 text-rose-400" /> In Garage Service
-          </span>
-        </div>
-
-        <div className="text-slate-500 font-mono text-[11px]">
-          Click empty date cells to create new booking · Click colored bar to view dossier
-        </div>
-      </div>
-
-      {/* Booking Dossier & Chauffeur Reassignment Modal */}
+      {/* Trip Details Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-amber-400 font-bold">
+                  <span className="font-mono text-sm text-blue-600 dark:text-blue-400 font-bold">
                     #{selectedBooking.id}
                   </span>
-                  <h3 className="text-base font-bold text-white">Booking Dossier & Dispatch</h3>
+                  <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Trip Details</h3>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Route: {selectedBooking.destination}
+                <p className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">
+                  Going to: {selectedBooking.destination}
                 </p>
               </div>
               <button
@@ -1000,7 +978,7 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
                   setSelectedBooking(null);
                   setAssignmentNotice(null);
                 }}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1008,76 +986,70 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
 
             {assignmentNotice && (
               <div
-                className={`p-3 rounded-lg text-xs font-medium ${
+                className={`p-3.5 rounded-xl text-sm font-medium ${
                   assignmentNotice.type === 'success'
-                    ? 'bg-emerald-950/60 border border-emerald-700 text-emerald-300'
-                    : 'bg-rose-950/60 border border-rose-700 text-rose-300'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300'
+                    : 'bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-300'
                 }`}
               >
                 {assignmentNotice.message}
               </div>
             )}
 
-            {/* Quick Summary Grid */}
-            <div className="grid grid-cols-2 gap-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs">
+            <div className="grid grid-cols-2 gap-4 bg-[#f6f9fc] dark:bg-slate-800/80 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
               <div>
-                <span className="text-slate-400 block text-[11px]">Client:</span>
-                <span className="font-bold text-white text-sm">{selectedBooking.client_name}</span>
-                <div className="text-slate-400 text-[11px] font-mono">{selectedBooking.client_phone}</div>
+                <span className="text-[#425466] dark:text-slate-400 block text-xs">Guest:</span>
+                <span className="font-bold text-[#0a2540] dark:text-white text-base">
+                  {selectedBooking.client_name}
+                </span>
+                <div className="text-[#425466] dark:text-slate-400 text-xs font-mono mt-0.5">
+                  {selectedBooking.client_phone}
+                </div>
               </div>
 
               <div>
-                <span className="text-slate-400 block text-[11px]">Status & Payment:</span>
-                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                  selectedBooking.status === 'Completed'
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : selectedBooking.status === 'In Progress'
-                    ? 'bg-amber-500/20 text-amber-400'
-                    : 'bg-blue-500/20 text-blue-400'
-                }`}>
+                <span className="text-[#425466] dark:text-slate-400 block text-xs">Price & Status:</span>
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">
                   {selectedBooking.status}
                 </span>
-                <div className="text-emerald-400 font-bold font-mono mt-0.5">
+                <div className="text-emerald-600 dark:text-emerald-400 font-extrabold font-mono mt-1">
                   {formatRwf(selectedBooking.total_rwf)}
                 </div>
               </div>
 
               <div>
-                <span className="text-slate-400 block text-[11px]">Rental Dates:</span>
-                <span className="text-slate-200 font-mono text-[11px]">
+                <span className="text-[#425466] dark:text-slate-400 block text-xs">Dates:</span>
+                <span className="text-[#0a2540] dark:text-slate-200 font-mono text-xs font-semibold">
                   {selectedBooking.start_date} → {selectedBooking.end_date}
                 </span>
-                <div className="text-[10px] text-slate-400">
+                <div className="text-xs text-[#425466] dark:text-slate-400 mt-0.5">
                   {calculateDays(selectedBooking.start_date, selectedBooking.end_date)} days total
                 </div>
               </div>
 
               <div>
-                <span className="text-slate-400 block text-[11px]">Flight / Arrival:</span>
+                <span className="text-[#425466] dark:text-slate-400 block text-xs">Airport Flight:</span>
                 {selectedBooking.flight_number ? (
-                  <span className="text-blue-400 font-mono font-bold flex items-center gap-1">
-                    <Plane className="w-3 h-3" />
-                    {selectedBooking.flight_number} ({selectedBooking.flight_status || 'Scheduled'})
+                  <span className="text-blue-600 dark:text-blue-400 font-mono font-bold flex items-center gap-1">
+                    <Plane className="w-3.5 h-3.5" />
+                    {selectedBooking.flight_number} ({selectedBooking.flight_status || 'On Time'})
                   </span>
                 ) : (
-                  <span className="text-slate-400">Standard Pickup</span>
+                  <span className="text-[#425466] dark:text-slate-400">City Pickup</span>
                 )}
               </div>
             </div>
 
-            {/* Driver Assignment Section */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                <span>Assigned Chauffeur (Collision Guard Protected):</span>
-                <span className="text-[10px] text-slate-500">Live conflict validation</span>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">
+                Driver for This Trip
               </label>
-
               <select
                 value={selectedBooking.driver_id}
                 onChange={(e) => handleReassignDriver(selectedBooking.id, e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-xs outline-none focus:border-blue-500"
+                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-3 text-sm outline-none focus:border-blue-500"
               >
-                <option value="">-- No Chauffeur Assigned (Self-Drive) --</option>
+                <option value="">-- No Driver (Guest Drives Self) --</option>
                 {drivers.map((drv) => {
                   const collision = checkDriverCollision(
                     drv.id,
@@ -1088,32 +1060,29 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
                   );
 
                   return (
-                    <option
-                      key={drv.id}
-                      value={drv.id}
-                      disabled={collision.hasCollision}
-                      className={collision.hasCollision ? 'text-rose-400 bg-slate-900' : 'text-slate-100 bg-slate-900'}
-                    >
+                    <option key={drv.id} value={drv.id} disabled={collision.hasCollision}>
                       {drv.name} ({drv.phone}) · {drv.language}
-                      {collision.hasCollision ? ` [OCCUPIED: ${collision.conflictingBooking?.client_name || 'Booked'}]` : ' [AVAILABLE]'}
+                      {collision.hasCollision
+                        ? ` [Busy: ${collision.conflictingBooking?.client_name || 'Booked'}]`
+                        : ' [Free]'}
                     </option>
                   );
                 })}
               </select>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
               {onSelectBookingForDispatch && (
                 <button
                   onClick={() => {
                     onSelectBookingForDispatch(selectedBooking);
                     setSelectedBooking(null);
                   }}
-                  className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                  className={`px-4 py-2.5 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-sm ${activeBtnText}`}
+                  style={{ backgroundColor: activeThemeColor }}
                 >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>Dispatch SMS (*134#)</span>
+                  <Phone className="w-4 h-4" />
+                  <span>Send Driver SMS</span>
                 </button>
               )}
 
@@ -1123,16 +1092,16 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
                     onUpdateBookingStatus(selectedBooking.id, 'Completed');
                     setSelectedBooking(null);
                   }}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-sm font-bold flex items-center gap-1.5 shadow-sm"
                 >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span>Mark Completed</span>
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Mark Trip Done</span>
                 </button>
               )}
 
               <button
                 onClick={() => setSelectedBooking(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium ml-auto"
+                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-sm font-semibold ml-auto"
               >
                 Close
               </button>
@@ -1141,100 +1110,84 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
         </div>
       )}
 
-      {/* Block Vehicle / Maintenance Modal (Launched by "Block Vehicle" button) */}
+      {/* Block Car Modal */}
       {isBlockVehicleModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <Ban className="w-5 h-5 text-rose-400" />
-                <h3 className="text-base font-bold text-white">Block Vehicle / Maintenance</h3>
+                <Ban className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Block a Car</h3>
               </div>
               <button
                 onClick={() => setIsBlockVehicleModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
-              Lock out a fleet vehicle from the booking calendar to prevent collisions during mandatory Rwanda Contrôle Technique or scheduled mechanical maintenance.
+            <p className="text-sm text-[#425466] dark:text-slate-300">
+              Lock a car so nobody can book it while it is in the garage or being checked.
             </p>
 
-            {/* Vehicle Selector */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Select Vehicle:</label>
+              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">Choose Car</label>
               <select
                 value={blockSelectedVehicleId}
                 onChange={(e) => setBlockSelectedVehicleId(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-xs outline-none focus:border-blue-500 font-medium"
+                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-3 text-sm outline-none focus:border-blue-500 font-medium"
               >
                 {vehicles.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {v.model_name} ({v.plate_number}) · Currently: {v.status}
+                    {v.model_name} ({v.plate_number}) · {v.status}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Reason Selector */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Maintenance Reason:</label>
+              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">Why is it blocked?</label>
               <select
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-xs outline-none focus:border-blue-500 font-medium"
+                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-3 text-sm outline-none focus:border-blue-500 font-medium"
               >
-                <option value="Contrôle Technique (RNP Mandatory Inspection)">
-                  Contrôle Technique (RNP Inspection)
-                </option>
-                <option value="Regular Engine Oil & Filter Service">
-                  Regular Engine Oil & Filter Service
-                </option>
-                <option value="Brake Pads & Suspension Overhaul">
-                  Brake Pads & Suspension Overhaul
-                </option>
-                <option value="Tire Replacement & Wheel Balancing">
-                  Tire Replacement & Wheel Balancing
-                </option>
-                <option value="VIP Deep Interior Detailing & Sanitization">
-                  VIP Deep Interior Detailing & Sanitization
-                </option>
-                <option value="Bodywork & Paint Touch-Up">
-                  Bodywork & Paint Touch-Up
-                </option>
+                <option value="Police Safety Check">Police Safety Check (Inspection)</option>
+                <option value="Oil & Filter Service">Oil & Filter Service</option>
+                <option value="Brakes & Wheel Repair">Brakes & Wheel Repair</option>
+                <option value="New Tires">New Tires</option>
+                <option value="Deep Wash & Inside Clean">Deep Wash & Inside Clean</option>
+                <option value="Body Paint & Dent Repair">Body Paint & Dent Repair</option>
               </select>
             </div>
 
-            {/* Notes */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Workshop Notes / Garage:</label>
+              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">Garage Name or Note</label>
               <input
                 type="text"
-                placeholder="e.g. Remera Inspection Center / Toyota Rwanda"
+                placeholder="e.g. Remera Inspection / Toyota Garage"
                 value={blockNotes}
                 onChange={(e) => setBlockNotes(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs outline-none focus:border-blue-500"
+                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-500"
               />
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsBlockVehicleModalOpen(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium"
+                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmBlockVehicle}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold shadow-md flex items-center gap-1.5"
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-full text-sm font-bold shadow-sm flex items-center gap-1.5"
               >
-                <Ban className="w-3.5 h-3.5" />
-                <span>Confirm Vehicle Lock</span>
+                <Ban className="w-4 h-4" />
+                <span>Block Car Now</span>
               </button>
             </div>
           </div>

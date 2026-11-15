@@ -13,22 +13,14 @@ import {
   MapPin,
   Search,
   Plus,
-  Filter,
   DollarSign,
-  FileText,
-  CreditCard,
   CheckCircle,
-  AlertTriangle,
   X,
-  ExternalLink,
-  ChevronRight,
   Calendar,
   MessageSquare,
   ShieldCheck,
   Edit2,
-  Trash2,
   Receipt,
-  Sparkles,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -48,36 +40,54 @@ export function getCategoryBadge(category: CustomerCategory) {
   switch (category) {
     case 'Corporate':
       return {
-        label: 'Corporate Client',
+        label: 'Company',
         icon: Building2,
-        badgeClass: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+        badgeClass:
+          'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30',
       };
     case 'NGO / Diplomatic':
       return {
-        label: 'NGO / Diplomatic',
+        label: 'NGO / Group',
         icon: Briefcase,
-        badgeClass: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+        badgeClass:
+          'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30',
       };
     case 'Tourist / Expat':
       return {
-        label: 'Tourist / Expat',
+        label: 'Visitor / Tourist',
         icon: Compass,
-        badgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+        badgeClass:
+          'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30',
       };
     case 'Travel Agency':
       return {
-        label: 'Travel Agency',
+        label: 'Tour Partner',
         icon: Globe,
-        badgeClass: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+        badgeClass:
+          'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30',
       };
     default:
       return {
-        label: 'Individual',
+        label: 'Person',
         icon: User,
-        badgeClass: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+        badgeClass:
+          'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
       };
   }
 }
+
+const getFriendlyTerms = (terms?: string) => {
+  switch (terms) {
+    case 'Net-15':
+      return 'Pay in 15 days';
+    case 'Net-30':
+      return 'Pay in 30 days';
+    case 'Pre-paid 50%':
+      return 'Half before trip';
+    default:
+      return 'Pay now (MoMo)';
+  }
+};
 
 export const CustomersView: React.FC<CustomersViewProps> = ({
   customers,
@@ -86,11 +96,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   currentTheme,
   onAddCustomer,
   onUpdateCustomer,
-  onDeleteCustomer,
   onRecordPayment,
   onOpenNewBookingForCustomer,
 }) => {
-  const activeThemeColor = currentTheme?.hex || '#3b82f6';
+  const activeThemeColor = currentTheme?.hex || '#635bff';
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,35 +128,32 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     notes: '',
   });
 
-  // Calculate dynamic metrics
-  const telemetry = useMemo(() => {
+  // Calculate summary totals
+  const summary = useMemo(() => {
     const totalCount = customers.length;
-    const corporateCount = customers.filter(
+    const groupCount = customers.filter(
       (c) => c.category === 'Corporate' || c.category === 'NGO / Diplomatic' || c.category === 'Travel Agency'
     ).length;
-    const totalLTV = customers.reduce((sum, c) => sum + (c.total_spent_rwf || 0), 0);
-    const totalOutstanding = customers.reduce((sum, c) => sum + (c.outstanding_balance_rwf || 0), 0);
+    const totalPaid = customers.reduce((sum, c) => sum + (c.total_spent_rwf || 0), 0);
+    const totalOwed = customers.reduce((sum, c) => sum + (c.outstanding_balance_rwf || 0), 0);
 
     return {
       totalCount,
-      corporateCount,
-      totalLTV,
-      totalOutstanding,
+      groupCount,
+      totalPaid,
+      totalOwed,
     };
   }, [customers]);
 
   // Filtered customers list
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
-      // Category filter
       if (selectedCategory !== 'All' && c.category !== selectedCategory) {
         return false;
       }
-      // Balance filter
       if (onlyWithBalances && (!c.outstanding_balance_rwf || c.outstanding_balance_rwf <= 0)) {
         return false;
       }
-      // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = c.name.toLowerCase().includes(q);
@@ -163,7 +169,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     });
   }, [customers, selectedCategory, onlyWithBalances, searchQuery]);
 
-  // Open Edit Customer Modal
   const handleOpenEdit = (customer: Customer) => {
     setEditingCustomer(customer);
     setFormData({
@@ -181,7 +186,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     setIsAddCustomerOpen(true);
   };
 
-  // Open Add Modal
   const handleOpenAdd = () => {
     setEditingCustomer(null);
     setFormData({
@@ -199,7 +203,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     setIsAddCustomerOpen(true);
   };
 
-  // Submit Add / Edit
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.phone) return;
@@ -239,7 +242,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     setEditingCustomer(null);
   };
 
-  // Open Payment Settle Modal
   const handleOpenPayment = (customer: Customer) => {
     setPaymentModalCustomer(customer);
     setPaymentAmountInput(customer.outstanding_balance_rwf || 0);
@@ -252,7 +254,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     setPaymentModalCustomer(null);
   };
 
-  // Customer Bookings
   const customerBookings = useMemo(() => {
     if (!selectedDossierCustomer) return [];
     return bookings.filter(
@@ -263,334 +264,333 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     );
   }, [selectedDossierCustomer, bookings]);
 
+  const categoryTabs: { value: string; label: string }[] = [
+    { value: 'All', label: 'Everyone' },
+    { value: 'Corporate', label: 'Companies' },
+    { value: 'NGO / Diplomatic', label: 'NGOs & Embassies' },
+    { value: 'Tourist / Expat', label: 'Visitors' },
+    { value: 'Travel Agency', label: 'Tour Partners' },
+    { value: 'Individual', label: 'People' },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Top Banner: CRM Telemetry & Action Bar */}
-      <div className="bg-[#0b0f17] border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+      {/* Top Header & Summary */}
+      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="flex h-2.5 w-2.5 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
-              </span>
-              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider font-mono">
-                Rwanda Enterprise & Tourist CRM
-              </span>
-            </div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight mt-1 flex items-center gap-2">
-              <span>Client CRM & Corporate Accounts</span>
-              <Sparkles className="w-5 h-5 text-amber-400" />
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white tracking-tight">
+              Customers & Groups
             </h1>
-            <p className="text-xs text-slate-400 max-w-2xl mt-1 leading-relaxed">
-              Manage corporate accounts, diplomatic delegations (UNHCR, Embassies), tour partners, and individual travelers with RRA TIN billing, credit terms (Net-30), and lifetime value (LTV).
+            <p className="text-base text-[#425466] dark:text-slate-300 mt-1 max-w-2xl">
+              Save people, companies, and tour groups you work with. Track what they paid and what they still owe.
             </p>
           </div>
 
-          {/* Quick Metrics Badges */}
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2">
-              <span className="text-slate-500 block text-[10px] uppercase font-mono">Total Clients</span>
-              <span className="text-base font-extrabold text-white">{telemetry.totalCount}</span>
-            </div>
+          <button
+            onClick={handleOpenAdd}
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold text-white shadow-sm hover:opacity-95 transition-opacity shrink-0"
+            style={{ backgroundColor: activeThemeColor }}
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add Customer</span>
+          </button>
+        </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2">
-              <span className="text-slate-500 block text-[10px] uppercase font-mono">B2B & NGO Accounts</span>
-              <span className="text-base font-extrabold text-blue-400">{telemetry.corporateCount}</span>
-            </div>
+        {/* 4 Simple Number Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400 block">
+              All Customers
+            </span>
+            <span className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono mt-1 block">
+              {summary.totalCount}
+            </span>
+          </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2">
-              <span className="text-slate-500 block text-[10px] uppercase font-mono">Lifetime Billed (LTV)</span>
-              <span className="text-base font-extrabold text-emerald-400">{formatRwf(telemetry.totalLTV)}</span>
-            </div>
+          <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400 block">
+              Company Accounts
+            </span>
+            <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 font-mono mt-1 block">
+              {summary.groupCount}
+            </span>
+          </div>
 
-            {telemetry.totalOutstanding > 0 && (
-              <div className="bg-rose-950/60 border border-rose-600/70 rounded-xl px-3.5 py-2 text-rose-200">
-                <span className="text-rose-400 block text-[10px] uppercase font-mono font-bold">Unpaid Receivables</span>
-                <span className="text-base font-extrabold text-rose-300">{formatRwf(telemetry.totalOutstanding)}</span>
-              </div>
-            )}
+          <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400 block">
+              Total Paid
+            </span>
+            <span className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-1 block truncate">
+              {formatRwf(summary.totalPaid)}
+            </span>
+          </div>
 
-            <button
-              onClick={handleOpenAdd}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-colors"
+          <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400 block">
+              Still Owed
+            </span>
+            <span
+              className={`text-xl sm:text-2xl font-extrabold font-mono mt-1 block truncate ${
+                summary.totalOwed > 0
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-emerald-600 dark:text-emerald-400'
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              <span>Register Customer</span>
-            </button>
+              {formatRwf(summary.totalOwed)}
+            </span>
           </div>
         </div>
 
-        {/* Filter & Search Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/60">
-          {/* Search Box */}
-          <div className="relative min-w-[280px]">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        {/* Search & Simple Filters */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search name, organization, phone, TIN..."
+              placeholder="Search name, company, phone, or tax ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-9 py-2.5 text-sm text-[#0a2540] dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
               >
-                <X className="w-3 h-3" />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            {['All', 'Corporate', 'NGO / Diplomatic', 'Tourist / Expat', 'Individual', 'Travel Agency'].map(
-              (cat) => {
-                const isSelected = selectedCategory === cat;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                      isSelected
-                        ? 'bg-blue-600 text-white font-bold shadow-xs'
-                        : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                );
-              }
-            )}
+          <div className="flex flex-wrap items-center gap-2">
+            {categoryTabs.map((cat) => {
+              const isSelected = selectedCategory === cat.value;
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setSelectedCategory(cat.value)}
+                  className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-all border ${
+                    isSelected
+                      ? 'text-white border-transparent shadow-xs'
+                      : 'bg-white dark:bg-slate-950 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                  style={isSelected ? { backgroundColor: activeThemeColor } : undefined}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
 
             <button
               onClick={() => setOnlyWithBalances(!onlyWithBalances)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all border ${
+              className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-all border ${
                 onlyWithBalances
-                  ? 'bg-rose-950/80 border-rose-500 text-rose-300 font-bold'
-                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                  ? 'bg-rose-600 border-rose-600 text-white'
+                  : 'bg-white dark:bg-slate-950 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              Balances Due Only
+              Owes Money Only
             </button>
           </div>
         </div>
       </div>
 
-      {/* Customer Directory Table / Grid */}
-      <div className="bg-[#0b0f17] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#0f172a] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                <th className="py-3 px-4">Client & Organization</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Contact Info</th>
-                <th className="py-3 px-4">Billing & Terms</th>
-                <th className="py-3 px-4 text-right">Lifetime Value (LTV)</th>
-                <th className="py-3 px-4 text-right">Balance Due</th>
-                <th className="py-3 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80 text-xs text-slate-300">
-              {filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-500 italic">
-                    No customers found matching the search criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredCustomers.map((c) => {
-                  const badge = getCategoryBadge(c.category);
-                  const IconComp = badge.icon;
-                  const hasBalance = (c.outstanding_balance_rwf || 0) > 0;
+      {/* Customer Directory Horizontal Grid */}
+      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+        <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 bg-[#f6f9fc] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-xs font-bold uppercase text-[#425466] dark:text-slate-400">
+          <div className="lg:col-span-3">Name & Company</div>
+          <div className="lg:col-span-2">Type</div>
+          <div className="lg:col-span-2">Phone & Email</div>
+          <div className="lg:col-span-2">Payment Rules</div>
+          <div className="lg:col-span-1 text-right">Paid</div>
+          <div className="lg:col-span-1 text-right">Owed</div>
+          <div className="lg:col-span-1 text-right">Actions</div>
+        </div>
 
-                  return (
-                    <tr
-                      key={c.id}
-                      className="hover:bg-slate-900/50 transition-colors group cursor-pointer"
-                      onClick={() => setSelectedDossierCustomer(c)}
+        <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
+          {filteredCustomers.length === 0 ? (
+            <div className="text-center py-12 text-[#425466] dark:text-slate-400 text-base">
+              No customers match your search.
+            </div>
+          ) : (
+            filteredCustomers.map((c) => {
+              const badge = getCategoryBadge(c.category);
+              const IconComp = badge.icon;
+              const hasBalance = (c.outstanding_balance_rwf || 0) > 0;
+
+              return (
+                <div
+                  key={c.id}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-5 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedDossierCustomer(c)}
+                >
+                  <div className="lg:col-span-3 min-w-0">
+                    <div className="font-bold text-[#0a2540] dark:text-white text-base truncate">
+                      {c.name}
+                    </div>
+                    {c.organization ? (
+                      <div className="text-xs text-[#425466] dark:text-slate-400 flex items-center gap-1.5 mt-0.5 min-w-0">
+                        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{c.organization}</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-500">Personal Account</div>
+                    )}
+                  </div>
+
+                  <div className="lg:col-span-2 min-w-0">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${badge.badgeClass}`}
                     >
-                      {/* Name & Org */}
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-white group-hover:text-blue-400 transition-colors">
-                          {c.name}
-                        </div>
-                        {c.organization ? (
-                          <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                            <Building2 className="w-3 h-3 text-slate-500 shrink-0" />
-                            <span className="truncate max-w-[200px]">{c.organization}</span>
-                          </div>
-                        ) : (
-                          <div className="text-[10px] text-slate-500 font-mono">Individual Account</div>
-                        )}
-                      </td>
+                      <IconComp className="w-3.5 h-3.5 shrink-0" />
+                      <span>{badge.label}</span>
+                    </span>
+                  </div>
 
-                      {/* Category Pill */}
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${badge.badgeClass}`}
-                        >
-                          <IconComp className="w-3 h-3" />
-                          <span>{c.category}</span>
+                  <div className="lg:col-span-2 min-w-0">
+                    <div className="flex items-center gap-1.5 font-mono text-xs text-[#0a2540] dark:text-slate-200 whitespace-nowrap">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{c.phone}</span>
+                    </div>
+                    <div className="text-xs text-[#425466] dark:text-slate-400 truncate mt-0.5">
+                      {c.email}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-200 px-2.5 py-0.5 rounded-lg font-medium whitespace-nowrap">
+                        {getFriendlyTerms(c.credit_terms)}
+                      </span>
+                      {c.discount_rate_pct ? (
+                        <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold whitespace-nowrap">
+                          {c.discount_rate_pct}% off
                         </span>
-                      </td>
+                      ) : null}
+                    </div>
+                    {c.tin_number && (
+                      <div className="text-xs text-[#425466] dark:text-slate-400 font-mono mt-0.5 whitespace-nowrap">
+                        TIN: {c.tin_number}
+                      </div>
+                    )}
+                  </div>
 
-                      {/* Contact Info */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1 font-mono text-slate-200">
-                          <Phone className="w-3 h-3 text-slate-500" />
-                          <span>{c.phone}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-400 truncate max-w-[180px] mt-0.5">
-                          {c.email}
-                        </div>
-                      </td>
+                  <div className="lg:col-span-1 lg:text-right min-w-0">
+                    <div className="font-bold text-emerald-700 dark:text-emerald-400 font-mono whitespace-nowrap tabular-nums">
+                      {formatRwf(c.total_spent_rwf || 0)}
+                    </div>
+                    <div className="text-xs text-[#425466] dark:text-slate-400 whitespace-nowrap">
+                      {c.total_bookings_count || 0} trips
+                    </div>
+                  </div>
 
-                      {/* Billing & Tax */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono font-bold">
-                            {c.credit_terms || 'Immediate MoMo'}
-                          </span>
-                          {c.discount_rate_pct ? (
-                            <span className="text-[10px] text-emerald-400 font-bold font-mono">
-                              -{c.discount_rate_pct}% VIP
-                            </span>
-                          ) : null}
-                        </div>
-                        {c.tin_number && (
-                          <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                            RRA TIN: {c.tin_number}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* LTV */}
-                      <td className="py-3 px-4 text-right">
-                        <div className="font-extrabold text-emerald-400 font-mono">
-                          {formatRwf(c.total_spent_rwf || 0)}
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-mono">
-                          {c.total_bookings_count || 0} missions
-                        </div>
-                      </td>
-
-                      {/* Balance Due */}
-                      <td className="py-3 px-4 text-right">
-                        {hasBalance ? (
-                          <div>
-                            <span className="font-extrabold text-rose-400 font-mono bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/30">
-                              {formatRwf(c.outstanding_balance_rwf)}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenPayment(c);
-                              }}
-                              className="block text-[10px] text-blue-400 hover:text-blue-300 font-medium underline mt-1 ml-auto"
-                            >
-                              Settle Balance
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-slate-500 text-[11px] font-mono">0 RWF (Clear)</span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3 px-4 text-center">
-                        <div
-                          className="flex items-center justify-center gap-1.5"
-                          onClick={(e) => e.stopPropagation()}
+                  <div className="lg:col-span-1 lg:text-right min-w-0">
+                    {hasBalance ? (
+                      <div className="space-y-1">
+                        <span className="inline-block font-bold text-xs text-rose-700 dark:text-rose-300 font-mono bg-rose-50 dark:bg-rose-500/15 px-2 py-0.5 rounded-lg border border-rose-200 dark:border-rose-500/30 whitespace-nowrap">
+                          {formatRwf(c.outstanding_balance_rwf)}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenPayment(c);
+                          }}
+                          className="block text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold lg:ml-auto whitespace-nowrap"
                         >
-                          <button
-                            onClick={() => onOpenNewBookingForCustomer(c.name, c.phone, c.email)}
-                            className="p-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors"
-                            title="Create new booking for this customer"
-                          >
-                            <Calendar className="w-3.5 h-3.5" />
-                          </button>
+                          Mark Paid
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold whitespace-nowrap text-xs">
+                        <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Paid</span>
+                      </span>
+                    )}
+                  </div>
 
-                          <button
-                            onClick={() => handleOpenEdit(c)}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors"
-                            title="Edit customer details"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                  <div
+                    className="lg:col-span-1 flex items-center lg:justify-end gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => onOpenNewBookingForCustomer(c.name, c.phone, c.email)}
+                      className="p-1.5 bg-blue-50 dark:bg-blue-500/15 hover:bg-blue-600 text-blue-700 dark:text-blue-300 hover:text-white rounded-lg transition-colors"
+                      title="Book a trip for this customer"
+                    >
+                      <Calendar className="w-4 h-4" />
+                    </button>
 
-                          <a
-                            href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-lg transition-colors"
-                            title="Chat on WhatsApp"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                    <button
+                      onClick={() => handleOpenEdit(c)}
+                      className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-lg transition-colors"
+                      title="Edit customer"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+
+                    <a
+                      href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-600 text-emerald-700 dark:text-emerald-300 hover:text-white rounded-lg transition-colors"
+                      title="Message on WhatsApp"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </a>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
-      {/* Customer Dossier Modal / Slide-Over */}
+      {/* Customer Details Modal */}
       {selectedDossierCustomer && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-blue-600/20 border border-blue-500/30 rounded-xl">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-xl">
                   {(() => {
                     const Icon = getCategoryBadge(selectedDossierCustomer.category).icon;
-                    return <Icon className="w-6 h-6 text-blue-400" />;
+                    return <Icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />;
                   })()}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <span>{selectedDossierCustomer.name}</span>
-                    <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">
-                      #{selectedDossierCustomer.id}
-                    </span>
+                  <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">
+                    {selectedDossierCustomer.name}
                   </h3>
-                  <div className="text-xs text-slate-400">
-                    {selectedDossierCustomer.organization || selectedDossierCustomer.category}
+                  <div className="text-sm text-[#425466] dark:text-slate-400">
+                    {selectedDossierCustomer.organization || getCategoryBadge(selectedDossierCustomer.category).label}
                   </div>
                 </div>
               </div>
 
               <button
                 onClick={() => setSelectedDossierCustomer(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Profile & Financial Summary Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-sm">
               <div>
-                <span className="text-slate-500 block text-[10px] uppercase font-mono">Total Spent (LTV)</span>
-                <span className="text-sm font-extrabold text-emerald-400 font-mono">
+                <span className="text-[#425466] dark:text-slate-400 block">Total Paid</span>
+                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
                   {formatRwf(selectedDossierCustomer.total_spent_rwf || 0)}
                 </span>
               </div>
 
               <div>
-                <span className="text-slate-500 block text-[10px] uppercase font-mono">Balance Due</span>
+                <span className="text-[#425466] dark:text-slate-400 block">Still Owed</span>
                 <span
-                  className={`text-sm font-extrabold font-mono ${
+                  className={`text-base font-extrabold font-mono ${
                     (selectedDossierCustomer.outstanding_balance_rwf || 0) > 0
-                      ? 'text-rose-400'
-                      : 'text-slate-400'
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : 'text-[#0a2540] dark:text-slate-300'
                   }`}
                 >
                   {formatRwf(selectedDossierCustomer.outstanding_balance_rwf || 0)}
@@ -598,61 +598,57 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               </div>
 
               <div>
-                <span className="text-slate-500 block text-[10px] uppercase font-mono">Terms</span>
-                <span className="text-xs font-bold text-white">
-                  {selectedDossierCustomer.credit_terms || 'Immediate MoMo'}
+                <span className="text-[#425466] dark:text-slate-400 block">Payment Rule</span>
+                <span className="font-bold text-[#0a2540] dark:text-white">
+                  {getFriendlyTerms(selectedDossierCustomer.credit_terms)}
                 </span>
               </div>
 
               <div>
-                <span className="text-slate-500 block text-[10px] uppercase font-mono">VIP Discount</span>
-                <span className="text-xs font-bold text-amber-400 font-mono">
+                <span className="text-[#425466] dark:text-slate-400 block">Discount</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400 font-mono">
                   {selectedDossierCustomer.discount_rate_pct || 0}%
                 </span>
               </div>
             </div>
 
-            {/* Contact & Legal Coordinates */}
-            <div className="grid grid-cols-2 gap-3 text-xs bg-slate-950 p-3 rounded-xl border border-slate-800/80">
-              <div className="space-y-1">
-                <div className="text-slate-500 text-[10px] uppercase font-mono font-bold">Contact Coordinates</div>
-                <div className="flex items-center gap-1.5 text-white font-mono">
-                  <Phone className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="space-y-1.5">
+                <div className="text-[#425466] dark:text-slate-400 font-bold">Phone & Email</div>
+                <div className="flex items-center gap-2 text-[#0a2540] dark:text-white font-mono">
+                  <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>{selectedDossierCustomer.phone}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <Mail className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="truncate">{selectedDossierCustomer.email}</span>
+                <div className="flex items-center gap-2 text-[#425466] dark:text-slate-300">
+                  <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="truncate">{selectedDossierCustomer.email || 'No email'}</span>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <div className="text-slate-500 text-[10px] uppercase font-mono font-bold">RRA Tax & Billing Address</div>
-                <div className="text-slate-300">
-                  TIN: <strong className="text-white font-mono">{selectedDossierCustomer.tin_number || 'N/A'}</strong>
+              <div className="space-y-1.5">
+                <div className="text-[#425466] dark:text-slate-400 font-bold">Tax ID & Address</div>
+                <div className="text-[#0a2540] dark:text-slate-200">
+                  Tax ID (TIN): <strong className="font-mono">{selectedDossierCustomer.tin_number || 'None'}</strong>
                 </div>
-                <div className="text-slate-400 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                <div className="text-[#425466] dark:text-slate-300 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-slate-400" />
                   <span className="truncate">{selectedDossierCustomer.address || 'Kigali, Rwanda'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Customer Special Notes */}
             {selectedDossierCustomer.notes && (
-              <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl text-xs text-amber-300 space-y-1">
-                <span className="font-bold flex items-center gap-1 text-[11px] uppercase tracking-wider">
-                  <Sparkles className="w-3.5 h-3.5" /> VIP Preferences & Contract Notes:
-                </span>
-                <p className="text-slate-300 leading-relaxed">{selectedDossierCustomer.notes}</p>
+              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-4 rounded-xl text-sm text-amber-900 dark:text-amber-200 space-y-1">
+                <span className="font-bold block">Notes:</span>
+                <p className="leading-relaxed">{selectedDossierCustomer.notes}</p>
               </div>
             )}
 
-            {/* Booking History Section */}
-            <div className="space-y-2">
+            {/* Trip History */}
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                  Mission & Rental History ({customerBookings.length})
+                <h4 className="text-sm font-bold text-[#0a2540] dark:text-white">
+                  Past & Current Trips ({customerBookings.length})
                 </h4>
                 <button
                   onClick={() => {
@@ -663,53 +659,51 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     );
                     setSelectedDossierCustomer(null);
                   }}
-                  className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                  className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-4 h-4" />
                   <span>Book New Trip</span>
                 </button>
               </div>
 
               {customerBookings.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-xs italic bg-slate-900 rounded-xl border border-slate-800">
-                  No previous bookings found for this customer profile yet.
+                <div className="text-center py-6 text-[#425466] dark:text-slate-400 text-sm bg-[#f6f9fc] dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                  No trips recorded for this customer yet.
                 </div>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {customerBookings.map((b) => {
                     const veh = vehicles.find((v) => v.id === b.vehicle_id);
-
                     return (
                       <div
                         key={b.id}
-                        className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between text-xs hover:border-slate-700 transition-colors"
+                        className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center justify-between text-sm"
                       >
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-[11px] text-amber-400 font-bold">#{b.id}</span>
+                            <span className="font-bold text-[#0a2540] dark:text-white">{b.destination}</span>
                             <span
-                              className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+                              className={`text-sm px-2 py-0.5 rounded-full font-semibold ${
                                 b.status === 'Completed'
-                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
                                   : b.status === 'In Progress'
-                                  ? 'bg-amber-500/20 text-amber-400'
-                                  : 'bg-blue-500/20 text-blue-400'
+                                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                                  : 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
                               }`}
                             >
-                              {b.status}
+                              {b.status === 'In Progress' ? 'On Road' : b.status === 'Completed' ? 'Done' : b.status}
                             </span>
                           </div>
-                          <div className="text-white font-medium">{b.destination}</div>
-                          <div className="text-[10px] text-slate-500 font-mono">
-                            {b.start_date} → {b.end_date} · {veh?.model_name || 'Vehicle'} ({veh?.plate_number})
+                          <div className="text-sm text-[#425466] dark:text-slate-400 font-mono">
+                            {b.start_date} → {b.end_date} · {veh?.model_name || 'Car'} ({veh?.plate_number})
                           </div>
                         </div>
 
                         <div className="text-right">
-                          <span className="font-extrabold text-emerald-400 font-mono">
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
                             {formatRwf(b.total_rwf)}
                           </span>
-                          <div className="text-[9px] text-slate-500 font-mono">{b.payment_status}</div>
+                          <div className="text-sm text-[#425466] dark:text-slate-400">{b.payment_status}</div>
                         </div>
                       </div>
                     );
@@ -718,8 +712,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               )}
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
               {(selectedDossierCustomer.outstanding_balance_rwf || 0) > 0 ? (
                 <button
                   type="button"
@@ -727,14 +720,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     handleOpenPayment(selectedDossierCustomer);
                     setSelectedDossierCustomer(null);
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md"
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-sm font-bold flex items-center gap-1.5 shadow-sm"
                 >
-                  <DollarSign className="w-3.5 h-3.5" />
-                  <span>Settle {formatRwf(selectedDossierCustomer.outstanding_balance_rwf)} Balance</span>
+                  <DollarSign className="w-4 h-4" />
+                  <span>Mark {formatRwf(selectedDossierCustomer.outstanding_balance_rwf)} Paid</span>
                 </button>
               ) : (
-                <div className="text-xs text-emerald-400 flex items-center gap-1 font-semibold">
-                  <ShieldCheck className="w-4 h-4" /> Account is fully settled (0 RWF balance)
+                <div className="text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 font-semibold">
+                  <ShieldCheck className="w-4 h-4" /> Everything is paid (0 RWF owed)
                 </div>
               )}
 
@@ -745,14 +738,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     handleOpenEdit(selectedDossierCustomer);
                     setSelectedDossierCustomer(null);
                   }}
-                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-sm font-semibold"
                 >
-                  Edit Profile
+                  Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedDossierCustomer(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-sm font-semibold"
                 >
                   Close
                 </button>
@@ -764,109 +757,105 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
       {/* Add / Edit Customer Modal */}
       {isAddCustomerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl my-8">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-400" />
-                <h3 className="text-base font-bold text-white">
-                  {editingCustomer ? 'Edit Customer Profile' : 'Register New Client Account'}
+                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
+                  {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
                 </h3>
               </div>
               <button
                 onClick={() => setIsAddCustomerOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-3.5 text-xs">
-              {/* Full Name & Category */}
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSubmitForm} className="space-y-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold">Client / Contact Name *</label>
+                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Full Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Dr. Sarah Jenkins"
+                    placeholder="e.g. Sarah Jenkins"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none"
+                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold">Account Category *</label>
+                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Customer Type *</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as CustomerCategory })}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-2 text-xs focus:border-blue-500 outline-none font-medium"
+                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3 py-2.5 text-sm focus:border-blue-500 outline-none font-medium"
                   >
-                    <option value="Corporate">Corporate Client</option>
-                    <option value="NGO / Diplomatic">NGO / Diplomatic</option>
-                    <option value="Tourist / Expat">Tourist / Expat</option>
-                    <option value="Travel Agency">Travel Agency</option>
-                    <option value="Individual">Individual</option>
+                    <option value="Corporate">Company</option>
+                    <option value="NGO / Diplomatic">NGO / Embassy</option>
+                    <option value="Tourist / Expat">Visitor / Tourist</option>
+                    <option value="Travel Agency">Tour Partner</option>
+                    <option value="Individual">Person</option>
                   </select>
                 </div>
               </div>
 
-              {/* Organization & TIN */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold">Organization / Employer</label>
+                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Company or Group</label>
                   <input
                     type="text"
-                    placeholder="e.g. Bank of Kigali / UNHCR"
+                    placeholder="e.g. Bank of Kigali"
                     value={formData.organization}
                     onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none"
+                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold">RRA TIN (Tax Number)</label>
+                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Tax Number (TIN)</label>
                   <input
                     type="text"
                     placeholder="e.g. 100293847"
                     value={formData.tin_number}
                     onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none font-mono"
+                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none font-mono"
                   />
                 </div>
               </div>
 
-              {/* Phone & Email */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold">Telephone (WhatsApp) *</label>
+                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Phone Number *</label>
                   <input
                     type="text"
                     required
                     placeholder="+250 788 000 000"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none font-mono"
+                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold">Email Address</label>
+                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Email Address</label>
                   <input
                     type="email"
-                    placeholder="client@organization.com"
+                    placeholder="name@company.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none"
+                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
                   />
                 </div>
               </div>
 
-              {/* Terms & Discount */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold">Billing & Credit Terms</label>
+                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">When They Pay</label>
                   <select
                     value={formData.credit_terms}
                     onChange={(e) =>
@@ -875,17 +864,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         credit_terms: e.target.value as 'Immediate MoMo' | 'Net-15' | 'Net-30' | 'Pre-paid 50%',
                       })
                     }
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-2 text-xs focus:border-blue-500 outline-none"
+                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3 py-2.5 text-sm focus:border-blue-500 outline-none"
                   >
-                    <option value="Immediate MoMo">Immediate MoMo / Card</option>
-                    <option value="Net-15">Net-15 (Corporate)</option>
-                    <option value="Net-30">Net-30 (Corporate / NGO)</option>
-                    <option value="Pre-paid 50%">Pre-paid 50% Deposit</option>
+                    <option value="Immediate MoMo">Pay Now (MoMo / Card)</option>
+                    <option value="Net-15">Pay in 15 Days</option>
+                    <option value="Net-30">Pay in 30 Days</option>
+                    <option value="Pre-paid 50%">Half Before Trip</option>
                   </select>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-semibold">Corporate Discount %</label>
+                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Price Discount (%)</label>
                   <input
                     type="number"
                     min="0"
@@ -893,49 +882,47 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     placeholder="0"
                     value={formData.discount_rate_pct}
                     onChange={(e) => setFormData({ ...formData, discount_rate_pct: Number(e.target.value) })}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none font-mono"
+                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none font-mono"
                   />
                 </div>
               </div>
 
-              {/* Address */}
               <div className="space-y-1">
-                <label className="text-slate-300 font-semibold">Physical / Billing Address in Kigali</label>
+                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Street or Area in Kigali</label>
                 <input
                   type="text"
-                  placeholder="e.g. Kiyovu, KN 16 Ave / Kimihurura"
+                  placeholder="e.g. Kiyovu or Kimihurura"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none"
+                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
                 />
               </div>
 
-              {/* Notes */}
               <div className="space-y-1">
-                <label className="text-slate-300 font-semibold">Contract Notes & VIP Preferences</label>
+                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Special Notes</label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. Preferred Land Cruiser V8, English/French chauffeur, airport sign requirement..."
+                  placeholder="e.g. Likes Land Cruiser, needs French-speaking driver..."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none"
+                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
                 />
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddCustomerOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium"
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-md"
+                  className="px-5 py-2.5 text-white rounded-full text-sm font-bold shadow-sm"
+                  style={{ backgroundColor: activeThemeColor }}
                 >
-                  {editingCustomer ? 'Save Changes' : 'Register Customer'}
+                  {editingCustomer ? 'Save Changes' : 'Save Customer'}
                 </button>
               </div>
             </form>
@@ -945,30 +932,30 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
       {/* Settle Balance / Record Payment Modal */}
       {paymentModalCustomer && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">Record Invoice Payment</h3>
+                <Receipt className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Record Payment</h3>
               </div>
               <button
                 onClick={() => setPaymentModalCustomer(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="text-xs text-slate-300 bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1">
-              <div>Client: <strong className="text-white">{paymentModalCustomer.name}</strong></div>
-              <div>Organization: <strong className="text-slate-300">{paymentModalCustomer.organization || 'Individual'}</strong></div>
-              <div>Current Outstanding Balance: <strong className="text-rose-400 font-mono">{formatRwf(paymentModalCustomer.outstanding_balance_rwf || 0)}</strong></div>
+            <div className="text-sm text-[#425466] dark:text-slate-300 bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+              <div>Customer: <strong className="text-[#0a2540] dark:text-white">{paymentModalCustomer.name}</strong></div>
+              <div>Company: <strong className="text-[#0a2540] dark:text-slate-200">{paymentModalCustomer.organization || 'Personal'}</strong></div>
+              <div>Still Owed: <strong className="text-rose-600 dark:text-rose-400 font-mono">{formatRwf(paymentModalCustomer.outstanding_balance_rwf || 0)}</strong></div>
             </div>
 
-            <form onSubmit={handleConfirmPayment} className="space-y-3 text-xs">
+            <form onSubmit={handleConfirmPayment} className="space-y-4 text-sm">
               <div className="space-y-1">
-                <label className="text-slate-300 font-semibold">Payment Amount (RWF) *</label>
+                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Amount Paid (RWF) *</label>
                 <input
                   type="number"
                   required
@@ -976,35 +963,35 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   max={paymentModalCustomer.outstanding_balance_rwf || 99999999}
                   value={paymentAmountInput}
                   onChange={(e) => setPaymentAmountInput(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs focus:border-blue-500 outline-none font-mono font-bold"
+                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none font-mono font-bold"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-300 font-semibold">Payment Channel</label>
+                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">How They Paid</label>
                 <select
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs focus:border-blue-500 outline-none font-medium"
+                  onChange={(e) => setPaymentMethod(e.target.value as 'MTN Mobile Money' | 'Bank Transfer')}
+                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3 py-2.5 text-sm focus:border-blue-500 outline-none font-medium"
                 >
-                  <option value="MTN Mobile Money">MTN Mobile Money (MoMo Merchant / Code)</option>
-                  <option value="Bank Transfer">Bank Wire Transfer (Bank of Kigali / I&M)</option>
+                  <option value="MTN Mobile Money">MTN Mobile Money (MoMo)</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setPaymentModalCustomer(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium"
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-md"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-sm font-bold shadow-sm"
                 >
-                  Record {formatRwf(paymentAmountInput)}
+                  Save {formatRwf(paymentAmountInput)}
                 </button>
               </div>
             </form>

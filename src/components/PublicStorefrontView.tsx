@@ -1,57 +1,34 @@
 import React, { useState, useMemo } from 'react';
-import { Vehicle, Driver, Booking, VehicleCategory, Company, CompanySettings, SupportTicket } from '../types';
+import { Vehicle, Driver, Booking, Company, CompanySettings, SupportTicket } from '../types';
 import {
   calculateDays,
   formatRwf,
-  getAvailableVehiclesForClass,
-  getCategoryAvailabilitySummary,
   checkBookingCollision,
 } from '../utils/collision';
 import {
   Calendar,
   Car,
   ShieldCheck,
-  ShieldAlert,
   Plane,
   CheckCircle2,
   Users,
   Fuel,
-  ArrowRight,
   ArrowLeft,
-  Share2,
-  ExternalLink,
   Phone,
   MessageSquare,
-  Lock,
-  Sparkles,
   Check,
-  AlertTriangle,
-  Copy,
   Printer,
-  Download,
   Search,
   Compass,
   MapPin,
   Clock,
-  Briefcase,
-  HelpCircle,
+  Building,
   FileText,
-  DollarSign,
   ChevronDown,
   ChevronUp,
   X,
   CreditCard,
-  Info,
-  Award,
-  Globe,
-  Send,
-  Building,
-  Luggage,
-  Navigation,
   Star,
-  RefreshCw,
-  Eye,
-  UserCheck,
   AlertCircle,
   CheckCircle,
   SlidersHorizontal,
@@ -61,6 +38,7 @@ import {
   LayoutGrid,
   List,
   RotateCcw,
+  Luggage,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -102,7 +80,7 @@ type ServiceType = 'self-drive' | 'chauffeur' | 'airport' | 'safari';
 type Currency = 'RWF' | 'USD';
 type Language = 'EN' | 'RW' | 'FR';
 
-const USD_RATE = 1350; // 1 USD = 1,350 RWF
+const USD_RATE = 1350;
 
 export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   vehicles,
@@ -113,28 +91,21 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   companySettings,
   onCompleteClientBooking,
   onSubmitSupportTicket,
-  onReturnToManager,
 }) => {
   const activeThemeColor = currentTheme?.hex || '#f59e0b';
   const activeBtnText = currentTheme?.btnText || 'text-slate-950';
 
-  // Primary Navigation Sub-View
   const [currentView, setCurrentView] = useState<StorefrontViewMode>('home');
   const [currency, setCurrency] = useState<Currency>('RWF');
   const [language, setLanguage] = useState<Language>('EN');
-  const [copiedLink, setCopiedLink] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Active Service in Search Widget
   const [serviceType, setServiceType] = useState<ServiceType>('self-drive');
-
-  // View Mode Switcher: Grid vs Horizontal List Row View (Avax, SIXT & CarTrawler)
   const [catalogViewMode, setCatalogViewMode] = useState<'grid' | 'list'>('grid');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [isSearchEditOpen, setIsSearchEditOpen] = useState(false);
   const [quickDetailVehicle, setQuickDetailVehicle] = useState<Vehicle | null>(null);
 
-  // Search & Filter Parameters (Left-Hand Sidebar)
   const [startDate, setStartDate] = useState('2026-11-15');
   const [endDate, setEndDate] = useState('2026-11-18');
   const [pickupLocation, setPickupLocation] = useState('Kigali International Airport (KIA)');
@@ -150,23 +121,18 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   const [filterPopUpRoofOnly, setFilterPopUpRoofOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'capacity' | 'rating'>('price-asc');
 
-  // Airport Transfer specific fields (Section 24)
   const [flightNumber, setFlightNumber] = useState('WB 402');
   const [flightAirline, setFlightAirline] = useState('RwandAir');
-  const [airportTerminal, setAirportTerminal] = useState('Arrivals Hall Gate 1');
   const [hotelDestination, setHotelDestination] = useState('Kigali Marriott Hotel, KN 3 Ave');
   const [passengerCount, setPassengerCount] = useState(2);
   const [luggageCount, setLuggageCount] = useState(3);
   const [meetGreetSign, setMeetGreetSign] = useState(true);
 
-  // Safari & Tour specific fields (Section 25)
-  const [safariPark, setSafariPark] = useState('Akagera National Park (Big 5 Game Drive)');
+  const [safariPark, setSafariPark] = useState('Akagera National Park (Big 5 Safari)');
   const [safariPopUpRoof, setSafariPopUpRoof] = useState(true);
 
-  // Selected vehicle for details & booking
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle>(vehicles[0] || null);
 
-  // Guided 5-Step Booking State (Section 7, 8, 9)
   const [bookingStep, setBookingStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [isCorporateBooking, setIsCorporateBooking] = useState(false);
   const [clientName, setClientName] = useState('Elizabeth Thorne');
@@ -176,23 +142,20 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   const [organization, setOrganization] = useState('African Wildlife Foundation');
   const [tinNumber, setTinNumber] = useState('109823471');
   const [purchaseOrderRef, setPurchaseOrderRef] = useState('PO-AWF-2026-081');
-  const [driverLanguagePref, setDriverLanguagePref] = useState<'EN' | 'RW' | 'FR'>('EN');
-  const [specialRequests, setSpecialRequests] = useState('Require bilingual driver and 4WD high-clearance for game drive.');
+  const [specialRequests, setSpecialRequests] = useState('Need English-speaking driver and 4x4 car for park roads.');
 
-  // Document Verification State (Page 5, Section 8)
   const [drivingLicenseNumber, setDrivingLicenseNumber] = useState('DL-UK-884920194');
   const [passportNumber, setPassportNumber] = useState('GB99201481');
-  const [documentVerified, setDocumentVerified] = useState(true);
 
-  // Add-on Extras (Section 6, 7)
   const [addonChauffeur, setAddonChauffeur] = useState(false);
   const [addonChildSeat, setAddonChildSeat] = useState(false);
   const [addonWifiHotspot, setAddonWifiHotspot] = useState(true);
-  const [addonSafariKit, setAddonSafariKit] = useState(false);
+  const [addonSafariKit] = useState(false);
 
-  // Checkout Payment State (Section 9)
   const [paymentOption, setPaymentOption] = useState<'deposit' | 'full'>('deposit');
-  const [paymentMethod, setPaymentMethod] = useState<'MTN Mobile Money' | 'Airtel Money' | 'Bank Transfer' | 'Credit Card'>('MTN Mobile Money');
+  const [paymentMethod, setPaymentMethod] = useState<
+    'MTN Mobile Money' | 'Airtel Money' | 'Bank Transfer' | 'Credit Card'
+  >('MTN Mobile Money');
   const [momoNumber, setMomoNumber] = useState('+250 788 456 789');
   const [termsAgreed, setTermsAgreed] = useState(true);
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
@@ -200,49 +163,40 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   const [bookingReferenceId, setBookingReferenceId] = useState<string>('');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
-  // Live Booking Tracker State (Section 12)
   const [trackRefInput, setTrackRefInput] = useState('');
   const [trackPhoneInput, setTrackPhoneInput] = useState('');
   const [trackedBooking, setTrackedBooking] = useState<Booking | null>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
 
-  // Corporate Multi-Vehicle Quotation Form (Section 22 & 26)
   const [quoteLandCruisers, setQuoteLandCruisers] = useState(2);
   const [quoteCoasters, setQuoteCoasters] = useState(1);
-  const [quoteSedans, setQuoteSedans] = useState(1);
   const [quoteDays, setQuoteDays] = useState(4);
   const [quoteOrganization, setQuoteOrganization] = useState('UNDP Regional Delegation');
   const [quoteContactName, setQuoteContactName] = useState('Marcus Vance');
   const [quoteEmail, setQuoteEmail] = useState('marcus.vance@undp.org');
   const [quotePhone, setQuotePhone] = useState('+250 788 901 234');
-  const [quoteNotes, setQuoteNotes] = useState('Need 3 professional English-speaking drivers for a 4-day summit mission across Kigali and Musanze.');
+  const [quoteNotes, setQuoteNotes] = useState('Need 3 English-speaking drivers for a 4-day trip in Kigali and Musanze.');
   const [quoteSuccessMsg, setQuoteSuccessMsg] = useState<string | null>(null);
 
-  // Customer Support Ticket Form (Section 14)
   const [ticketName, setTicketName] = useState('');
   const [ticketEmail, setTicketEmail] = useState('');
   const [ticketPhone, setTicketPhone] = useState('');
   const [ticketBookingRef, setTicketBookingRef] = useState('');
-  const [ticketCategory, setTicketCategory] = useState('Existing reservation inquiry');
+  const [ticketCategory, setTicketCategory] = useState('Question about a booking I already have');
   const [ticketPriority, setTicketPriority] = useState<'Normal' | 'Urgent' | 'Emergency'>('Normal');
   const [ticketMessage, setTicketMessage] = useState('');
   const [ticketSubmittedId, setTicketSubmittedId] = useState<string | null>(null);
 
-  // Cancellation Request State (Section 17)
   const [cancelBookingRef, setCancelBookingRef] = useState('');
   const [cancelPhone, setCancelPhone] = useState('');
-  const [cancelReason, setCancelReason] = useState('Flight itinerary rescheduled by airline');
+  const [cancelReason, setCancelReason] = useState('My flight date changed');
   const [cancelSuccessMsg, setCancelSuccessMsg] = useState<string | null>(null);
 
-  // FAQ Search & Accordion State (Section 18)
   const [faqSearch, setFaqSearch] = useState('');
-  const [faqCategory, setFaqCategory] = useState<'All' | 'Booking' | 'Airport' | 'Safari' | 'Payments'>('All');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  // Rental duration in days
   const days = calculateDays(startDate, endDate);
 
-  // Currency Converter helper
   const formatMoney = (amountRwf: number) => {
     if (currency === 'USD') {
       const usd = Math.round(amountRwf / USD_RATE);
@@ -251,32 +205,17 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
     return formatRwf(amountRwf);
   };
 
-  // Company Details (Selling the transport company, not KigaliFleet SaaS)
   const companyDisplayName = currentCompany?.name || 'Kigali Executive Rentals';
   const companyPhone = currentCompany?.phone || '+250 788 312 000';
-  const companyEmail = currentCompany?.email || 'dispatch@kigaliexecutive.rw';
-  const companySlug = currentCompany?.slug || 'kigali-executive';
-  const companyBio =
-    companySettings?.storefront_tagline ||
-    'Premium 4x4 Safari Rentals, VIP Chauffeurs & Airport Transfers across Rwanda';
 
-  // Live URL for sharing
-  const liveUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}${window.location.pathname}?tab=storefront`
-      : `https://kigalifleet.rw/booking/${companySlug}`;
-
-  // Itemized Pricing Engine calculations (Section 28)
   const activeDailyRate = selectedVehicle?.daily_rate_rwf || 120000;
   const baseRentalRwf = days * activeDailyRate;
 
-  // Safari peak season surge (+15% for June-Sept, Dec)
   const isSafariPeak = useMemo(() => {
     const month = parseInt(startDate.split('-')[1] || '11', 10);
     return [6, 7, 8, 9, 12].includes(month);
   }, [startDate]);
 
-  // Upcountry distance allowance (+25,000 RWF/day for destinations outside Kigali)
   const isUpcountry = useMemo(() => {
     const text = `${pickupLocation} ${returnLocation} ${hotelDestination} ${safariPark}`.toLowerCase();
     return /musanze|akagera|volcanoes|rubavu|nyungwe|kivu|gisenyi|karongi/i.test(text);
@@ -285,29 +224,21 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   const safariSurgeRwf = isSafariPeak ? Math.round(baseRentalRwf * 0.15) : 0;
   const upcountrySurgeRwf = isUpcountry ? days * 25000 : 0;
 
-  // Add-ons cost
-  const chauffeurCostRwf =
-    addonChauffeur || serviceType === 'chauffeur' ? days * 15000 : 0;
+  const chauffeurCostRwf = addonChauffeur || serviceType === 'chauffeur' ? days * 15000 : 0;
   const childSeatCostRwf = addonChildSeat ? days * 5000 : 0;
   const wifiHotspotCostRwf = addonWifiHotspot ? days * 7500 : 0;
-  const safariKitCostRwf =
-    addonSafariKit || (serviceType === 'safari' && safariPopUpRoof) ? days * 20000 : 0;
+  const safariKitCostRwf = addonSafariKit || (serviceType === 'safari' && safariPopUpRoof) ? days * 20000 : 0;
 
-  const totalAddonsRwf =
-    chauffeurCostRwf + childSeatCostRwf + wifiHotspotCostRwf + safariKitCostRwf;
-  const subtotalBeforeVatRwf =
-    baseRentalRwf + safariSurgeRwf + upcountrySurgeRwf + totalAddonsRwf;
+  const totalAddonsRwf = chauffeurCostRwf + childSeatCostRwf + wifiHotspotCostRwf + safariKitCostRwf;
+  const subtotalBeforeVatRwf = baseRentalRwf + safariSurgeRwf + upcountrySurgeRwf + totalAddonsRwf;
   const vatRwf = Math.round(subtotalBeforeVatRwf * 0.18);
-  const securityDepositRwf = 150000; // 100% Refundable
+  const securityDepositRwf = 150000;
   const grandTotalRwf = subtotalBeforeVatRwf + vatRwf;
 
   const depositPercent = companySettings?.storefront_deposit_percent || 30;
   const depositToPayNowRwf =
-    paymentOption === 'deposit'
-      ? Math.round(grandTotalRwf * (depositPercent / 100))
-      : grandTotalRwf;
+    paymentOption === 'deposit' ? Math.round(grandTotalRwf * (depositPercent / 100)) : grandTotalRwf;
 
-  // Category counts for filter badges
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { All: vehicles.length };
     vehicles.forEach((v) => {
@@ -316,7 +247,6 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
     return counts;
   }, [vehicles]);
 
-  // Vehicle inventory filtered by category, transmission, fuel, price, and features
   const filteredVehicles = useMemo(() => {
     return vehicles
       .filter((v) => {
@@ -368,7 +298,6 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
     setSortBy('price-asc');
   };
 
-  // Navigate to book vehicle
   const handleStartBookingVehicle = (v: Vehicle) => {
     setSelectedVehicle(v);
     setBookingStep(1);
@@ -377,37 +306,27 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // View full details of vehicle
   const handleViewVehicleDetails = (v: Vehicle) => {
     setSelectedVehicle(v);
     setCurrentView('vehicle-detail');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Complete client booking
   const handleConfirmReservation = () => {
     if (!selectedVehicle) return;
     setIsSubmittingBooking(true);
     setSubmissionError(null);
 
-    // Collision check against current bookings
-    const collision = checkBookingCollision(
-      selectedVehicle.id,
-      startDate,
-      endDate,
-      bookings
-    );
+    const collision = checkBookingCollision(selectedVehicle.id, startDate, endDate, bookings);
     if (collision.hasCollision) {
       setIsSubmittingBooking(false);
       setSubmissionError(
-        collision.conflictReason ||
-          'This vehicle is no longer available for these selected dates. Please select another vehicle or modify dates.'
+        collision.conflictReason || 'This car is already booked for those dates. Please pick another car or date.'
       );
       return;
     }
 
-    const availableDriver =
-      drivers.find((d) => d.status === 'Available') || drivers[0];
+    const availableDriver = drivers.find((d) => d.status === 'Available') || drivers[0];
     const refCode = `KGF-2026-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const effectiveDestination =
@@ -418,9 +337,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
         : `${pickupLocation} -> ${returnLocation}`;
 
     const res = onCompleteClientBooking({
-      client_name: isCorporateBooking
-        ? `${clientName} (${organization})`
-        : clientName,
+      client_name: isCorporateBooking ? `${clientName} (${organization})` : clientName,
       client_email: clientEmail,
       client_phone: clientPhone,
       vehicle_id: selectedVehicle.id,
@@ -429,20 +346,14 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
       end_date: endDate,
       total_rwf: grandTotalRwf,
       destination: effectiveDestination,
-      flight_number:
-        serviceType === 'airport' ? `${flightAirline} ${flightNumber}` : undefined,
+      flight_number: serviceType === 'airport' ? `${flightAirline} ${flightNumber}` : undefined,
       flight_status: serviceType === 'airport' ? 'Scheduled' : undefined,
       status: 'Confirmed',
-      payment_status:
-        paymentOption === 'deposit'
-          ? 'Deposit Paid (MoMo)'
-          : 'Fully Paid',
+      payment_status: paymentOption === 'deposit' ? 'Deposit Paid (MoMo)' : 'Fully Paid',
       payment_method: paymentMethod,
-      notes: `${serviceType.toUpperCase()} | Extras: ${
-        addonWifiHotspot ? 'Wi-Fi ' : ''
-      }${addonChildSeat ? 'ChildSeat ' : ''}${
-        isSafariPeak ? 'PeakSafari ' : ''
-      }| Ref: ${refCode} | ${specialRequests}`,
+      notes: `${serviceType.toUpperCase()} | Extras: ${addonWifiHotspot ? 'Wi-Fi ' : ''}${
+        addonChildSeat ? 'ChildSeat ' : ''
+      }${isSafariPeak ? 'PeakSafari ' : ''}| Ref: ${refCode} | ${specialRequests}`,
     });
 
     setTimeout(() => {
@@ -453,12 +364,11 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
         setCurrentView('confirmation');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        setSubmissionError(res.error || 'Failed to complete booking.');
+        setSubmissionError(res.error || 'Could not finish booking. Please try again.');
       }
     }, 600);
   };
 
-  // Live booking tracking lookup
   const handleTrackBookingLookup = (e: React.FormEvent) => {
     e.preventDefault();
     setTrackError(null);
@@ -468,10 +378,8 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
     const phone = trackPhoneInput.trim().replace(/\s+/g, '');
 
     const found = bookings.find((b) => {
-      const matchId =
-        b.id.toLowerCase().includes(ref) || ref.includes(b.id.toLowerCase());
-      const matchPhone =
-        !phone || b.client_phone.replace(/\s+/g, '').includes(phone);
+      const matchId = b.id.toLowerCase().includes(ref) || ref.includes(b.id.toLowerCase());
+      const matchPhone = !phone || b.client_phone.replace(/\s+/g, '').includes(phone);
       return matchId && matchPhone;
     });
 
@@ -479,21 +387,19 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
       setTrackedBooking(found);
     } else {
       setTrackError(
-        'No active reservation found matching reference code and phone. Please check your confirmation SMS or contact our 24/7 dispatch desk.'
+        'We could not find a booking with that code and phone number. Check your text message or call our help desk.'
       );
     }
   };
 
-  // Submit Corporate Quote Request
   const handleSubmitQuote = (e: React.FormEvent) => {
     e.preventDefault();
     const rfqId = `RFQ-KGF-${Math.floor(1000 + Math.random() * 9000)}`;
     setQuoteSuccessMsg(
-      `Quotation request #${rfqId} submitted for ${quoteOrganization}. Our corporate transport desk will email your official RRA-compliant pro-forma invoice within 2 business hours.`
+      `Request #${rfqId} sent for ${quoteOrganization}. We will email your price sheet within 2 business hours.`
     );
   };
 
-  // Submit Customer Support Ticket
   const handleSubmitTicket = (e: React.FormEvent) => {
     e.preventDefault();
     if (onSubmitSupportTicket) {
@@ -501,7 +407,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
         requester_type: 'Storefront Customer',
         company_id: currentCompany?.id,
         company_name: currentCompany?.name,
-        customer_name: ticketName || 'Storefront Guest',
+        customer_name: ticketName || 'Guest',
         customer_email: ticketEmail || 'guest@kigalifleet.rw',
         customer_phone: ticketPhone || '+250 788 000 000',
         booking_ref: ticketBookingRef || undefined,
@@ -520,74 +426,80 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
     setTicketSubmittedId(tckId);
   };
 
-  // Submit Cancellation Request
   const handleSubmitCancellation = (e: React.FormEvent) => {
     e.preventDefault();
     const canId = `CAN-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     setCancelSuccessMsg(
-      `Cancellation request #${canId} logged for booking ${cancelBookingRef}. Per our 72-hour policy, our accounts team is processing your eligible deposit refund to ${cancelPhone}.`
+      `Cancel request #${canId} saved for booking ${cancelBookingRef}. Our team will check and refund your money to ${cancelPhone}.`
     );
   };
 
+  const serviceLabel = (st: ServiceType) => {
+    if (st === 'self-drive') return 'Drive Yourself';
+    if (st === 'chauffeur') return 'With Driver';
+    if (st === 'airport') return 'Airport Pickup';
+    return 'Safari & Parks';
+  };
+
+  const inputClass =
+    'w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-[#0a2540] dark:text-white outline-none focus:border-slate-400 dark:focus:border-slate-500';
+
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-950 text-slate-100 font-sans antialiased flex flex-col selection:bg-amber-500 selection:text-slate-950">
-      {/* =========================================================================
-          1. CUSTOMER-FACING HELPLINE & LOCALIZATION BAR
-      ========================================================================= */}
-      {/* =========================================================================
-          1. CUSTOMER-FACING HELPLINE & LOCALIZATION BAR (Mobile-First, Zero Blowout)
-      ========================================================================= */}
-      <div className="bg-slate-900/90 border-b border-slate-800/80 px-3 sm:px-6 py-1.5 sm:py-2 text-xs w-full max-w-full overflow-hidden">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3 w-full">
-          {/* 24/7 Operations Contact & Terminal Info */}
-          <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs min-w-0">
-            <div className="flex items-center gap-1.5 text-slate-300 font-medium truncate">
-              <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="truncate">24/7 Dispatch: <strong className="text-white font-mono">{companyPhone}</strong></span>
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f6f9fc] dark:bg-slate-950 text-[#0a2540] dark:text-slate-100 antialiased flex flex-col">
+      {/* Top Help & Currency Bar */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-2 text-sm w-full">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-3 text-[#425466] dark:text-slate-400 min-w-0">
+            <div className="flex items-center gap-2 font-medium truncate">
+              <Phone className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
+              <span className="truncate">
+                Call 24/7: <strong className="text-[#0a2540] dark:text-white font-mono">{companyPhone}</strong>
+              </span>
             </div>
-            <span aria-hidden="true" className="hidden lg:inline text-slate-600">·</span>
-            <div className="hidden lg:flex items-center gap-1.5 text-slate-400 truncate">
-              <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-              <span>Kigali Airport Hub & Remera HQ</span>
+            <span aria-hidden="true" className="hidden lg:inline text-slate-300 dark:text-slate-700">
+              ·
+            </span>
+            <div className="hidden lg:flex items-center gap-1.5 truncate">
+              <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+              <span>Kigali Airport & Remera Office</span>
             </div>
           </div>
 
-          {/* Currency Switcher, Language Switcher & Operator Exit */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Currency Switcher */}
-            <div className="flex items-center bg-slate-950 rounded-md p-0.5 border border-slate-800">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-950 rounded-full p-0.5 border border-slate-200 dark:border-slate-800">
               <button
                 onClick={() => setCurrency('RWF')}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded transition-colors ${
+                className={`px-3 py-1 text-sm font-semibold rounded-full transition-colors ${
                   currency === 'RWF'
-                    ? 'bg-amber-500 text-slate-950'
-                    : 'text-slate-400 hover:text-white'
+                    ? `${activeBtnText}`
+                    : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
                 }`}
+                style={currency === 'RWF' ? { backgroundColor: activeThemeColor } : undefined}
               >
                 RWF
               </button>
               <button
                 onClick={() => setCurrency('USD')}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded transition-colors ${
+                className={`px-3 py-1 text-sm font-semibold rounded-full transition-colors ${
                   currency === 'USD'
-                    ? 'bg-amber-500 text-slate-950'
-                    : 'text-slate-400 hover:text-white'
+                    ? `${activeBtnText}`
+                    : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
                 }`}
+                style={currency === 'USD' ? { backgroundColor: activeThemeColor } : undefined}
               >
                 USD ($)
               </button>
             </div>
 
-            {/* Language Switcher */}
-            <div className="flex items-center bg-slate-950 rounded-md p-0.5 border border-slate-800 text-[11px] font-bold">
+            <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-950 rounded-full p-0.5 border border-slate-200 dark:border-slate-800 text-sm font-semibold">
               {(['EN', 'RW', 'FR'] as Language[]).map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
-                  className={`px-1.5 py-0.5 rounded transition-colors ${
+                  className={`px-2.5 py-1 rounded-full transition-colors ${
                     language === lang
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white shadow-xs'
+                      : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
                   }`}
                 >
                   {lang}
@@ -598,85 +510,79 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
         </div>
       </div>
 
-      {/* =========================================================================
-          2. STRICT TOP BAR CONTRACT (Zone 1: Wordmark — Zone 2: Links — Zone 3: Action)
-      ========================================================================= */}
-      <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3 w-full max-w-full">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full">
-          {/* Zone 1: Brand Wordmark (Capped width, never pushes actions off-screen) */}
+      {/* Main Navigation Header */}
+      <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-4 sm:px-6 py-3 w-full">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 w-full">
           <button
             onClick={() => setCurrentView('home')}
-            className="flex items-center gap-2 text-left text-white min-w-0 shrink group"
+            className="flex items-center gap-2.5 text-left text-[#0a2540] dark:text-white min-w-0 shrink group"
           >
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-950 shadow-sm shrink-0"
+              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shadow-xs shrink-0 ${activeBtnText}`}
               style={{ backgroundColor: activeThemeColor }}
             >
               <Car className="w-5 h-5 stroke-[2.2]" />
             </div>
-            <span className="text-sm sm:text-base font-extrabold tracking-tight group-hover:text-amber-400 transition-colors truncate max-w-[130px] xs:max-w-[160px] sm:max-w-[200px] md:max-w-[240px] xl:max-w-[270px]">
+            <span className="text-base sm:text-lg font-extrabold tracking-tight truncate max-w-[160px] sm:max-w-[260px]">
               {companyDisplayName}
             </span>
           </button>
 
-          {/* Zone 2: Navigation Links (Clean, streamlined, strictly hidden on < xl to protect mobile & laptop viewports) */}
-          <nav className="hidden xl:flex items-center gap-1 xl:gap-2.5 2xl:gap-4 text-xs font-semibold text-slate-300 min-w-0 shrink">
+          <nav className="hidden xl:flex items-center gap-6 text-sm font-medium text-[#425466] dark:text-slate-300 min-w-0 shrink">
             <button
               onClick={() => setCurrentView('vehicles')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md ${
-                currentView === 'vehicles' ? 'text-amber-400 font-bold bg-slate-800/60' : ''
+              className={`hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap ${
+                currentView === 'vehicles' ? 'text-[#0a2540] dark:text-white font-bold' : ''
               }`}
             >
-              Fleet & Rates
+              Cars & Prices
             </button>
             <button
               onClick={() => {
                 setServiceType('airport');
                 setCurrentView('home');
               }}
-              className="hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md"
+              className="hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap"
             >
-              Airport Transfers
+              Airport Pickup
             </button>
             <button
               onClick={() => {
                 setServiceType('safari');
                 setCurrentView('home');
               }}
-              className="hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md"
+              className="hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap"
             >
-              Safari Expeditions
+              Safari Trips
             </button>
             <button
               onClick={() => setCurrentView('track')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md ${
-                currentView === 'track' ? 'text-amber-400 font-bold bg-slate-800/60' : ''
+              className={`hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap ${
+                currentView === 'track' ? 'text-[#0a2540] dark:text-white font-bold' : ''
               }`}
             >
-              Track Reservation
+              Check Booking
             </button>
             <button
               onClick={() => setCurrentView('contact')}
-              className={`hover:text-amber-400 transition-colors whitespace-nowrap px-2 py-1 rounded-md ${
-                currentView === 'contact' ? 'text-amber-400 font-bold bg-slate-800/60' : ''
+              className={`hover:text-[#0a2540] dark:hover:text-white transition-colors whitespace-nowrap ${
+                currentView === 'contact' ? 'text-[#0a2540] dark:text-white font-bold' : ''
               }`}
             >
-              Support Desk
+              Help
             </button>
           </nav>
 
-          {/* Zone 3: Primary Action & WhatsApp Shortcut - Guaranteed 100% visible without horizontal scroll! */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 z-10">
+          <div className="flex items-center gap-2.5 shrink-0 z-10">
             <a
               href={`https://wa.me/250788312000?text=${encodeURIComponent(
-                `Muraho! I would like to inquire about booking a vehicle with ${companyDisplayName}.`
+                `Muraho! I want to ask about renting a car from ${companyDisplayName}.`
               )}`}
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-950/70 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-500/30 text-xs font-semibold transition-colors shrink-0"
-              title="Chat on WhatsApp"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-500/30 text-sm font-semibold transition-colors shrink-0"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquare className="w-4 h-4" />
               <span className="hidden 2xl:inline">WhatsApp</span>
             </a>
 
@@ -689,154 +595,85 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                   setCurrentView('vehicles');
                 }
               }}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap transition-transform active:scale-95 shrink-0 ${activeBtnText}`}
+              className={`px-5 py-2 rounded-full text-sm font-semibold shadow-xs whitespace-nowrap transition-transform active:scale-95 shrink-0 ${activeBtnText}`}
               style={{ backgroundColor: activeThemeColor }}
             >
-              <span className="inline sm:hidden">Book</span>
-              <span className="hidden sm:inline">Book a Vehicle</span>
+              Book a Car
             </button>
 
-            {/* Menu Button - visible on screens < xl */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 xl:hidden transition-colors shrink-0"
-              aria-label="Toggle navigation menu"
+              className="p-2 rounded-xl text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white bg-slate-100 dark:bg-slate-800 xl:hidden transition-colors shrink-0"
+              aria-label="Open menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="xl:hidden mt-3 pt-3 border-t border-slate-800 flex flex-col gap-2 text-xs font-semibold text-slate-300 pb-2 animate-in fade-in duration-150">
-            <button
-              onClick={() => {
-                setCurrentView('home');
-                setMobileMenuOpen(false);
-              }}
-              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
-                currentView === 'home' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
-              }`}
-            >
-              Home
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('vehicles');
-                setMobileMenuOpen(false);
-              }}
-              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
-                currentView === 'vehicles' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
-              }`}
-            >
-              Fleet & Rates ({vehicles.length} Vehicles)
-            </button>
-            <button
-              onClick={() => {
-                setServiceType('airport');
-                setCurrentView('home');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400"
-            >
-              Airport Transfer (KIA Arrivals)
-            </button>
-            <button
-              onClick={() => {
-                setServiceType('safari');
-                setCurrentView('home');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400"
-            >
-              Safari Expeditions (Akagera & Volcanoes)
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('track');
-                setMobileMenuOpen(false);
-              }}
-              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
-                currentView === 'track' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
-              }`}
-            >
-              Track Reservation Status
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('quote');
-                setMobileMenuOpen(false);
-              }}
-              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
-                currentView === 'quote' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
-              }`}
-            >
-              Corporate Multi-Vehicle RFP
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('contact');
-                setMobileMenuOpen(false);
-              }}
-              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
-                currentView === 'contact' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
-              }`}
-            >
-              Customer Support Desk
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('faq');
-                setMobileMenuOpen(false);
-              }}
-              className={`text-left py-1.5 px-2 rounded-md hover:bg-slate-800 hover:text-amber-400 ${
-                currentView === 'faq' ? 'text-amber-400 bg-slate-800/80 font-bold' : ''
-              }`}
-            >
-              Frequently Asked Questions
-            </button>
-
-            {/* Mobile Operator & WhatsApp links */}
-            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-1">
-              <a
-                href="https://wa.me/250788312000"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-emerald-400 font-semibold py-1 px-2 rounded-md bg-emerald-950/40 border border-emerald-500/20 text-xs"
+          <div className="xl:hidden mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-1.5 text-sm font-medium text-[#425466] dark:text-slate-300 pb-2">
+            {[
+              { label: 'Home', action: () => setCurrentView('home'), active: currentView === 'home' },
+              {
+                label: `Cars & Prices (${vehicles.length} Cars)`,
+                action: () => setCurrentView('vehicles'),
+                active: currentView === 'vehicles',
+              },
+              {
+                label: 'Airport Pickup (Kigali Airport)',
+                action: () => {
+                  setServiceType('airport');
+                  setCurrentView('home');
+                },
+              },
+              {
+                label: 'Safari Trips (Akagera & Volcanoes)',
+                action: () => {
+                  setServiceType('safari');
+                  setCurrentView('home');
+                },
+              },
+              { label: 'Check My Booking', action: () => setCurrentView('track'), active: currentView === 'track' },
+              { label: 'Group & Business Quote', action: () => setCurrentView('quote'), active: currentView === 'quote' },
+              { label: 'Help & Support', action: () => setCurrentView('contact'), active: currentView === 'contact' },
+              { label: 'Common Questions (FAQ)', action: () => setCurrentView('faq'), active: currentView === 'faq' },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={() => {
+                  item.action();
+                  setMobileMenuOpen(false);
+                }}
+                className={`text-left py-2 px-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                  item.active ? 'bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-white font-bold' : ''
+                }`}
               >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>WhatsApp Dispatch</span>
-              </a>
-            </div>
+                {item.label}
+              </button>
+            ))}
           </div>
         )}
       </header>
 
-      {/* =========================================================================
-          MAIN BODY ROUTER: Renders the active sub-view
-      ========================================================================= */}
       <main className="flex-1">
-        {/* =====================================================================
-            VIEW 1: STOREFRONT HOMEPAGE (/booking/:slug)
-        ===================================================================== */}
+        {/* VIEW 1: HOMEPAGE */}
         {currentView === 'home' && (
           <div className="space-y-16 pb-20">
-            {/* Hero Section */}
-            <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800 py-14 sm:py-20 px-4 sm:px-8">
+            <section className="relative overflow-hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-14 sm:py-20 px-4 sm:px-8">
               <div className="max-w-5xl mx-auto text-center space-y-6">
-                <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400">
-                  <span>RDB Licensed Transport Operator #RW-2024-9841</span>
+                <div className="inline-flex items-center gap-2 text-sm font-medium text-[#425466] dark:text-slate-400">
+                  <span>Licensed Rwanda Car Rental</span>
                   <span aria-hidden="true">·</span>
-                  <span>Kigali International Airport Hub</span>
+                  <span>Kigali Airport Pickup</span>
                 </div>
 
-                <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight max-w-3xl mx-auto">
-                  Explore Rwanda With the Right Vehicle.
+                <h1 className="text-3xl sm:text-5xl font-extrabold text-[#0a2540] dark:text-white tracking-tight leading-tight max-w-3xl mx-auto">
+                  Rent the Right Car in Rwanda.
                 </h1>
 
-                <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-                  Book reliable 4x4 Safari Land Cruisers, executive town SUVs, and VIP airport shuttles. Direct Kigali booking with verified physical fleet, bilingual chauffeurs, and instant MTN MoMo checkout.
+                <p className="text-base sm:text-lg text-[#425466] dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                  Book clean 4x4 safari cars, city SUVs, and airport rides. Pick your dates, see real open cars, and pay easily with MTN MoMo.
                 </p>
 
                 <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
@@ -845,124 +682,96 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                       const el = document.getElementById('adaptive-search');
                       if (el) el.scrollIntoView({ behavior: 'smooth' });
                     }}
-                    className={`px-5 py-2.5 rounded-lg text-xs font-bold shadow-md transition-transform active:scale-95 ${activeBtnText}`}
+                    className={`px-6 py-3 rounded-full text-sm font-semibold shadow-xs transition-transform active:scale-95 ${activeBtnText}`}
                     style={{ backgroundColor: activeThemeColor }}
                   >
-                    Check Live Availability
+                    Find an Open Car
                   </button>
                   <button
                     onClick={() => setCurrentView('vehicles')}
-                    className="px-5 py-2.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+                    className="px-6 py-3 rounded-full text-sm font-semibold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors"
                   >
-                    View All Vehicles & Daily Rates
+                    See All Cars & Prices
                   </button>
                 </div>
 
-                {/* Trust Markers Bar */}
-                <div className="pt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs text-slate-400 border-t border-slate-800/80 max-w-4xl mx-auto mt-6">
+                <div className="pt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-sm text-[#425466] dark:text-slate-400 border-t border-slate-200 dark:border-slate-800 max-w-4xl mx-auto mt-6">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Zero Double-Booking Guarantee</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>No Double-Bookings</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Rwanda Contrôle Technique Certified</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Safety Checked Cars</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Official 18% RRA EBM Invoicing</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Official 18% Tax Receipt</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>24/7 Roadside Assistance</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>24/7 Road Help</span>
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* Section 3: Adaptive 4-Service Search Widget */}
+            {/* Adaptive Search Box */}
             <section id="adaptive-search" className="max-w-5xl mx-auto px-4 -mt-10 relative z-20">
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
-                {/* 4 Service Tabs (Functional Segmented Control) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setServiceType('self-drive')}
-                    className={`p-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      serviceType === 'self-drive'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Car className="w-4 h-4" />
-                    <span>Self-Drive</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setServiceType('chauffeur')}
-                    className={`p-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      serviceType === 'chauffeur'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Users className="w-4 h-4" />
-                    <span>With Chauffeur</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setServiceType('airport')}
-                    className={`p-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      serviceType === 'airport'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Plane className="w-4 h-4" />
-                    <span>Airport (KIA)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setServiceType('safari')}
-                    className={`p-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      serviceType === 'safari'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Compass className="w-4 h-4" />
-                    <span>Safari & Tours</span>
-                  </button>
+              <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f6f9fc] dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                  {(
+                    [
+                      { id: 'self-drive', label: 'Drive Yourself', icon: Car },
+                      { id: 'chauffeur', label: 'With Driver', icon: Users },
+                      { id: 'airport', label: 'Airport Pickup', icon: Plane },
+                      { id: 'safari', label: 'Safari & Parks', icon: Compass },
+                    ] as const
+                  ).map((tab) => {
+                    const Icon = tab.icon;
+                    const active = serviceType === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setServiceType(tab.id)}
+                        className={`p-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                          active
+                            ? `${activeBtnText} shadow-xs`
+                            : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
+                        }`}
+                        style={active ? { backgroundColor: activeThemeColor } : undefined}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Adaptive Inputs Based on Service */}
                 {serviceType === 'airport' ? (
-                  /* Dedicated Airport Transfer Form (Section 24) */
-                  <div className="space-y-4 text-xs">
+                  <div className="space-y-4 text-sm">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Arrival Airport
+                        <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                          Airport
                         </label>
                         <input
                           type="text"
                           disabled
-                          value="Kigali International Airport (KGL / KIA)"
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white font-medium"
+                          value="Kigali International Airport (KIA)"
+                          className={inputClass}
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Flight Number & Airline
+                        <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                          Airline & Flight Number
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           <select
                             value={flightAirline}
                             onChange={(e) => setFlightAirline(e.target.value)}
-                            className="bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                            className={inputClass}
                           >
                             <option value="RwandAir">RwandAir</option>
                             <option value="Ethiopian">Ethiopian</option>
@@ -975,14 +784,14 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                             type="text"
                             value={flightNumber}
                             onChange={(e) => setFlightNumber(e.target.value)}
-                            placeholder="e.g. WB 402"
-                            className="bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-400 font-mono font-bold outline-none"
+                            placeholder="WB 402"
+                            className={`${inputClass} font-mono font-bold`}
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Arrival Date & Flight Time
+                        <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                          Arrival Day
                         </label>
                         <input
                           type="date"
@@ -991,44 +800,44 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                             setStartDate(e.target.value);
                             setEndDate(e.target.value);
                           }}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                          className={`${inputClass} font-mono`}
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Kigali Hotel or Destination
+                        <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                          Hotel or Drop-off Place
                         </label>
                         <input
                           type="text"
                           value={hotelDestination}
                           onChange={(e) => setHotelDestination(e.target.value)}
-                          placeholder="e.g. Kigali Marriott, Serena Hotel"
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                          placeholder="e.g. Kigali Marriott Hotel"
+                          className={inputClass}
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Passengers & Luggage
+                        <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                          People & Bags
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           <select
                             value={passengerCount}
                             onChange={(e) => setPassengerCount(Number(e.target.value))}
-                            className="bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                            className={inputClass}
                           >
                             {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
                               <option key={n} value={n}>
-                                {n} Pax
+                                {n} People
                               </option>
                             ))}
                           </select>
                           <select
                             value={luggageCount}
                             onChange={(e) => setLuggageCount(Number(e.target.value))}
-                            className="bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                            className={inputClass}
                           >
                             {[1, 2, 3, 4, 5, 6, 8].map((n) => (
                               <option key={n} value={n}>
@@ -1038,243 +847,227 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                           </select>
                         </div>
                       </div>
-                      <div className="flex items-center pt-5">
-                        <label className="flex items-center gap-2 cursor-pointer text-slate-300 font-semibold">
+                      <div className="flex items-center pt-6">
+                        <label className="flex items-center gap-2.5 cursor-pointer text-[#0a2540] dark:text-slate-300 font-medium">
                           <input
                             type="checkbox"
                             checked={meetGreetSign}
                             onChange={(e) => setMeetGreetSign(e.target.checked)}
-                            className="rounded text-amber-500 focus:ring-0"
+                            className="w-4 h-4 rounded"
                           />
-                          <span>Chauffeur Name Board at Terminal Gate 1</span>
+                          <span>Driver holds your name sign at Gate 1</span>
                         </label>
                       </div>
                     </div>
                   </div>
                 ) : serviceType === 'safari' ? (
-                  /* Dedicated Safari & Tours Form (Section 25) */
-                  <div className="space-y-4 text-xs">
+                  <div className="space-y-4 text-sm">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Destination National Park
+                        <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                          Which Park?
                         </label>
                         <select
                           value={safariPark}
                           onChange={(e) => setSafariPark(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none font-semibold"
+                          className={inputClass}
                         >
-                          <option value="Akagera National Park (Big 5 Game Drive)">
+                          <option value="Akagera National Park (Big 5 Safari)">
                             Akagera National Park (Big 5 Safari)
                           </option>
-                          <option value="Volcanoes National Park (Gorilla Trek Musanze)">
-                            Volcanoes NP (Gorilla Trekking)
+                          <option value="Volcanoes National Park (Gorilla Trekking)">
+                            Volcanoes National Park (Gorillas)
                           </option>
-                          <option value="Nyungwe Forest National Park (Canopy Walk)">
-                            Nyungwe National Park (Canopy Walk)
+                          <option value="Nyungwe National Park (Canopy Walk)">
+                            Nyungwe Forest Park (Canopy Walk)
                           </option>
-                          <option value="Rubavu / Lake Kivu Serena Resort">
-                            Lake Kivu & Rubavu Getaway
-                          </option>
+                          <option value="Lake Kivu & Rubavu">Lake Kivu & Rubavu</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Safari Start Date
+                        <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                          Start Day
                         </label>
                         <input
                           type="date"
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                          className={`${inputClass} font-mono`}
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Safari Return Date
+                        <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                          Return Day
                         </label>
                         <input
                           type="date"
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                          className={`${inputClass} font-mono`}
                         />
                       </div>
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                      <label className="flex items-center gap-2 cursor-pointer text-slate-300 font-semibold">
+                      <label className="flex items-center gap-2.5 cursor-pointer text-[#0a2540] dark:text-slate-300 font-medium">
                         <input
                           type="checkbox"
                           checked={safariPopUpRoof}
                           onChange={(e) => setSafariPopUpRoof(e.target.checked)}
-                          className="rounded text-amber-500 focus:ring-0"
+                          className="w-4 h-4 rounded"
                         />
-                        <span>Pop-up Photography Roof (Custom 4x4 Safari Edition)</span>
+                        <span>Open-up safari roof for photos</span>
                       </label>
-                      <span className="font-mono text-amber-400 font-semibold">
-                        {days} Days Itinerary Calculated
+                      <span className="font-mono font-semibold text-[#0a2540] dark:text-amber-400">
+                        {days} Days Trip
                       </span>
                     </div>
                   </div>
                 ) : (
-                  /* Standard Self-Drive or Chauffeur Form */
-                  <div className="space-y-4 text-xs">
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Pickup Location
-                        </label>
-                        <input
-                          type="text"
-                          value={pickupLocation}
-                          onChange={(e) => setPickupLocation(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Return Location
-                        </label>
-                        <input
-                          type="text"
-                          value={returnLocation}
-                          onChange={(e) => setReturnLocation(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Pickup Date
-                        </label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-300 font-semibold mb-1">
-                          Return Date
-                        </label>
-                        <input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
-                        />
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                        Pick-up Place
+                      </label>
+                      <input
+                        type="text"
+                        value={pickupLocation}
+                        onChange={(e) => setPickupLocation(e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                        Return Place
+                      </label>
+                      <input
+                        type="text"
+                        value={returnLocation}
+                        onChange={(e) => setReturnLocation(e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                        Pick-up Day
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className={`${inputClass} font-mono`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1.5">
+                        Return Day
+                      </label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className={`${inputClass} font-mono`}
+                      />
                     </div>
                   </div>
                 )}
 
-                {/* Bottom Action Bar */}
-                <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
-                    <span>Duration: <strong className="text-white">{days} Days</strong></span>
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 text-sm text-[#425466] dark:text-slate-400 font-mono">
+                    <span>
+                      Length: <strong className="text-[#0a2540] dark:text-white">{days} Days</strong>
+                    </span>
                     <span aria-hidden="true">·</span>
-                    <span>Service: <strong className="text-amber-400 capitalize">{serviceType}</strong></span>
+                    <span>
+                      Trip: <strong className="text-[#0a2540] dark:text-amber-400">{serviceLabel(serviceType)}</strong>
+                    </span>
                   </div>
 
                   <button
                     onClick={() => setCurrentView('vehicles')}
-                    className={`px-6 py-2.5 rounded-lg text-xs font-bold shadow-md transition-transform active:scale-95 ${activeBtnText}`}
+                    className={`px-6 py-3 rounded-full text-sm font-semibold shadow-xs transition-transform active:scale-95 ${activeBtnText}`}
                     style={{ backgroundColor: activeThemeColor }}
                   >
-                    Search Available Fleet ({vehicles.length}) →
+                    Show Open Cars ({vehicles.length}) →
                   </button>
                 </div>
               </div>
             </section>
 
-            {/* Section 4: Featured Vehicles Showcase */}
+            {/* Popular Cars */}
             <section className="max-w-7xl mx-auto px-4 sm:px-8 space-y-8 pt-4">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div className="space-y-1">
-                  <span className="text-xs font-semibold text-amber-400">
-                    Physical Inventory & Rates
+                  <span className="text-sm font-semibold" style={{ color: activeThemeColor }}>
+                    Ready to Drive
                   </span>
-                  <h2 className="text-2xl font-extrabold text-white">
-                    Featured Transport Vehicles
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
+                    Popular Cars for Rent
                   </h2>
                 </div>
 
                 <button
                   onClick={() => setCurrentView('vehicles')}
-                  className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 self-start sm:self-auto"
+                  className="text-sm font-semibold flex items-center gap-1 hover:underline self-start sm:self-auto"
+                  style={{ color: activeThemeColor }}
                 >
-                  <span>Explore full fleet catalog</span>
+                  <span>See all {vehicles.length} cars</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Grid of 3 marquee vehicles */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {vehicles.slice(0, 3).map((vehicle) => {
-                  const collision = checkBookingCollision(
-                    vehicle.id,
-                    startDate,
-                    endDate,
-                    bookings
-                  );
+                  const collision = checkBookingCollision(vehicle.id, startDate, endDate, bookings);
                   const isAvailable = !collision.hasCollision;
 
                   return (
                     <div
                       key={vehicle.id}
-                      className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between transition-all hover:border-slate-700 shadow-md group"
+                      className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between transition-all group"
                     >
                       <div>
-                        {/* Vehicle Header & Photo Slot */}
-                        <div className="h-44 bg-slate-950 flex flex-col justify-between p-4 relative overflow-hidden">
+                        <div className="h-44 bg-slate-900 flex flex-col justify-between p-4 relative overflow-hidden">
                           <div className="flex items-center justify-between z-10">
-                            <span className="text-xs font-mono font-semibold text-slate-400">
+                            <span className="text-sm font-mono font-semibold text-white bg-slate-950/75 px-2.5 py-0.5 rounded-lg">
                               {vehicle.plate_number}
                             </span>
                             <span
-                              className={`text-[11px] font-semibold flex items-center gap-1 ${
-                                isAvailable ? 'text-emerald-400' : 'text-rose-400'
+                              className={`text-sm font-semibold px-2.5 py-0.5 rounded-full ${
+                                isAvailable
+                                  ? 'bg-emerald-950/85 text-emerald-300'
+                                  : 'bg-rose-950/85 text-rose-300'
                               }`}
                             >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  isAvailable ? 'bg-emerald-400' : 'bg-rose-400'
-                                }`}
-                              />
-                              <span>{isAvailable ? 'Available' : 'Reserved'}</span>
+                              {isAvailable ? 'Open' : 'Booked'}
                             </span>
                           </div>
 
-                          {/* Automotive Studio Photo or Fallback Silhouette */}
                           {vehicle.image_url ? (
                             <img
                               src={vehicle.image_url}
                               alt={vehicle.model_name}
-                              className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100"
+                              referrerPolicy="no-referrer"
+                              className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 brightness-90"
                             />
                           ) : (
-                            <div className="flex items-center justify-center my-auto text-slate-700 group-hover:text-amber-400/30 transition-colors">
+                            <div className="flex items-center justify-center my-auto text-slate-600">
                               <Car className="w-20 h-20 stroke-[1.2]" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent pointer-events-none" />
 
-                          {/* Category and Year Unboxed Metadata */}
-                          <div className="flex items-center gap-2 text-xs text-slate-300 font-medium z-10 drop-shadow">
-                            <span className="bg-slate-900/80 px-2 py-0.5 rounded text-[11px] border border-slate-700/60">{vehicle.category}</span>
+                          <div className="flex items-center gap-2 text-sm text-slate-200 font-medium z-10">
+                            <span>{vehicle.category}</span>
                             <span aria-hidden="true">·</span>
-                            <span>Model {vehicle.year}</span>
+                            <span>{vehicle.year}</span>
                           </div>
                         </div>
 
-                        {/* Vehicle Title & Specs */}
                         <div className="p-5 space-y-4">
                           <div>
-                            <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors">
-                              {vehicle.model_name}
-                            </h3>
-                            <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">{vehicle.model_name}</h3>
+                            <div className="flex items-center gap-3 text-sm text-[#425466] dark:text-slate-400 mt-1">
                               <span>{vehicle.seating_capacity} Seats</span>
                               <span aria-hidden="true">·</span>
                               <span>{vehicle.transmission || 'Automatic'}</span>
@@ -1283,25 +1076,23 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                             </div>
                           </div>
 
-                          {/* Transparent Highlights */}
-                          <div className="space-y-1 text-xs text-slate-300">
+                          <div className="space-y-1.5 text-sm text-[#425466] dark:text-slate-300">
                             <div className="flex items-center gap-2">
-                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <span>Full-to-Full Fuel Policy</span>
+                              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span>Start full tank, return full</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <span>Unlimited Mileage in Rwanda</span>
+                              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span>Unlimited distance in Rwanda</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Card Footer with Price and Actions */}
-                      <div className="p-5 pt-0 border-t border-slate-800/80 mt-2 flex items-center justify-between">
+                      <div className="p-5 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                         <div>
-                          <span className="text-[10px] text-slate-400 block">Daily Rate:</span>
-                          <span className="font-mono font-extrabold text-white text-base">
+                          <span className="text-sm text-[#425466] dark:text-slate-400 block">Per day:</span>
+                          <span className="font-mono font-extrabold text-[#0a2540] dark:text-white text-lg">
                             {formatMoney(vehicle.daily_rate_rwf)}
                           </span>
                         </div>
@@ -1309,17 +1100,17 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleViewVehicleDetails(vehicle)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+                            className="px-4 py-2 rounded-full text-sm font-semibold text-[#0a2540] dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                           >
                             Details
                           </button>
                           <button
                             onClick={() => handleStartBookingVehicle(vehicle)}
                             disabled={!isAvailable}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                               isAvailable
-                                ? `${activeBtnText} hover:brightness-105 active:scale-95`
-                                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                ? `${activeBtnText} hover:brightness-105`
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                             }`}
                             style={isAvailable ? { backgroundColor: activeThemeColor } : undefined}
                           >
@@ -1333,249 +1124,237 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
               </div>
             </section>
 
-            {/* Section 5: Services Showcase */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-8 space-y-8 pt-6">
+            {/* 4 Ways to Travel */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-8 space-y-8 pt-4">
               <div className="space-y-1">
-                <span className="text-xs font-semibold text-amber-400">
-                  Tailored Mobility
+                <span className="text-sm font-semibold" style={{ color: activeThemeColor }}>
+                  Ways to Travel
                 </span>
-                <h2 className="text-2xl font-extrabold text-white">
-                  Transport Services Offered
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
+                  What We Offer
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                    <Car className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white">01. Self-Drive Rentals</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Freedom to navigate Rwanda's thousand hills independently. Foreign licenses in English or French accepted for 90 days.
-                  </p>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white">02. Chauffeur-Driven</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Vetted bilingual English and Kinyarwanda drivers. Rwanda Police Bon de Mission cleared for inter-district travel.
-                  </p>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
-                    <Plane className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white">03. Airport Transfers (KIA)</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Reliable meet and greet at Kigali International Airport. Automated flight arrival monitoring prevents wait charges.
-                  </p>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                    <Compass className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white">04. Safari Expeditions</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Custom 4x4 Land Cruisers with pop-up photography roofs for Akagera Big 5 game drives and Volcanoes gorilla trekking.
-                  </p>
-                </div>
+                {[
+                  {
+                    icon: Car,
+                    title: '01. Drive Yourself',
+                    body: 'Pick up a car and drive anywhere in Rwanda. Foreign licenses in English or French work for 90 days.',
+                  },
+                  {
+                    icon: Users,
+                    title: '02. With a Driver',
+                    body: 'Friendly local drivers who speak English and Kinyarwanda and know every road across Rwanda.',
+                  },
+                  {
+                    icon: Plane,
+                    title: '03. Airport Pickup',
+                    body: 'Your driver meets you right at Kigali Airport arrivals. Even if your plane is late, we wait at no extra cost.',
+                  },
+                  {
+                    icon: Compass,
+                    title: '04. Safari & Parks',
+                    body: 'Strong 4x4 cars with open roofs for Akagera game drives and Volcanoes gorilla trips.',
+                  },
+                ].map((svc) => {
+                  const Icon = svc.icon;
+                  return (
+                    <div
+                      key={svc.title}
+                      className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-3"
+                    >
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#f6f9fc] dark:bg-slate-800"
+                        style={{ color: activeThemeColor }}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <h3 className="text-base font-bold text-[#0a2540] dark:text-white">{svc.title}</h3>
+                      <p className="text-sm text-[#425466] dark:text-slate-400 leading-relaxed">{svc.body}</p>
+                    </div>
+                  );
+                })}
               </div>
             </section>
 
-            {/* Section 6 & 19: Trust & Transparency Pillars */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-8 pt-6">
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-12 space-y-8">
+            {/* Why Book Here */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-8 pt-4">
+              <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 space-y-8">
                 <div className="max-w-2xl space-y-2">
-                  <span className="text-xs font-semibold text-amber-400">
-                    Why Book Directly With Us
+                  <span className="text-sm font-semibold" style={{ color: activeThemeColor }}>
+                    Safe & Clear
                   </span>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-                    Built on Accountability & Rwandan Legal Compliance
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
+                    Simple Rules, No Surprises
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    We eliminate double-booking fraud and surprise fees through strict inventory locking and transparent policies.
+                  <p className="text-base text-[#425466] dark:text-slate-400 leading-relaxed">
+                    Every car listed is real and ready. You see the full price before paying.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2 p-5 rounded-xl bg-slate-950/70 border border-slate-800">
-                    <div className="flex items-center gap-2 text-white font-bold text-sm">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Collision-Guarded Engine</span>
+                  <div className="space-y-2 p-5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 text-[#0a2540] dark:text-white font-bold text-base">
+                      <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>No Double-Bookings</span>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Every reservation atomically locks the physical vehicle's schedule down to the second. You are guaranteed the exact vehicle booked.
+                    <p className="text-sm text-[#425466] dark:text-slate-400 leading-relaxed">
+                      Once you book a car, those dates lock right away so nobody else can take your car.
                     </p>
                   </div>
 
-                  <div className="space-y-2 p-5 rounded-xl bg-slate-950/70 border border-slate-800">
-                    <div className="flex items-center gap-2 text-white font-bold text-sm">
-                      <FileText className="w-4 h-4 text-sky-400 shrink-0" />
-                      <span>RRA EBM v2.0 Tax Receipts</span>
+                  <div className="space-y-2 p-5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 text-[#0a2540] dark:text-white font-bold text-base">
+                      <FileText className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0" />
+                      <span>Official Tax Receipt</span>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Every payment generates an official Rwanda Revenue Authority electronic receipt with verified TIN for institutional expense reconciliation.
+                    <p className="text-sm text-[#425466] dark:text-slate-400 leading-relaxed">
+                      Every payment gives you an official Rwanda tax receipt for personal or work records.
                     </p>
                   </div>
 
-                  <div className="space-y-2 p-5 rounded-xl bg-slate-950/70 border border-slate-800">
-                    <div className="flex items-center gap-2 text-white font-bold text-sm">
-                      <CreditCard className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>MTN MoMo & Card Gateways</span>
+                  <div className="space-y-2 p-5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 text-[#0a2540] dark:text-white font-bold text-base">
+                      <CreditCard className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>Easy MoMo & Card Pay</span>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Instant *182# MTN Mobile Money prompts, Airtel Money, Bank of Kigali wire transfers, and Visa/Mastercard support with 30% deposit options.
+                    <p className="text-sm text-[#425466] dark:text-slate-400 leading-relaxed">
+                      Pay 30% now or all at once using MTN MoMo, Airtel Money, bank transfer, or Visa/Mastercard.
                     </p>
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* Section 7: Verified Customer Reviews */}
+            {/* Reviews */}
             <section className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6 pt-4">
               <div className="space-y-1">
-                <span className="text-xs font-semibold text-amber-400">
-                  Client Experiences
+                <span className="text-sm font-semibold" style={{ color: activeThemeColor }}>
+                  Guest Stories
                 </span>
-                <h2 className="text-2xl font-extrabold text-white">
-                  Verified Reviews & Feedback
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
+                  What Travelers Say
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white">Dr. Arthur Mugabo</span>
-                    <span className="text-slate-500 font-mono">Verified NGO Booking</span>
+                {[
+                  {
+                    name: 'Dr. Arthur Mugabo',
+                    tag: 'NGO Trip',
+                    quote:
+                      'Rented a Land Cruiser for a 4-day work trip in Musanze. The car was clean, driver Emmanuel was on time, and we got our tax receipt right away.',
+                    org: 'UNDP Rwanda',
+                  },
+                  {
+                    name: 'Sarah Jenkins',
+                    tag: 'Visitor',
+                    quote:
+                      'Our flight from Amsterdam landed 2 hours late, and the driver still waited at Gate 1 with water and our name sign. Very easy!',
+                    org: 'Visitor from Netherlands',
+                  },
+                  {
+                    name: 'Patrick Habimana',
+                    tag: 'Business',
+                    quote:
+                      'Booked two safari vans for event guests. Confirmed in minutes and paying with MTN MoMo was fast.',
+                    org: 'Kigali Event Team',
+                  },
+                ].map((rev) => (
+                  <div
+                    key={rev.name}
+                    className="stripe-card p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3"
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-bold text-[#0a2540] dark:text-white">{rev.name}</span>
+                      <span className="text-[#425466] dark:text-slate-400">{rev.tag}</span>
+                    </div>
+                    <div className="text-amber-500 text-sm">★★★★★</div>
+                    <p className="text-sm text-[#425466] dark:text-slate-300 leading-relaxed">"{rev.quote}"</p>
+                    <div className="text-sm text-[#425466] dark:text-slate-500">{rev.org}</div>
                   </div>
-                  <div className="text-amber-400 text-xs">★★★★★</div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    "Rented a Land Cruiser Prado for a 4-day UNDP field mission in Musanze. The vehicle was spotless, chauffeur Emmanuel was prompt, and the EBM receipt was emailed instantly."
-                  </p>
-                  <div className="text-[11px] text-slate-500 font-mono">UNDP Rwanda Country Mission</div>
-                </div>
-
-                <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white">Sarah Jenkins</span>
-                    <span className="text-slate-500 font-mono">Verified Tourist</span>
-                  </div>
-                  <div className="text-amber-400 text-xs">★★★★★</div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    "Our flight from Amsterdam was delayed by 2 hours, but dispatch adjusted our pickup automatically. Chauffeur Jean-Paul was waiting at Gate 1 with cold water and a clear name sign."
-                  </p>
-                  <div className="text-[11px] text-slate-500 font-mono">Visitor from Netherlands</div>
-                </div>
-
-                <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white">Patrick Habimana</span>
-                    <span className="text-slate-500 font-mono">Local Business Client</span>
-                  </div>
-                  <div className="text-amber-400 text-xs">★★★★★</div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    "We rented two HiAce safari vans for conference delegates. The reservation was confirmed in minutes, no schedule overlap occurred, and MoMo checkout was completely painless."
-                  </p>
-                  <div className="text-[11px] text-slate-500 font-mono">Kigali Tech Summit Organizer</div>
-                </div>
+                ))}
               </div>
             </section>
 
-            {/* Section 8: 4-Step How Booking Works */}
+            {/* 4 Easy Steps */}
             <section className="max-w-7xl mx-auto px-4 sm:px-8 space-y-8 pt-4">
               <div className="text-center max-w-xl mx-auto space-y-2">
-                <span className="text-xs font-semibold text-amber-400">
-                  Seamless Workflow
+                <span className="text-sm font-semibold" style={{ color: activeThemeColor }}>
+                  Easy Steps
                 </span>
-                <h2 className="text-2xl font-extrabold text-white">
-                  How Direct Booking Works
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
+                  How Booking Works
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 text-xs">
-                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-                  <span className="font-mono text-base font-bold text-amber-400">01</span>
-                  <h3 className="font-bold text-white text-sm">Choose Service</h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    Select self-drive, chauffeur-driven, airport shuttle, or a national park safari itinerary.
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-                  <span className="font-mono text-base font-bold text-amber-400">02</span>
-                  <h3 className="font-bold text-white text-sm">Select Vehicle</h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    View real verified photos, specs, itemized prices, and live collision-checked availability.
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-                  <span className="font-mono text-base font-bold text-amber-400">03</span>
-                  <h3 className="font-bold text-white text-sm">Confirm & Pay</h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    Pay 30% deposit or 100% full via MTN MoMo (*182#), Airtel, Bank of Kigali, or Visa.
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-                  <span className="font-mono text-base font-bold text-amber-400">04</span>
-                  <h3 className="font-bold text-white text-sm">Receive Voucher</h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    Receive your official travel voucher with driver details, flight pickup gate instructions, and SMS.
-                  </p>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 text-sm">
+                {[
+                  { n: '01', title: 'Pick Trip Type', text: 'Choose self-drive, with a driver, airport pickup, or safari.' },
+                  { n: '02', title: 'Pick a Car', text: 'Check photos, seats, full prices, and open dates.' },
+                  { n: '03', title: 'Pay & Confirm', text: 'Pay 30% deposit or full total with MoMo, bank, or card.' },
+                  { n: '04', title: 'Get Your Pass', text: 'Get your booking pass with pickup steps and driver phone.' },
+                ].map((step) => (
+                  <div
+                    key={step.n}
+                    className="stripe-card p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2"
+                  >
+                    <span className="font-mono text-lg font-bold" style={{ color: activeThemeColor }}>
+                      {step.n}
+                    </span>
+                    <h3 className="font-bold text-[#0a2540] dark:text-white text-base">{step.title}</h3>
+                    <p className="text-[#425466] dark:text-slate-400 leading-relaxed">{step.text}</p>
+                  </div>
+                ))}
               </div>
             </section>
 
-            {/* Section 9: FAQ Quick Preview */}
-            <section className="max-w-4xl mx-auto px-4 space-y-6 pt-6">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h2 className="text-xl font-bold text-white">Frequently Asked Questions</h2>
+            {/* Quick Questions */}
+            <section className="max-w-4xl mx-auto px-4 space-y-6 pt-4">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h2 className="text-2xl font-bold text-[#0a2540] dark:text-white">Common Questions</h2>
                 <button
                   onClick={() => setCurrentView('faq')}
-                  className="text-xs font-semibold text-amber-400 hover:text-amber-300"
+                  className="text-sm font-semibold hover:underline"
+                  style={{ color: activeThemeColor }}
                 >
-                  View full FAQ directory →
+                  See all questions →
                 </button>
               </div>
 
               <div className="space-y-3">
                 {[
                   {
-                    q: 'What documents are required to rent a self-drive vehicle in Rwanda?',
-                    a: 'A valid National Driving License (or International Driving Permit for foreign visitors) and a Passport or National ID. For tourists, foreign driving licenses in English or French are legally accepted for up to 90 days in Rwanda.',
+                    q: 'What papers do I need to drive myself in Rwanda?',
+                    a: 'You need a valid driving license and a passport or national ID. Foreign licenses in English or French are accepted for up to 90 days.',
                   },
                   {
-                    q: 'How does the Collision-Guarded booking system protect my reservation?',
-                    a: 'Our platform performs real-time physical inventory checks across every vehicle and date. Once you submit your reservation, the vehicle is atomically locked down to the millisecond, completely preventing double-bookings or replacement substitutions.',
+                    q: 'How do I know my car will really be there?',
+                    a: 'Every car shown here is checked against all live bookings. As soon as you book, that car is saved only for you.',
                   },
                   {
-                    q: 'What happens if my flight to Kigali International Airport (KIA) is delayed?',
-                    a: 'Our dispatch center tracks inbound flights (RwandAir, Ethiopian, Qatar, KLM, Brussels Airlines) in real-time. When a flight is delayed, our dispatch team auto-adjusts the chauffeur pickup time without any extra waiting fees.',
+                    q: 'What if my flight to Kigali is late?',
+                    a: 'Share your flight number when booking. We track your plane and move your driver pickup time for free if it arrives late.',
                   },
                 ].map((faq, idx) => (
                   <div
                     key={idx}
-                    className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden"
                   >
                     <button
                       onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
-                      className="w-full p-4 text-left flex items-center justify-between text-xs font-bold text-slate-200 hover:text-white"
+                      className="w-full p-4 text-left flex items-center justify-between text-base font-semibold text-[#0a2540] dark:text-slate-100"
                     >
                       <span>{faq.q}</span>
                       {openFaqIndex === idx ? (
-                        <ChevronUp className="w-4 h-4 text-amber-400" />
+                        <ChevronUp className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
                       ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-500" />
+                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                       )}
                     </button>
                     {openFaqIndex === idx && (
-                      <div className="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3">
+                      <div className="px-4 pb-4 text-sm text-[#425466] dark:text-slate-400 leading-relaxed border-t border-slate-200 dark:border-slate-800 pt-3">
                         {faq.a}
                       </div>
                     )}
@@ -1586,273 +1365,185 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 2: VEHICLE LISTING / SEARCH RESULTS (/booking/:slug/vehicles)
-        ===================================================================== */}
+        {/* VIEW 2: CARS LIST */}
         {currentView === 'vehicles' && (
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 w-full max-w-full overflow-hidden">
-            {/* 1. TOP ITINERARY STEPPER (CarTrawler & Avax Style) */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm w-full max-w-full overflow-hidden">
-              <div className="w-full md:w-auto overflow-x-auto py-1 min-w-0">
-                <div className="flex items-center gap-2 sm:gap-4 text-xs font-semibold whitespace-nowrap min-w-max">
-                  <span className="flex items-center gap-2 text-amber-400 font-bold shrink-0">
-                    <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[10px] font-black">
-                      1
-                    </span>
-                    <span>1. Vehicles & Rates</span>
-                  </span>
-                  <span className="text-slate-600 shrink-0">→</span>
-                  <span className="flex items-center gap-2 text-slate-500 shrink-0">
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
-                      2
-                    </span>
-                    <span>2. Extras & Coverage</span>
-                  </span>
-                  <span className="text-slate-600 shrink-0">→</span>
-                  <span className="flex items-center gap-2 text-slate-500 shrink-0">
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
-                      3
-                    </span>
-                    <span>3. Passenger & Docs</span>
-                  </span>
-                  <span className="text-slate-600 shrink-0">→</span>
-                  <span className="flex items-center gap-2 text-slate-500 shrink-0">
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">
-                      4
-                    </span>
-                    <span>4. Payment & Voucher</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="text-xs font-medium text-slate-400 flex items-center gap-2 shrink-0 pt-1 md:pt-0 border-t md:border-t-0 border-slate-800/60">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Verified Physical Fleet in Kigali</span>
-              </div>
-            </div>
-
-            {/* 2. SEARCH SUMMARY STRIP WITH INLINE EDIT DRAWER */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full">
+            <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Pickup & Return</span>
-                  <span className="text-white font-medium flex items-center gap-1.5 mt-0.5">
-                    <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="text-[#425466] dark:text-slate-400 block text-sm font-medium">Pick-up & Return</span>
+                  <span className="text-[#0a2540] dark:text-white font-semibold flex items-center gap-1.5 mt-0.5">
+                    <MapPin className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
                     <span>{pickupLocation}</span>
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Rental Dates</span>
-                  <span className="text-white font-medium flex items-center gap-1.5 mt-0.5">
-                    <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="font-mono">{startDate} to {endDate} ({days} days)</span>
+                  <span className="text-[#425466] dark:text-slate-400 block text-sm font-medium">Dates</span>
+                  <span className="text-[#0a2540] dark:text-white font-semibold flex items-center gap-1.5 mt-0.5">
+                    <Calendar className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
+                    <span className="font-mono">
+                      {startDate} to {endDate} ({days} days)
+                    </span>
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Service Mode</span>
-                  <span className="text-amber-400 font-semibold capitalize flex items-center gap-1.5 mt-0.5">
-                    <Car className="w-3.5 h-3.5 shrink-0" />
-                    <span>{serviceType}</span>
+                  <span className="text-[#425466] dark:text-slate-400 block text-sm font-medium">Trip Type</span>
+                  <span className="font-semibold flex items-center gap-1.5 mt-0.5" style={{ color: activeThemeColor }}>
+                    <Car className="w-4 h-4 shrink-0" />
+                    <span>{serviceLabel(serviceType)}</span>
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsSearchEditOpen(!isSearchEditOpen)}
-                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{isSearchEditOpen ? 'Hide Editor' : 'Modify Dates & Location'}</span>
-                </button>
-              </div>
+              <button
+                onClick={() => setIsSearchEditOpen(!isSearchEditOpen)}
+                className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 text-sm font-semibold flex items-center gap-2 transition-colors self-start md:self-auto"
+              >
+                <SlidersHorizontal className="w-4 h-4" style={{ color: activeThemeColor }} />
+                <span>{isSearchEditOpen ? 'Close Edit' : 'Change Dates or Place'}</span>
+              </button>
             </div>
 
-            {/* INLINE QUICK SEARCH EDITOR */}
             {isSearchEditOpen && (
-              <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 space-y-4 shadow-xl animate-in fade-in duration-200">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="text-xs font-bold text-white flex items-center gap-2">
-                    <SlidersHorizontal className="w-4 h-4 text-amber-400" />
-                    <span>Quick Update Rental Parameters</span>
-                  </span>
-                  <button
-                    onClick={() => setIsSearchEditOpen(false)}
-                    className="text-slate-400 hover:text-white text-xs font-bold"
-                  >
-                    ✕ Close
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+              <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Pickup Location</label>
+                    <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">Pick-up Place</label>
                     <input
                       type="text"
                       value={pickupLocation}
                       onChange={(e) => setPickupLocation(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Return Location</label>
+                    <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">Return Place</label>
                     <input
                       type="text"
                       value={returnLocation}
                       onChange={(e) => setReturnLocation(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Pickup Date</label>
+                    <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">Pick-up Day</label>
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Return Date</label>
+                    <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">Return Day</label>
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                  <span className="text-xs text-slate-400 font-mono">
-                    Calculated Duration: <strong className="text-amber-400">{days} Days</strong>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <span className="text-sm text-[#425466] dark:text-slate-400 font-mono">
+                    Total Days: <strong className="text-[#0a2540] dark:text-white">{days} Days</strong>
                   </span>
                   <button
                     onClick={() => setIsSearchEditOpen(false)}
-                    className="px-4 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs shadow-sm hover:brightness-105"
+                    className={`px-5 py-2 rounded-full font-semibold text-sm ${activeBtnText}`}
+                    style={{ backgroundColor: activeThemeColor }}
                   >
-                    Apply New Parameters
+                    Update Search
                   </button>
                 </div>
               </div>
             )}
 
-            {/* 3. TRUST & VERIFIED RATINGS BAR (Avax & SIXT Style) */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-amber-400 font-bold">
-                <div className="flex items-center gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <span>4.9 / 5.0</span>
-                <span className="text-slate-400 font-normal">(1,240+ verified client bookings in Rwanda)</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-4 text-slate-300 text-[11px]">
-                <span className="flex items-center gap-1 text-emerald-400">
-                  <Check className="w-3.5 h-3.5" /> Free 72h Cancellation
-                </span>
-                <span className="flex items-center gap-1 text-emerald-400">
-                  <Check className="w-3.5 h-3.5" /> Full-to-Full Fuel Policy
-                </span>
-                <span className="flex items-center gap-1 text-emerald-400">
-                  <Check className="w-3.5 h-3.5" /> Zero Hidden Fees
-                </span>
-                <span className="flex items-center gap-1 text-emerald-400">
-                  <Check className="w-3.5 h-3.5" /> 100% Physical Inventory Lock
-                </span>
-              </div>
-            </div>
-
-            {/* MOBILE FILTER TRIGGER BAR */}
-            <div className="lg:hidden flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3">
+            {/* Mobile Filter Button */}
+            <div className="lg:hidden flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
               <button
-                onClick={() => setMobileFiltersOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs"
+                onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm ${activeBtnText}`}
+                style={{ backgroundColor: activeThemeColor }}
               >
-                <Filter className="w-3.5 h-3.5" />
-                <span>Filters & Options ({filteredVehicles.length})</span>
+                <Filter className="w-4 h-4" />
+                <span>Filter Cars ({filteredVehicles.length})</span>
               </button>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCatalogViewMode('grid')}
-                  className={`p-2 rounded-lg text-xs font-semibold ${
+                  className={`p-2 rounded-lg text-sm ${
                     catalogViewMode === 'grid'
-                      ? 'bg-amber-500 text-slate-950'
-                      : 'bg-slate-800 text-slate-400'
+                      ? `${activeBtnText}`
+                      : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-400'
                   }`}
-                  title="Grid View"
+                  style={catalogViewMode === 'grid' ? { backgroundColor: activeThemeColor } : undefined}
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setCatalogViewMode('list')}
-                  className={`p-2 rounded-lg text-xs font-semibold ${
+                  className={`p-2 rounded-lg text-sm ${
                     catalogViewMode === 'list'
-                      ? 'bg-amber-500 text-slate-950'
-                      : 'bg-slate-800 text-slate-400'
+                      ? `${activeBtnText}`
+                      : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-400'
                   }`}
-                  title="Horizontal List Row View"
+                  style={catalogViewMode === 'list' ? { backgroundColor: activeThemeColor } : undefined}
                 >
                   <List className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* 4. MAIN STOREFRONT WORKSPACE (LEFT FILTER SIDEBAR + RIGHT FLEET CATALOG) */}
             <div className="flex flex-col lg:flex-row items-start gap-8">
-              {/* LEFT-HAND COMPREHENSIVE FILTER SIDEBAR (SIXT, CarTrawler & Rentura Style) */}
-              <aside className="w-72 shrink-0 hidden lg:block space-y-6 sticky top-24">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-6 shadow-md">
-                  {/* Sidebar Header with Reset */}
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <span className="text-sm font-bold text-white flex items-center gap-2">
-                      <Filter className="w-4 h-4 text-amber-400" />
-                      <span>Filter Results</span>
+              {/* Filter Sidebar */}
+              <aside className={`w-full lg:w-72 shrink-0 space-y-6 ${mobileFiltersOpen ? 'block' : 'hidden lg:block'}`}>
+                <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                    <span className="text-base font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
+                      <Filter className="w-4 h-4" style={{ color: activeThemeColor }} />
+                      <span>Filter Cars</span>
                     </span>
                     <button
                       onClick={handleResetFilters}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-amber-400 transition-colors"
-                      title="Reset all filters to defaults"
+                      className="inline-flex items-center gap-1 text-sm font-semibold text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white"
                     >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>Reset all</span>
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset</span>
                     </button>
                   </div>
 
-                  {/* 1. Automatic Only Switch (SIXT Style) */}
-                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                  <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-white block">Automatic Only</span>
-                      <span className="text-[10px] text-slate-400">Exclude manual gearboxes</span>
+                      <span className="text-sm font-bold text-[#0a2540] dark:text-white block">Automatic Only</span>
+                      <span className="text-sm text-[#425466] dark:text-slate-400">Hide manual gears</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setFilterAutomaticOnly(!filterAutomaticOnly)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        filterAutomaticOnly ? 'bg-amber-500' : 'bg-slate-800'
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                        filterAutomaticOnly ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'
                       }`}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${
-                          filterAutomaticOnly ? 'translate-x-4' : 'translate-x-0'
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                          filterAutomaticOnly ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       />
                     </button>
                   </div>
 
-                  {/* 2. Vehicle Categories with live counts */}
-                  <div className="space-y-2.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Vehicle Category
-                    </label>
-                    <div className="space-y-1.5">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-[#0a2540] dark:text-slate-300 block">Car Type</label>
+                    <div className="space-y-1">
                       {[
-                        { id: 'All', label: 'All Categories' },
+                        { id: 'All', label: 'All Cars' },
                         { id: 'LandCruiser', label: 'Land Cruiser 4x4' },
-                        { id: 'RAV4', label: 'Toyota RAV4 AWD' },
-                        { id: 'Safari Van', label: 'HiAce Safari Pop-Top' },
-                        { id: 'Coaster', label: 'Toyota Coaster Bus' },
-                        { id: 'Luxury Sedan', label: 'Luxury VIP Sedan' },
+                        { id: 'RAV4', label: 'Toyota RAV4' },
+                        { id: 'Safari Van', label: 'Safari Van' },
+                        { id: 'Coaster', label: 'Coaster Bus' },
+                        { id: 'Luxury Sedan', label: 'VIP Sedan' },
                       ].map((cat) => {
                         const count = categoryCounts[cat.id] ?? 0;
                         const isSelected = selectedCategory === cat.id;
@@ -1861,34 +1552,23 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                             key={cat.id}
                             type="button"
                             onClick={() => setSelectedCategory(cat.id)}
-                            className={`w-full flex items-center justify-between p-2 rounded-lg text-xs font-medium transition-colors ${
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-colors ${
                               isSelected
-                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/40 font-bold'
-                                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                                ? 'bg-[#f6f9fc] dark:bg-slate-800 text-[#0a2540] dark:text-white font-bold border border-slate-300 dark:border-slate-700'
+                                : 'text-[#425466] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                             }`}
                           >
                             <span>{cat.label}</span>
-                            <span
-                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                                isSelected
-                                  ? 'bg-amber-500 text-slate-950 font-bold'
-                                  : 'bg-slate-800 text-slate-400'
-                              }`}
-                            >
-                              {count}
-                            </span>
+                            <span className="font-mono text-sm text-[#425466] dark:text-slate-400">{count}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* 3. Passenger Capacity Filter */}
-                  <div className="space-y-2.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Passenger Seats
-                    </label>
-                    <div className="grid grid-cols-5 gap-1 text-xs">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-[#0a2540] dark:text-slate-300 block">Seats Needed</label>
+                    <div className="grid grid-cols-5 gap-1.5 text-sm">
                       {[
                         { label: 'Any', value: 0 },
                         { label: '2+', value: 2 },
@@ -1900,11 +1580,12 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                           key={opt.label}
                           type="button"
                           onClick={() => setFilterMinPassengers(opt.value)}
-                          className={`py-1.5 rounded-lg font-semibold text-center transition-colors ${
+                          className={`py-1.5 rounded-lg font-semibold text-center ${
                             filterMinPassengers === opt.value
-                              ? 'bg-amber-500 text-slate-950 font-bold'
-                              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                              ? `${activeBtnText}`
+                              : 'bg-[#f6f9fc] dark:bg-slate-950 text-[#425466] dark:text-slate-400 border border-slate-200 dark:border-slate-800'
                           }`}
+                          style={filterMinPassengers === opt.value ? { backgroundColor: activeThemeColor } : undefined}
                         >
                           {opt.label}
                         </button>
@@ -1912,41 +1593,10 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                     </div>
                   </div>
 
-                  {/* 4. Luggage / Bags Filter */}
-                  <div className="space-y-2.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Luggage Capacity
-                    </label>
-                    <div className="grid grid-cols-4 gap-1 text-xs">
-                      {[
-                        { label: 'Any', value: 0 },
-                        { label: '2+ Bags', value: 2 },
-                        { label: '3+ Bags', value: 3 },
-                        { label: '4+ Bags', value: 4 },
-                      ].map((opt) => (
-                        <button
-                          key={opt.label}
-                          type="button"
-                          onClick={() => setFilterMinLuggage(opt.value)}
-                          className={`py-1.5 rounded-lg font-semibold text-center text-[11px] transition-colors ${
-                            filterMinLuggage === opt.value
-                              ? 'bg-amber-500 text-slate-950 font-bold'
-                              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 5. Max Daily Rate Price Slider */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                        Max Daily Rate
-                      </label>
-                      <span className="text-xs font-mono font-bold text-amber-400">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <label className="font-bold text-[#0a2540] dark:text-slate-300">Max Price / Day</label>
+                      <span className="font-mono font-bold text-[#0a2540] dark:text-amber-400">
                         {formatMoney(filterMaxPrice)}
                       </span>
                     </div>
@@ -1957,246 +1607,167 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                       step={10000}
                       value={filterMaxPrice}
                       onChange={(e) => setFilterMaxPrice(Number(e.target.value))}
-                      className="w-full accent-amber-500 cursor-pointer"
+                      className="w-full cursor-pointer"
                     />
-                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                      <span>{formatMoney(50000)}</span>
-                      <span>{formatMoney(300000)}</span>
-                    </div>
                   </div>
 
-                  {/* 6. Fuel Type Filter */}
-                  <div className="space-y-2.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Fuel Type
-                    </label>
-                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-[#0a2540] dark:text-slate-300 block">Fuel</label>
+                    <div className="grid grid-cols-3 gap-1.5 text-sm">
                       {['All', 'Diesel', 'Petrol'].map((fuel) => (
                         <button
                           key={fuel}
                           type="button"
                           onClick={() => setFilterFuel(fuel)}
-                          className={`py-1.5 rounded-lg font-semibold text-center transition-colors ${
+                          className={`py-1.5 rounded-lg font-semibold ${
                             filterFuel === fuel
-                              ? 'bg-amber-500 text-slate-950 font-bold'
-                              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                              ? `${activeBtnText}`
+                              : 'bg-[#f6f9fc] dark:bg-slate-950 text-[#425466] dark:text-slate-400 border border-slate-200 dark:border-slate-800'
                           }`}
+                          style={filterFuel === fuel ? { backgroundColor: activeThemeColor } : undefined}
                         >
                           {fuel}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* 7. Equipment & Inclusions Checkboxes */}
-                  <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                      Equipment & Features
-                    </label>
-                    <label className="flex items-center gap-2.5 cursor-pointer text-slate-300 hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={filter4WDOnly}
-                        onChange={(e) => setFilter4WDOnly(e.target.checked)}
-                        className="rounded text-amber-500 focus:ring-0 bg-slate-950 border-slate-700"
-                      />
-                      <span>Full-Time 4WD / AWD</span>
-                    </label>
-                    <label className="flex items-center gap-2.5 cursor-pointer text-slate-300 hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={filterPopUpRoofOnly}
-                        onChange={(e) => setFilterPopUpRoofOnly(e.target.checked)}
-                        className="rounded text-amber-500 focus:ring-0 bg-slate-950 border-slate-700"
-                      />
-                      <span>Safari Pop-Up Photography Roof</span>
-                    </label>
-                  </div>
                 </div>
               </aside>
 
-              {/* RIGHT-HAND FLEET CATALOG (GRID VS HORIZONTAL LIST ROW) */}
+              {/* Results */}
               <div className="flex-1 min-w-0 space-y-6">
-                {/* Catalog Control Bar: Result Count, View Switcher & Sorting */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 text-xs text-slate-300">
-                    <span className="font-semibold text-white">
-                      Showing {filteredVehicles.length} of {vehicles.length}
-                    </span>
-                    <span>available vehicles for your dates</span>
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+                  <div className="text-sm text-[#425466] dark:text-slate-300">
+                    Showing <strong className="text-[#0a2540] dark:text-white">{filteredVehicles.length}</strong> of{' '}
+                    {vehicles.length} cars
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {/* View Switcher: Grid vs Horizontal List Row */}
-                    <div className="hidden sm:flex items-center bg-slate-950 rounded-lg p-0.5 border border-slate-800">
+                    <div className="hidden sm:flex items-center bg-[#f6f9fc] dark:bg-slate-950 rounded-lg p-0.5 border border-slate-200 dark:border-slate-800">
                       <button
                         onClick={() => setCatalogViewMode('grid')}
-                        className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                        className={`px-3 py-1.5 rounded-md text-sm font-semibold flex items-center gap-1.5 ${
                           catalogViewMode === 'grid'
-                            ? 'bg-amber-500 text-slate-950 font-bold'
-                            : 'text-slate-400 hover:text-white'
+                            ? `${activeBtnText}`
+                            : 'text-[#425466] dark:text-slate-400'
                         }`}
-                        title="3-Column Grid View"
+                        style={catalogViewMode === 'grid' ? { backgroundColor: activeThemeColor } : undefined}
                       >
-                        <LayoutGrid className="w-3.5 h-3.5" />
-                        <span className="hidden md:inline text-[11px]">Grid</span>
+                        <LayoutGrid className="w-4 h-4" />
+                        <span>Grid</span>
                       </button>
                       <button
                         onClick={() => setCatalogViewMode('list')}
-                        className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                        className={`px-3 py-1.5 rounded-md text-sm font-semibold flex items-center gap-1.5 ${
                           catalogViewMode === 'list'
-                            ? 'bg-amber-500 text-slate-950 font-bold'
-                            : 'text-slate-400 hover:text-white'
+                            ? `${activeBtnText}`
+                            : 'text-[#425466] dark:text-slate-400'
                         }`}
-                        title="Horizontal List Row View (CarTrawler & SIXT)"
+                        style={catalogViewMode === 'list' ? { backgroundColor: activeThemeColor } : undefined}
                       >
-                        <List className="w-3.5 h-3.5" />
-                        <span className="hidden md:inline text-[11px]">List</span>
+                        <List className="w-4 h-4" />
+                        <span>List</span>
                       </button>
                     </div>
 
-                    {/* Sorting Dropdown */}
-                    <label className="text-xs text-slate-400 flex items-center gap-2">
-                      <span className="hidden sm:inline">Sort:</span>
-                      <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
-                        className="bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-white font-medium outline-none"
-                      >
-                        <option value="price-asc">Lowest Price First</option>
-                        <option value="price-desc">Highest Price First</option>
-                        <option value="capacity">Passenger Capacity</option>
-                        <option value="rating">Newest Model / Year</option>
-                      </select>
-                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-sm text-[#0a2540] dark:text-white font-medium outline-none"
+                    >
+                      <option value="price-asc">Lowest Price First</option>
+                      <option value="price-desc">Highest Price First</option>
+                      <option value="capacity">Most Seats</option>
+                      <option value="rating">Newest Car</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* VEHICLES RESULTS */}
                 {filteredVehicles.length > 0 ? (
                   catalogViewMode === 'grid' ? (
-                    /* 1. GRID VIEW (3 Columns with real photography) */
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                       {filteredVehicles.map((vehicle) => {
-                        const collision = checkBookingCollision(
-                          vehicle.id,
-                          startDate,
-                          endDate,
-                          bookings
-                        );
+                        const collision = checkBookingCollision(vehicle.id, startDate, endDate, bookings);
                         const isAvailable = !collision.hasCollision;
                         const tripTotalRwf = vehicle.daily_rate_rwf * days;
 
                         return (
                           <div
                             key={vehicle.id}
-                            className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between transition-all hover:border-slate-700 shadow-md group"
+                            className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between group"
                           >
                             <div>
-                              {/* Vehicle Image Slot */}
-                              <div className="h-48 bg-slate-950 flex flex-col justify-between p-4 relative overflow-hidden">
+                              <div className="h-48 bg-slate-900 flex flex-col justify-between p-4 relative overflow-hidden">
                                 <div className="flex items-center justify-between z-10">
-                                  <span className="text-xs font-mono font-bold bg-slate-950/80 px-2 py-0.5 rounded text-slate-300 border border-slate-700/60">
+                                  <span className="text-sm font-mono font-bold bg-slate-950/80 px-2.5 py-0.5 rounded-lg text-white">
                                     {vehicle.plate_number}
                                   </span>
                                   <span
-                                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5 backdrop-blur-md ${
+                                    className={`text-sm font-semibold px-2.5 py-0.5 rounded-full ${
                                       isAvailable
-                                        ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
-                                        : 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
+                                        ? 'bg-emerald-950/85 text-emerald-300'
+                                        : 'bg-rose-950/85 text-rose-300'
                                     }`}
                                   >
-                                    <span
-                                      className={`w-1.5 h-1.5 rounded-full ${
-                                        isAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
-                                      }`}
-                                    />
-                                    <span>{isAvailable ? 'Available' : 'Reserved'}</span>
+                                    {isAvailable ? 'Open' : 'Booked'}
                                   </span>
                                 </div>
 
-                                {/* Vehicle Studio Photo or Silhouette */}
                                 {vehicle.image_url ? (
                                   <img
                                     src={vehicle.image_url}
                                     alt={vehicle.model_name}
-                                    className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100"
+                                    referrerPolicy="no-referrer"
+                                    className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 brightness-90"
                                   />
                                 ) : (
-                                  <div className="flex items-center justify-center my-auto text-slate-700 group-hover:text-amber-400/30 transition-colors">
+                                  <div className="flex items-center justify-center my-auto text-slate-600">
                                     <Car className="w-20 h-20 stroke-[1.2]" />
                                   </div>
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent pointer-events-none" />
 
-                                {/* Category and Year Unboxed Metadata */}
-                                <div className="flex items-center gap-2 text-xs text-slate-300 font-medium z-10 drop-shadow">
-                                  <span className="bg-slate-900/80 px-2 py-0.5 rounded text-[11px] border border-slate-700/60">
-                                    {vehicle.category}
-                                  </span>
+                                <div className="flex items-center gap-2 text-sm text-slate-200 font-medium z-10">
+                                  <span>{vehicle.category}</span>
                                   <span aria-hidden="true">·</span>
-                                  <span>Model {vehicle.year}</span>
+                                  <span>{vehicle.year}</span>
                                 </div>
                               </div>
 
-                              {/* Title & Specs */}
                               <div className="p-5 space-y-4">
-                                <div>
-                                  <h3 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors">
-                                    {vehicle.model_name}
-                                  </h3>
-                                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 mt-3 pt-3 border-t border-slate-800/80">
-                                    <div className="flex items-center gap-1.5">
-                                      <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                      <span>{vehicle.seating_capacity} Passengers</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <Luggage className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                      <span>{vehicle.seating_capacity >= 7 ? '4' : '3'} Large Bags</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                      <span>{vehicle.transmission || 'Automatic'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <Fuel className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                      <span>{vehicle.fuel_type || 'Diesel'}</span>
-                                    </div>
+                                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">{vehicle.model_name}</h3>
+                                <div className="grid grid-cols-2 gap-2 text-sm text-[#425466] dark:text-slate-300 pt-3 border-t border-slate-200 dark:border-slate-800">
+                                  <div className="flex items-center gap-1.5">
+                                    <Users className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
+                                    <span>{vehicle.seating_capacity} Seats</span>
                                   </div>
-                                </div>
-
-                                {/* Inclusions Checkmarks (Avax & CarTrawler) */}
-                                <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-slate-800/60">
-                                  <div className="flex items-center gap-2">
-                                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                    <span>Free 72h Cancellation</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <Luggage className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
+                                    <span>{vehicle.seating_capacity >= 7 ? '4' : '3'} Bags</span>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                    <span>Full-to-Full Fuel Policy</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <SlidersHorizontal className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
+                                    <span>{vehicle.transmission || 'Automatic'}</span>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                    <span>Rwanda Contrôle Technique Safety Certified</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <Fuel className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
+                                    <span>{vehicle.fuel_type || 'Diesel'}</span>
                                   </div>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Footer: Price Box and Action CTAs */}
-                            <div className="p-5 pt-0 border-t border-slate-800/80 mt-2 space-y-3">
-                              <div className="flex items-baseline justify-between pt-3">
+                            <div className="p-5 pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                              <div className="flex items-baseline justify-between">
                                 <div>
-                                  <span className="text-[10px] text-slate-400 block font-medium">Daily Rate:</span>
-                                  <span className="font-mono font-extrabold text-white text-base">
+                                  <span className="text-sm text-[#425466] dark:text-slate-400 block">Per day:</span>
+                                  <span className="font-mono font-extrabold text-[#0a2540] dark:text-white text-lg">
                                     {formatMoney(vehicle.daily_rate_rwf)}
                                   </span>
                                 </div>
                                 <div className="text-right">
-                                  <span className="text-[10px] text-slate-400 block font-medium">
-                                    {days} Days Total:
-                                  </span>
-                                  <span className="font-mono font-bold text-amber-400 text-sm">
+                                  <span className="text-sm text-[#425466] dark:text-slate-400 block">{days} days:</span>
+                                  <span className="font-mono font-bold text-sm" style={{ color: activeThemeColor }}>
                                     {formatMoney(tripTotalRwf)}
                                   </span>
                                 </div>
@@ -2205,21 +1776,21 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                               <div className="flex items-center gap-2 pt-1">
                                 <button
                                   onClick={() => setQuickDetailVehicle(vehicle)}
-                                  className="w-1/3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+                                  className="w-1/3 py-2 rounded-full text-sm font-semibold text-[#0a2540] dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700"
                                 >
-                                  Specs
+                                  Info
                                 </button>
                                 <button
                                   onClick={() => handleStartBookingVehicle(vehicle)}
                                   disabled={!isAvailable}
-                                  className={`w-2/3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                  className={`w-2/3 py-2 rounded-full text-sm font-semibold transition-all ${
                                     isAvailable
-                                      ? `${activeBtnText} hover:brightness-105 active:scale-95 shadow-md`
-                                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                      ? `${activeBtnText} hover:brightness-105`
+                                      : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                                   }`}
                                   style={isAvailable ? { backgroundColor: activeThemeColor } : undefined}
                                 >
-                                  Select & Book →
+                                  Pick & Book →
                                 </button>
                               </div>
                             </div>
@@ -2228,131 +1799,83 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                       })}
                     </div>
                   ) : (
-                    /* 2. HORIZONTAL LIST ROW VIEW (CarTrawler & SIXT Style) */
                     <div className="space-y-4">
                       {filteredVehicles.map((vehicle) => {
-                        const collision = checkBookingCollision(
-                          vehicle.id,
-                          startDate,
-                          endDate,
-                          bookings
-                        );
+                        const collision = checkBookingCollision(vehicle.id, startDate, endDate, bookings);
                         const isAvailable = !collision.hasCollision;
                         const tripTotalRwf = vehicle.daily_rate_rwf * days;
 
                         return (
                           <div
                             key={vehicle.id}
-                            className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col md:flex-row hover:border-slate-700 transition-all shadow-md group"
+                            className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col md:flex-row group"
                           >
-                            {/* Left Image Section */}
-                            <div className="md:w-80 h-52 md:h-auto relative shrink-0 bg-slate-950 overflow-hidden">
+                            <div className="md:w-80 h-52 md:h-auto relative shrink-0 bg-slate-900 overflow-hidden">
                               {vehicle.image_url ? (
                                 <img
                                   src={vehicle.image_url}
                                   alt={vehicle.model_name}
-                                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100"
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover object-center brightness-90"
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-slate-700 group-hover:text-amber-400/30 transition-colors">
+                                <div className="w-full h-full flex items-center justify-center text-slate-600">
                                   <Car className="w-24 h-24 stroke-[1.2]" />
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-
-                              <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-                                <span className="text-xs font-mono font-bold bg-slate-950/90 px-2 py-0.5 rounded text-slate-300 border border-slate-700/60">
+                              <div className="absolute top-3 left-3 z-10">
+                                <span className="text-sm font-mono font-bold bg-slate-950/90 px-2.5 py-0.5 rounded-lg text-white">
                                   {vehicle.plate_number}
                                 </span>
                               </div>
-
                               <div className="absolute bottom-3 left-3 z-10">
                                 <span
-                                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5 backdrop-blur-md ${
+                                  className={`text-sm font-semibold px-3 py-0.5 rounded-full ${
                                     isAvailable
-                                      ? 'bg-emerald-950/90 text-emerald-400 border border-emerald-500/40'
-                                      : 'bg-rose-950/90 text-rose-400 border border-rose-500/40'
+                                      ? 'bg-emerald-950/90 text-emerald-300'
+                                      : 'bg-rose-950/90 text-rose-300'
                                   }`}
                                 >
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      isAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
-                                    }`}
-                                  />
-                                  <span>{isAvailable ? 'Available for Dates' : 'Reserved'}</span>
+                                  {isAvailable ? 'Open for Dates' : 'Booked'}
                                 </span>
                               </div>
                             </div>
 
-                            {/* Middle Specs Section */}
                             <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between space-y-4">
                               <div>
-                                <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-                                  <span className="bg-slate-800 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-200">
-                                    {vehicle.category}
-                                  </span>
-                                  <span>·</span>
-                                  <span>Model Year {vehicle.year}</span>
+                                <div className="text-sm text-[#425466] dark:text-slate-400 mb-1">
+                                  {vehicle.category} · {vehicle.year}
                                 </div>
-
-                                <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">
-                                  {vehicle.model_name}
-                                </h3>
-
-                                {/* Key Features Row with Icons */}
-                                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300 mt-3 pt-3 border-t border-slate-800">
-                                  <div className="flex items-center gap-1.5">
-                                    <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                    <span>{vehicle.seating_capacity} Seats</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <Luggage className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                    <span>{vehicle.seating_capacity >= 7 ? '4' : '3'} Bags</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                    <span>{vehicle.transmission || 'Automatic'}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <Fuel className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                    <span>{vehicle.fuel_type || 'Diesel'}</span>
-                                  </div>
+                                <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">{vehicle.model_name}</h3>
+                                <div className="flex flex-wrap items-center gap-4 text-sm text-[#425466] dark:text-slate-300 mt-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                                  <span>{vehicle.seating_capacity} Seats</span>
+                                  <span>·</span>
+                                  <span>{vehicle.transmission || 'Automatic'}</span>
+                                  <span>·</span>
+                                  <span>{vehicle.fuel_type || 'Diesel'}</span>
                                 </div>
                               </div>
 
-                              {/* Inclusions Checklist */}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2 border-t border-slate-800/80">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-[#425466] dark:text-slate-300 pt-2 border-t border-slate-200 dark:border-slate-800">
                                 <div className="flex items-center gap-1.5">
-                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                  <span>Free 72h Cancellation</span>
+                                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                  <span>Free cancel 3+ days before</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                  <span>100% Guaranteed Physical Lock</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                  <span>Full-to-Full Fuel Policy</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                  <span>Contrôle Technique Safety Certified</span>
+                                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                  <span>Safety checked car</span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Right Price & Actions Box */}
-                            <div className="md:w-64 bg-slate-950/60 border-t md:border-t-0 md:border-l border-slate-800 p-5 sm:p-6 flex flex-col justify-between text-right shrink-0 space-y-4">
+                            <div className="md:w-64 bg-[#f6f9fc] dark:bg-slate-950/60 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 p-5 sm:p-6 flex flex-col justify-between text-right shrink-0 space-y-4">
                               <div className="space-y-1">
-                                <span className="text-xs text-slate-400 block font-medium">Daily Rate:</span>
-                                <div className="font-mono font-extrabold text-white text-xl">
+                                <span className="text-sm text-[#425466] dark:text-slate-400 block">Per day:</span>
+                                <div className="font-mono font-extrabold text-[#0a2540] dark:text-white text-xl">
                                   {formatMoney(vehicle.daily_rate_rwf)}
                                 </div>
-                                <div className="text-xs font-mono font-semibold text-amber-400">
-                                  {formatMoney(tripTotalRwf)} for {days} days
-                                </div>
-                                <div className="text-[10px] text-slate-500 font-medium pt-1">
-                                  +{formatMoney(150000)} refundable deposit
+                                <div className="text-sm font-mono font-semibold" style={{ color: activeThemeColor }}>
+                                  {formatMoney(tripTotalRwf)} total ({days} days)
                                 </div>
                               </div>
 
@@ -2360,20 +1883,20 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                                 <button
                                   onClick={() => handleStartBookingVehicle(vehicle)}
                                   disabled={!isAvailable}
-                                  className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md ${
+                                  className={`w-full py-2.5 rounded-full font-semibold text-sm ${
                                     isAvailable
-                                      ? `${activeBtnText} hover:brightness-105 active:scale-95`
-                                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                      ? `${activeBtnText}`
+                                      : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                                   }`}
                                   style={isAvailable ? { backgroundColor: activeThemeColor } : undefined}
                                 >
-                                  Select Vehicle →
+                                  Pick Car →
                                 </button>
                                 <button
                                   onClick={() => setQuickDetailVehicle(vehicle)}
-                                  className="w-full py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                                  className="w-full py-1.5 rounded-full text-sm font-semibold text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white"
                                 >
-                                  View Detailed Specs
+                                  More Info
                                 </button>
                               </div>
                             </div>
@@ -2383,123 +1906,87 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                     </div>
                   )
                 ) : (
-                  /* Fallback when no vehicles match filters */
-                  <div className="p-12 text-center rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                    <AlertCircle className="w-12 h-12 text-amber-400 mx-auto" />
-                    <h3 className="text-lg font-bold text-white">
-                      No vehicles match your selected filter criteria
-                    </h3>
-                    <p className="text-xs text-slate-400 max-w-md mx-auto">
-                      Try broadening your passenger or price filter, clearing selected categories, or contacting our Kigali dispatch desk.
+                  <div className="p-12 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+                    <AlertCircle className="w-12 h-12 mx-auto" style={{ color: activeThemeColor }} />
+                    <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">No cars match your filters</h3>
+                    <p className="text-sm text-[#425466] dark:text-slate-400 max-w-md mx-auto">
+                      Try clearing your filters or ask our Kigali help desk.
                     </p>
-                    <div className="flex items-center justify-center gap-3 pt-2">
-                      <button
-                        onClick={handleResetFilters}
-                        className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs"
-                      >
-                        Reset All Filters
-                      </button>
-                      <button
-                        onClick={() => setCurrentView('contact')}
-                        className="px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold text-xs border border-slate-700"
-                      >
-                        Contact Dispatch Desk
-                      </button>
-                    </div>
+                    <button
+                      onClick={handleResetFilters}
+                      className={`px-5 py-2.5 rounded-full font-semibold text-sm ${activeBtnText}`}
+                      style={{ backgroundColor: activeThemeColor }}
+                    >
+                      Show All Cars
+                    </button>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* QUICK VEHICLE DETAILS MODAL (Avax & CarTrawler Style) */}
+            {/* Quick Vehicle Info Modal */}
             {quickDetailVehicle && (
-              <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                     <div>
-                      <span className="text-xs font-semibold text-amber-400">
-                        {quickDetailVehicle.category} · Model {quickDetailVehicle.year}
+                      <span className="text-sm font-semibold" style={{ color: activeThemeColor }}>
+                        {quickDetailVehicle.category} · {quickDetailVehicle.year}
                       </span>
-                      <h2 className="text-xl font-bold text-white">
-                        {quickDetailVehicle.model_name}
-                      </h2>
+                      <h2 className="text-xl font-bold text-[#0a2540] dark:text-white">{quickDetailVehicle.model_name}</h2>
                     </div>
                     <button
                       onClick={() => setQuickDetailVehicle(null)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800"
+                      className="p-2 rounded-full text-[#425466] dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
 
-                  {/* Photo Preview */}
-                  <div className="h-56 bg-slate-950 rounded-xl overflow-hidden relative">
-                    {quickDetailVehicle.image_url ? (
-                      <img
-                        src={quickDetailVehicle.image_url}
-                        alt={quickDetailVehicle.model_name}
-                        className="w-full h-full object-cover object-center"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-700">
-                        <Car className="w-24 h-24 stroke-[1.2]" />
-                      </div>
-                    )}
-                    <div className="absolute top-3 left-3 bg-slate-950/80 px-2.5 py-1 rounded-md text-xs font-mono font-bold text-white border border-slate-700/60">
-                      {quickDetailVehicle.plate_number}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[#425466] dark:text-slate-400 block">Seats</span>
+                      <strong className="text-[#0a2540] dark:text-white">{quickDetailVehicle.seating_capacity}</strong>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[#425466] dark:text-slate-400 block">Gears</span>
+                      <strong className="text-[#0a2540] dark:text-white">
+                        {quickDetailVehicle.transmission || 'Automatic'}
+                      </strong>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[#425466] dark:text-slate-400 block">Fuel</span>
+                      <strong className="text-[#0a2540] dark:text-white">{quickDetailVehicle.fuel_type || 'Diesel'}</strong>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[#425466] dark:text-slate-400 block">Place</span>
+                      <strong className="text-[#0a2540] dark:text-white truncate block">{quickDetailVehicle.location}</strong>
                     </div>
                   </div>
 
-                  {/* Specifications Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className="text-slate-400 text-[10px] uppercase font-semibold block">Seating</span>
-                      <strong className="text-white">{quickDetailVehicle.seating_capacity} Passengers</strong>
+                  <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-[#425466] dark:text-slate-400">Price per day:</span>
+                      <span className="font-mono font-bold text-[#0a2540] dark:text-white">
+                        {formatMoney(quickDetailVehicle.daily_rate_rwf)}
+                      </span>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className="text-slate-400 text-[10px] uppercase font-semibold block">Transmission</span>
-                      <strong className="text-white">{quickDetailVehicle.transmission || 'Automatic'}</strong>
+                    <div className="flex justify-between">
+                      <span className="text-[#425466] dark:text-slate-400">Trip length:</span>
+                      <span className="font-mono text-[#0a2540] dark:text-white">{days} Days</span>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className="text-slate-400 text-[10px] uppercase font-semibold block">Fuel Type</span>
-                      <strong className="text-white">{quickDetailVehicle.fuel_type || 'Diesel'}</strong>
-                    </div>
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className="text-slate-400 text-[10px] uppercase font-semibold block">Location</span>
-                      <strong className="text-white truncate block">{quickDetailVehicle.location}</strong>
-                    </div>
-                  </div>
-
-                  {/* Rental Conditions & Transparent Pricing */}
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
-                    <div className="flex justify-between text-slate-300">
-                      <span>Daily Rate:</span>
-                      <span className="font-mono font-bold text-white">{formatMoney(quickDetailVehicle.daily_rate_rwf)}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-300">
-                      <span>Rental Duration:</span>
-                      <span className="font-mono text-white">{days} Days ({startDate} to {endDate})</span>
-                    </div>
-                    <div className="flex justify-between text-slate-300">
-                      <span>Subtotal Base Rental:</span>
-                      <span className="font-mono text-white">{formatMoney(quickDetailVehicle.daily_rate_rwf * days)}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-400">
-                      <span>Refundable Security Deposit:</span>
-                      <span className="font-mono text-slate-300">{formatMoney(150000)}</span>
-                    </div>
-                    <div className="flex justify-between text-white font-bold pt-2 border-t border-slate-800 text-sm">
-                      <span>Total Estimated ({days} days):</span>
-                      <span className="font-mono text-amber-400 text-base">
+                    <div className="flex justify-between font-bold pt-2 border-t border-slate-200 dark:border-slate-800 text-base">
+                      <span>Estimated Total:</span>
+                      <span className="font-mono" style={{ color: activeThemeColor }}>
                         {formatMoney(quickDetailVehicle.daily_rate_rwf * days)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-3 pt-2">
+                  <div className="flex items-center justify-end gap-3">
                     <button
                       onClick={() => setQuickDetailVehicle(null)}
-                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                      className="px-5 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-300 text-sm font-semibold"
                     >
                       Close
                     </button>
@@ -2508,10 +1995,10 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                         setQuickDetailVehicle(null);
                         handleStartBookingVehicle(quickDetailVehicle);
                       }}
-                      className={`px-6 py-2 rounded-lg text-xs font-bold shadow-md ${activeBtnText}`}
+                      className={`px-6 py-2 rounded-full text-sm font-semibold ${activeBtnText}`}
                       style={{ backgroundColor: activeThemeColor }}
                     >
-                      Proceed to Book This Vehicle →
+                      Book This Car →
                     </button>
                   </div>
                 </div>
@@ -2520,439 +2007,406 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 3: VEHICLE DETAILS PAGE (/booking/:slug/vehicles/:id)
-        ===================================================================== */}
+        {/* VIEW 3: CAR DETAILS PAGE */}
         {currentView === 'vehicle-detail' && selectedVehicle && (
           <div className="max-w-5xl mx-auto px-4 sm:px-8 py-10 space-y-8">
             <button
               onClick={() => setCurrentView('vehicles')}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to fleet catalog</span>
+              <span>Back to all cars</span>
             </button>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Left Column: Gallery & Specifications */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Big Visual Header */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden p-8 space-y-6 text-center">
-                  <div className="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 pb-3">
-                    <span className="font-mono font-bold text-amber-400">{selectedVehicle.plate_number}</span>
-                    <span>{selectedVehicle.category} · Year {selectedVehicle.year}</span>
+                <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 space-y-6 text-center">
+                  <div className="flex items-center justify-between text-sm text-[#425466] dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-3">
+                    <span className="font-mono font-bold" style={{ color: activeThemeColor }}>
+                      {selectedVehicle.plate_number}
+                    </span>
+                    <span>
+                      {selectedVehicle.category} · {selectedVehicle.year}
+                    </span>
                   </div>
 
-                  <div className="py-6 flex items-center justify-center text-slate-600">
-                    <Car className="w-32 h-32 stroke-[1.1]" />
-                  </div>
+                  {selectedVehicle.image_url ? (
+                    <img
+                      src={selectedVehicle.image_url}
+                      alt={selectedVehicle.model_name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-64 object-cover rounded-xl"
+                    />
+                  ) : (
+                    <div className="py-6 flex items-center justify-center text-slate-400">
+                      <Car className="w-32 h-32 stroke-[1.1]" />
+                    </div>
+                  )}
 
                   <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">
                       {selectedVehicle.model_name}
                     </h1>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Rwanda Police Bon de Mission & Contrôle Technique Safety Cleared
+                    <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">
+                      Safety checked & ready for city or park roads
                     </p>
                   </div>
                 </div>
 
-                {/* Technical Specifications */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <h3 className="text-sm font-bold text-white">Verified Specifications</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className="text-slate-500 block text-[10px] uppercase">Seating</span>
-                      <strong className="text-white text-sm">{selectedVehicle.seating_capacity} Seats</strong>
+                <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
+                  <h3 className="text-base font-bold text-[#0a2540] dark:text-white">Car Info</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[#425466] dark:text-slate-400 block">Seats</span>
+                      <strong className="text-[#0a2540] dark:text-white">{selectedVehicle.seating_capacity} Seats</strong>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className="text-slate-500 block text-[10px] uppercase">Transmission</span>
-                      <strong className="text-white text-sm">{selectedVehicle.transmission || 'Automatic'}</strong>
+                    <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[#425466] dark:text-slate-400 block">Gears</span>
+                      <strong className="text-[#0a2540] dark:text-white">
+                        {selectedVehicle.transmission || 'Automatic'}
+                      </strong>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className="text-slate-500 block text-[10px] uppercase">Fuel Type</span>
-                      <strong className="text-white text-sm">{selectedVehicle.fuel_type || 'Diesel'}</strong>
+                    <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[#425466] dark:text-slate-400 block">Fuel</span>
+                      <strong className="text-[#0a2540] dark:text-white">{selectedVehicle.fuel_type || 'Diesel'}</strong>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className="text-slate-500 block text-[10px] uppercase">Drivetrain</span>
-                      <strong className="text-amber-400 text-sm">4WD Full-Time</strong>
+                    <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[#425466] dark:text-slate-400 block">Drive</span>
+                      <strong style={{ color: activeThemeColor }}>4x4 Ready</strong>
                     </div>
                   </div>
                 </div>
-
-                {/* Rental Conditions & Transparent Inclusions (Section 6, Part D) */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3 text-xs">
-                  <h3 className="text-sm font-bold text-white">Rental Conditions & Inclusions</h3>
-                  <ul className="space-y-2 text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span><strong>Fuel Policy:</strong> Full-to-Full (delivered full tank, return full tank)</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span><strong>Mileage Allowance:</strong> 100% Unlimited mileage across all 30 districts of Rwanda</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span><strong>Safety Certificate:</strong> Rwanda Contrôle Technique inspection active</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span><strong>Cancellation:</strong> 100% Free cancellation up to 72 hours before trip start</span>
-                    </li>
-                  </ul>
-                </div>
               </div>
 
-              {/* Right Column: Price Calculator & Booking Action */}
-              <div className="space-y-6">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 sticky top-24">
-                  <div className="border-b border-slate-800 pb-3">
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase block">
-                      Daily Rate
-                    </span>
-                    <span className="text-2xl font-extrabold text-white font-mono">
+              <div>
+                <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5 sticky top-24">
+                  <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
+                    <span className="text-sm text-[#425466] dark:text-slate-400 block">Price per day</span>
+                    <span className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono">
                       {formatMoney(selectedVehicle.daily_rate_rwf)}
                     </span>
                   </div>
 
-                  {/* Calculator Breakdown */}
-                  <div className="space-y-2 text-xs font-mono">
-                    <div className="flex justify-between text-slate-400">
-                      <span>Duration:</span>
-                      <span className="text-white">{days} Days</span>
+                  <div className="space-y-2 text-sm font-mono">
+                    <div className="flex justify-between text-[#425466] dark:text-slate-400">
+                      <span>Days:</span>
+                      <span className="text-[#0a2540] dark:text-white">{days} Days</span>
                     </div>
-                    <div className="flex justify-between text-slate-400">
-                      <span>Base Rental:</span>
-                      <span className="text-white">{formatMoney(baseRentalRwf)}</span>
+                    <div className="flex justify-between text-[#425466] dark:text-slate-400">
+                      <span>Car rent:</span>
+                      <span className="text-[#0a2540] dark:text-white">{formatMoney(baseRentalRwf)}</span>
                     </div>
-
-                    {isSafariPeak && (
-                      <div className="flex justify-between text-amber-400">
-                        <span>+ Safari Peak (15%):</span>
-                        <span>+{formatMoney(safariSurgeRwf)}</span>
-                      </div>
-                    )}
-
-                    {isUpcountry && (
-                      <div className="flex justify-between text-amber-400">
-                        <span>+ Upcountry Allowance:</span>
-                        <span>+{formatMoney(upcountrySurgeRwf)}</span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between text-emerald-400">
-                      <span>+ RRA 18% VAT:</span>
+                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                      <span>+ 18% VAT tax:</span>
                       <span>+{formatMoney(vatRwf)}</span>
                     </div>
-
-                    <div className="pt-2 border-t border-slate-800 flex justify-between text-slate-400">
-                      <span>Refundable Deposit:</span>
-                      <span>{formatMoney(securityDepositRwf)}</span>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-800 flex justify-between text-white font-bold text-sm">
-                      <span>Total Estimated:</span>
-                      <span className="text-amber-400 text-base">{formatMoney(grandTotalRwf)}</span>
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between font-bold text-base">
+                      <span>Total:</span>
+                      <span style={{ color: activeThemeColor }}>{formatMoney(grandTotalRwf)}</span>
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleStartBookingVehicle(selectedVehicle)}
-                    className={`w-full py-3 rounded-xl font-bold text-xs shadow-md transition-transform active:scale-95 ${activeBtnText}`}
+                    className={`w-full py-3 rounded-full font-semibold text-sm shadow-xs ${activeBtnText}`}
                     style={{ backgroundColor: activeThemeColor }}
                   >
-                    Proceed to Book This Vehicle →
+                    Book This Car →
                   </button>
-
-                  <div className="text-[11px] text-slate-400 text-center space-y-1">
-                    <div>Direct booking with {companyDisplayName}</div>
-                    <div className="text-emerald-400 font-semibold">Instant confirmation available</div>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 4: GUIDED 5-STEP BOOKING FLOW (/booking/:slug/book/:id)
-        ===================================================================== */}
+        {/* VIEW 4: 5-STEP BOOKING */}
         {currentView === 'book' && selectedVehicle && (
           <div className="max-w-3xl mx-auto px-4 sm:px-8 py-10 space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
               <div>
                 <button
                   onClick={() => setCurrentView('vehicles')}
-                  className="text-xs text-slate-400 hover:text-white flex items-center gap-1 mb-1"
+                  className="text-sm text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white flex items-center gap-1 mb-1"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Change Vehicle</span>
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Pick another car</span>
                 </button>
-                <h1 className="text-lg sm:text-xl font-extrabold text-white">
-                  Reserve {selectedVehicle.model_name}
+                <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a2540] dark:text-white">
+                  Book {selectedVehicle.model_name}
                 </h1>
               </div>
 
-              {/* Steps Progress */}
-              <div className="overflow-x-auto w-full sm:w-auto py-1">
-                <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold whitespace-nowrap min-w-max">
-                  <span className={bookingStep >= 1 ? 'text-amber-400 font-bold' : 'text-slate-600'}>1. Service</span>
-                  <span className="text-slate-600">→</span>
-                  <span className={bookingStep >= 2 ? 'text-amber-400 font-bold' : 'text-slate-600'}>2. Extras</span>
-                  <span className="text-slate-600">→</span>
-                  <span className={bookingStep >= 3 ? 'text-amber-400 font-bold' : 'text-slate-600'}>3. Passenger</span>
-                  <span className="text-slate-600">→</span>
-                  <span className={bookingStep >= 4 ? 'text-amber-400 font-bold' : 'text-slate-600'}>4. Verification</span>
-                  <span className="text-slate-600">→</span>
-                  <span className={bookingStep >= 5 ? 'text-amber-400 font-bold' : 'text-slate-600'}>5. Review</span>
+              <div className="w-full sm:w-auto py-1">
+                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                  {[
+                    { s: 1, l: '1. Dates' },
+                    { s: 2, l: '2. Extras' },
+                    { s: 3, l: '3. Your Info' },
+                    { s: 4, l: '4. ID' },
+                    { s: 5, l: '5. Pay' },
+                  ].map((st, idx) => (
+                    <React.Fragment key={st.s}>
+                      {idx > 0 && <span className="text-slate-400">→</span>}
+                      <span
+                        className={
+                          bookingStep >= st.s ? 'font-bold text-[#0a2540] dark:text-amber-400' : 'text-slate-400'
+                        }
+                      >
+                        {st.l}
+                      </span>
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* STEP 1: Service & Dates */}
             {bookingStep === 1 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5">
-                <h2 className="text-sm font-bold text-white">Step 1: Service Selection & Dates</h2>
+              <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5">
+                <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">Step 1: Trip Type & Dates</h2>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f6f9fc] dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   {(['self-drive', 'chauffeur', 'airport', 'safari'] as ServiceType[]).map((st) => (
                     <button
                       key={st}
                       type="button"
                       onClick={() => setServiceType(st)}
-                      className={`py-2 rounded-lg text-xs font-bold capitalize transition-colors ${
-                        serviceType === st ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                      className={`py-2 rounded-lg text-sm font-semibold transition-colors ${
+                        serviceType === st
+                          ? `${activeBtnText}`
+                          : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
                       }`}
+                      style={serviceType === st ? { backgroundColor: activeThemeColor } : undefined}
                     >
-                      {st}
+                      {serviceLabel(st)}
                     </button>
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Pickup Date</label>
+                    <label className="block font-semibold mb-1.5">Pick-up Day</label>
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Return Date</label>
+                    <label className="block font-semibold mb-1.5">Return Day</label>
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Pickup Location</label>
+                    <label className="block font-semibold mb-1.5">Pick-up Place</label>
                     <input
                       type="text"
                       value={pickupLocation}
                       onChange={(e) => setPickupLocation(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Return Location</label>
+                    <label className="block font-semibold mb-1.5">Return Place</label>
                     <input
                       type="text"
                       value={returnLocation}
                       onChange={(e) => setReturnLocation(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                      className={inputClass}
                     />
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800 flex justify-end">
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
                   <button
                     onClick={() => setBookingStep(2)}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-md ${activeBtnText}`}
+                    className={`px-6 py-2.5 rounded-full font-semibold text-sm ${activeBtnText}`}
                     style={{ backgroundColor: activeThemeColor }}
                   >
-                    Next: Add Optional Extras →
+                    Next: Add Extras →
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 2: Optional Extras & Add-ons */}
             {bookingStep === 2 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5">
-                <h2 className="text-sm font-bold text-white">Step 2: Add-ons & Equipment</h2>
+              <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5">
+                <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">Step 2: Optional Extras</h2>
 
-                <div className="space-y-3 text-xs">
-                  <label className="flex items-start justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                <div className="space-y-3 text-sm">
+                  <label className="flex items-start justify-between p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={addonChauffeur}
                         onChange={(e) => setAddonChauffeur(e.target.checked)}
-                        className="mt-0.5 rounded text-amber-500 focus:ring-0"
+                        className="mt-1 w-4 h-4 rounded"
                       />
                       <div>
-                        <div className="font-semibold text-white">Professional Bilingual Chauffeur</div>
-                        <div className="text-[11px] text-slate-400">Driver per-diem and police-cleared Bon de Mission included</div>
+                        <div className="font-semibold text-[#0a2540] dark:text-white">Add a Driver</div>
+                        <div className="text-sm text-[#425466] dark:text-slate-400">
+                          Experienced local driver who speaks English & Kinyarwanda
+                        </div>
                       </div>
                     </div>
-                    <span className="font-mono font-bold text-slate-300">+{formatMoney(15000)}/day</span>
+                    <span className="font-mono font-bold">+{formatMoney(15000)}/day</span>
                   </label>
 
-                  <label className="flex items-start justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                  <label className="flex items-start justify-between p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={addonWifiHotspot}
                         onChange={(e) => setAddonWifiHotspot(e.target.checked)}
-                        className="mt-0.5 rounded text-amber-500 focus:ring-0"
+                        className="mt-1 w-4 h-4 rounded"
                       />
                       <div>
-                        <div className="font-semibold text-white">Portable 4G LTE Wi-Fi Hotspot</div>
-                        <div className="text-[11px] text-slate-400">Unlimited high-speed MTN Rwanda data for up to 5 devices</div>
+                        <div className="font-semibold text-[#0a2540] dark:text-white">Car Wi-Fi Box</div>
+                        <div className="text-sm text-[#425466] dark:text-slate-400">
+                          Fast MTN internet inside the car for up to 5 phones
+                        </div>
                       </div>
                     </div>
-                    <span className="font-mono font-bold text-slate-300">+{formatMoney(7500)}/day</span>
+                    <span className="font-mono font-bold">+{formatMoney(7500)}/day</span>
                   </label>
 
-                  <label className="flex items-start justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                  <label className="flex items-start justify-between p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={addonChildSeat}
                         onChange={(e) => setAddonChildSeat(e.target.checked)}
-                        className="mt-0.5 rounded text-amber-500 focus:ring-0"
+                        className="mt-1 w-4 h-4 rounded"
                       />
                       <div>
-                        <div className="font-semibold text-white">Child Safety Car Seat</div>
-                        <div className="text-[11px] text-slate-400">ISOFIX certified infant or toddler safety booster</div>
+                        <div className="font-semibold text-[#0a2540] dark:text-white">Child Car Seat</div>
+                        <div className="text-sm text-[#425466] dark:text-slate-400">Safe baby or child seat</div>
                       </div>
                     </div>
-                    <span className="font-mono font-bold text-slate-300">+{formatMoney(5000)}/day</span>
+                    <span className="font-mono font-bold">+{formatMoney(5000)}/day</span>
                   </label>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800 flex justify-between">
-                  <button
-                    onClick={() => setBookingStep(1)}
-                    className="px-4 py-2 text-slate-400 hover:text-white text-xs"
-                  >
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between">
+                  <button onClick={() => setBookingStep(1)} className="px-4 py-2 text-sm font-semibold text-[#425466]">
                     ← Back
                   </button>
                   <button
                     onClick={() => setBookingStep(3)}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-md ${activeBtnText}`}
+                    className={`px-6 py-2.5 rounded-full font-semibold text-sm ${activeBtnText}`}
                     style={{ backgroundColor: activeThemeColor }}
                   >
-                    Next: Passenger Details →
+                    Next: Your Details →
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 3: Customer Information (4 Personas Supported) */}
             {bookingStep === 3 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5 text-xs">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-white">Step 3: Customer Information</h2>
-                  <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+              <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">Step 3: Your Details</h2>
+                  <div className="flex items-center gap-1 bg-[#f6f9fc] dark:bg-slate-950 p-1 rounded-full border border-slate-200 dark:border-slate-800">
                     <button
                       type="button"
                       onClick={() => setIsCorporateBooking(false)}
-                      className={`px-2.5 py-1 rounded text-[11px] font-bold transition-colors ${
-                        !isCorporateBooking ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                      className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        !isCorporateBooking ? `${activeBtnText}` : 'text-[#425466] dark:text-slate-400'
                       }`}
+                      style={!isCorporateBooking ? { backgroundColor: activeThemeColor } : undefined}
                     >
-                      Individual / Tourist
+                      Personal
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsCorporateBooking(true)}
-                      className={`px-2.5 py-1 rounded text-[11px] font-bold transition-colors ${
-                        isCorporateBooking ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                      className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        isCorporateBooking ? `${activeBtnText}` : 'text-[#425466] dark:text-slate-400'
                       }`}
+                      style={isCorporateBooking ? { backgroundColor: activeThemeColor } : undefined}
                     >
-                      Corporate / NGO
+                      Company / NGO
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Full Name</label>
+                    <label className="block font-semibold mb-1.5">Full Name</label>
                     <input
                       type="text"
                       required
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">WhatsApp / Phone Number</label>
+                    <label className="block font-semibold mb-1.5">Phone / WhatsApp</label>
                     <input
                       type="text"
                       required
                       value={clientPhone}
                       onChange={(e) => setClientPhone(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-400 font-mono outline-none"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Email (for travel voucher)</label>
+                    <label className="block font-semibold mb-1.5">Email (for your receipt)</label>
                     <input
                       type="email"
                       required
                       value={clientEmail}
                       onChange={(e) => setClientEmail(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Country of Residence</label>
+                    <label className="block font-semibold mb-1.5">Country</label>
                     <input
                       type="text"
                       value={countryResidence}
                       onChange={(e) => setCountryResidence(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                      className={inputClass}
                     />
                   </div>
                 </div>
 
-                {/* Corporate Specific Fields */}
                 {isCorporateBooking && (
-                  <div className="p-4 rounded-xl bg-blue-950/40 border border-blue-800/60 space-y-3">
-                    <span className="font-bold text-blue-300 block">Corporate Tax & Billing Data (RRA Invoicing):</span>
+                  <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 space-y-3">
+                    <span className="font-bold text-sky-900 dark:text-sky-300 block">
+                      Company Tax Receipt Info:
+                    </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Organization / Embassy</label>
+                        <label className="block font-semibold mb-1">Company Name</label>
                         <input
                           type="text"
                           value={organization}
                           onChange={(e) => setOrganization(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
+                          className={inputClass}
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">RRA TIN Number</label>
+                        <label className="block font-semibold mb-1">TIN Number</label>
                         <input
                           type="text"
                           value={tinNumber}
                           onChange={(e) => setTinNumber(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-amber-400 font-mono"
+                          className={`${inputClass} font-mono`}
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Purchase Order (PO) Ref</label>
+                        <label className="block font-semibold mb-1">Order Number</label>
                         <input
                           type="text"
                           value={purchaseOrderRef}
                           onChange={(e) => setPurchaseOrderRef(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
+                          className={`${inputClass} font-mono`}
                         />
                       </div>
                     </div>
@@ -2960,153 +2414,145 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 )}
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Special Flight or Trip Instructions</label>
+                  <label className="block font-semibold mb-1.5">Any Notes for Us?</label>
                   <textarea
                     rows={2}
                     value={specialRequests}
                     onChange={(e) => setSpecialRequests(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none"
+                    className={inputClass}
                   />
                 </div>
 
-                <div className="pt-4 border-t border-slate-800 flex justify-between">
-                  <button
-                    onClick={() => setBookingStep(2)}
-                    className="px-4 py-2 text-slate-400 hover:text-white text-xs"
-                  >
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between">
+                  <button onClick={() => setBookingStep(2)} className="px-4 py-2 text-sm font-semibold text-[#425466]">
                     ← Back
                   </button>
                   <button
                     onClick={() => setBookingStep(4)}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-md ${activeBtnText}`}
+                    className={`px-6 py-2.5 rounded-full font-semibold text-sm ${activeBtnText}`}
                     style={{ backgroundColor: activeThemeColor }}
                   >
-                    Next: Verification Details →
+                    Next: ID Check →
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 4: Document Verification (Section 8) */}
             {bookingStep === 4 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5 text-xs">
+              <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5 text-sm">
                 <div>
-                  <h2 className="text-sm font-bold text-white">Step 4: Driver License & Document Verification</h2>
-                  <p className="text-slate-400 text-xs mt-1">
+                  <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">Step 4: License & ID</h2>
+                  <p className="text-[#425466] dark:text-slate-400 mt-1">
                     {serviceType === 'self-drive'
-                      ? 'Required for self-drive insurance and Rwanda traffic police compliance.'
-                      : 'For chauffeur and airport transfers, basic ID verification ensures seamless vehicle dispatch.'}
+                      ? 'Needed for driving insurance in Rwanda.'
+                      : 'Needed so your driver can confirm it is you at pickup.'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Driving License Number</label>
+                    <label className="block font-semibold mb-1.5">Driving License Number</label>
                     <input
                       type="text"
                       value={drivingLicenseNumber}
                       onChange={(e) => setDrivingLicenseNumber(e.target.value)}
-                      placeholder="e.g. DL-RWA-2022-881"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                      placeholder="DL-RWA-2022-881"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Passport or National ID</label>
+                    <label className="block font-semibold mb-1.5">Passport or National ID</label>
                     <input
                       type="text"
                       value={passportNumber}
                       onChange={(e) => setPassportNumber(e.target.value)}
-                      placeholder="e.g. 1198980012345678"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                      placeholder="1198980012345678"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <span className="font-semibold text-white block">Digital Identity Verification Status</span>
-                    <span className="text-slate-400 text-[11px]">Encrypted & accessible only to authorized dispatch personnel</span>
+                <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-[#0a2540] dark:text-white block">ID Status</span>
+                    <span className="text-[#425466] dark:text-slate-400">Kept private and safe</span>
                   </div>
-                  <span className="text-emerald-400 font-bold flex items-center gap-1 font-mono text-xs">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
                     <CheckCircle className="w-4 h-4" />
-                    <span>Verified</span>
+                    <span>Checked</span>
                   </span>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800 flex justify-between">
-                  <button
-                    onClick={() => setBookingStep(3)}
-                    className="px-4 py-2 text-slate-400 hover:text-white text-xs"
-                  >
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between">
+                  <button onClick={() => setBookingStep(3)} className="px-4 py-2 text-sm font-semibold text-[#425466]">
                     ← Back
                   </button>
                   <button
                     onClick={() => setBookingStep(5)}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-md ${activeBtnText}`}
+                    className={`px-6 py-2.5 rounded-full font-semibold text-sm ${activeBtnText}`}
                     style={{ backgroundColor: activeThemeColor }}
                   >
-                    Next: Review & Payment Checkout →
+                    Next: Review & Pay →
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 5: Final Review & Checkout (Section 9) */}
             {bookingStep === 5 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5 text-xs">
-                <h2 className="text-sm font-bold text-white">Step 5: Review & Confirm Reservation</h2>
+              <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5 text-sm">
+                <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">Step 5: Check Price & Pay</h2>
 
-                {/* Transparent Financial Itemization */}
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 font-mono text-[11px]">
-                  <div className="flex justify-between text-slate-400">
-                    <span>Base Rental ({days} days @ {formatMoney(selectedVehicle.daily_rate_rwf)}/day):</span>
-                    <span className="text-white">{formatMoney(baseRentalRwf)}</span>
+                <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 font-mono">
+                  <div className="flex justify-between text-[#425466] dark:text-slate-400">
+                    <span>
+                      Car rent ({days} days × {formatMoney(selectedVehicle.daily_rate_rwf)}):
+                    </span>
+                    <span className="text-[#0a2540] dark:text-white">{formatMoney(baseRentalRwf)}</span>
                   </div>
 
                   {isSafariPeak && (
-                    <div className="flex justify-between text-amber-400">
-                      <span>+ High Safari Season Peak (+15%):</span>
+                    <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                      <span>+ Busy Season (+15%):</span>
                       <span>+{formatMoney(safariSurgeRwf)}</span>
                     </div>
                   )}
 
                   {isUpcountry && (
-                    <div className="flex justify-between text-amber-400">
-                      <span>+ Upcountry Safari Distance Allowance:</span>
+                    <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                      <span>+ Outside Kigali Trip Fee:</span>
                       <span>+{formatMoney(upcountrySurgeRwf)}</span>
                     </div>
                   )}
 
                   {totalAddonsRwf > 0 && (
-                    <div className="flex justify-between text-slate-300">
-                      <span>+ Selected Equipment & Add-ons:</span>
+                    <div className="flex justify-between text-[#425466] dark:text-slate-300">
+                      <span>+ Extras:</span>
                       <span>+{formatMoney(totalAddonsRwf)}</span>
                     </div>
                   )}
 
-                  <div className="flex justify-between text-emerald-400">
-                    <span>+ Rwanda Revenue Authority VAT (18%):</span>
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                    <span>+ Tax (18% VAT):</span>
                     <span>+{formatMoney(vatRwf)}</span>
                   </div>
 
-                  <div className="flex justify-between text-slate-400 pt-1 border-t border-slate-800">
-                    <span>Security Deposit (100% Refundable):</span>
-                    <span className="text-slate-300">{formatMoney(securityDepositRwf)}</span>
+                  <div className="flex justify-between text-[#425466] dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-slate-800">
+                    <span>Refundable Deposit (returned after trip):</span>
+                    <span>{formatMoney(securityDepositRwf)}</span>
                   </div>
 
-                  <div className="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
-                    <span>Grand Total:</span>
-                    <span className="text-amber-400 text-base">{formatMoney(grandTotalRwf)}</span>
+                  <div className="flex justify-between text-base font-bold text-[#0a2540] dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
+                    <span>Total Price:</span>
+                    <span style={{ color: activeThemeColor }}>{formatMoney(grandTotalRwf)}</span>
                   </div>
                 </div>
 
-                {/* Deposit Option Toggle */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label
-                    className={`p-3.5 rounded-xl border cursor-pointer ${
+                    className={`p-4 rounded-xl border cursor-pointer ${
                       paymentOption === 'deposit'
-                        ? 'bg-amber-500/10 border-amber-500 text-white'
-                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                        ? 'bg-amber-500/10 border-amber-500'
+                        : 'bg-[#f6f9fc] dark:bg-slate-950 border-slate-200 dark:border-slate-800'
                     }`}
                   >
                     <input
@@ -3116,18 +2562,18 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                       onChange={() => setPaymentOption('deposit')}
                       className="sr-only"
                     />
-                    <div className="font-bold text-xs">Pay 30% Deposit Now</div>
-                    <div className="font-mono text-sm text-amber-400 font-bold mt-1">
+                    <div className="font-bold">Pay 30% Now</div>
+                    <div className="font-mono text-base font-bold mt-1" style={{ color: activeThemeColor }}>
                       {formatMoney(depositToPayNowRwf)}
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Remaining balance on vehicle handover</div>
+                    <div className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">Pay the rest at pickup</div>
                   </label>
 
                   <label
-                    className={`p-3.5 rounded-xl border cursor-pointer ${
+                    className={`p-4 rounded-xl border cursor-pointer ${
                       paymentOption === 'full'
-                        ? 'bg-amber-500/10 border-amber-500 text-white'
-                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                        ? 'bg-amber-500/10 border-amber-500'
+                        : 'bg-[#f6f9fc] dark:bg-slate-950 border-slate-200 dark:border-slate-800'
                     }`}
                   >
                     <input
@@ -3137,83 +2583,75 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                       onChange={() => setPaymentOption('full')}
                       className="sr-only"
                     />
-                    <div className="font-bold text-xs">Pay 100% Full Total</div>
-                    <div className="font-mono text-sm text-emerald-400 font-bold mt-1">
+                    <div className="font-bold">Pay Full Amount Now</div>
+                    <div className="font-mono text-base text-emerald-600 dark:text-emerald-400 font-bold mt-1">
                       {formatMoney(grandTotalRwf)}
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Includes full settlement and EBM receipt</div>
+                    <div className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">All paid, nothing owed later</div>
                   </label>
                 </div>
 
-                {/* Payment Gateway Selector */}
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Select Payment Gateway</label>
+                  <label className="block font-semibold mb-1.5">How Will You Pay?</label>
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none font-medium"
+                    className={inputClass}
                   >
-                    <option value="MTN Mobile Money">MTN Mobile Money (*182# Prompt Dispatch)</option>
+                    <option value="MTN Mobile Money">MTN Mobile Money (*182#)</option>
                     <option value="Airtel Money">Airtel Money</option>
-                    <option value="Bank Transfer">Bank of Kigali / I&M Wire Transfer</option>
-                    <option value="Credit Card">Visa / Mastercard / Amex</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Credit Card">Visa / Mastercard</option>
                   </select>
                 </div>
 
                 {paymentMethod === 'MTN Mobile Money' && (
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">
-                      MTN MoMo Number for Instant PIN Prompt
-                    </label>
+                    <label className="block font-semibold mb-1.5">Your MTN MoMo Phone Number</label>
                     <input
                       type="text"
                       value={momoNumber}
                       onChange={(e) => setMomoNumber(e.target.value)}
                       placeholder="+250 788 123 456"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-400 font-mono font-bold"
+                      className={`${inputClass} font-mono font-bold`}
                     />
                   </div>
                 )}
 
-                {/* Terms Acceptance */}
-                <label className="flex items-start gap-2 pt-1 text-[11px] text-slate-300 cursor-pointer">
+                <label className="flex items-start gap-2.5 pt-1 text-sm text-[#425466] dark:text-slate-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={termsAgreed}
                     onChange={(e) => setTermsAgreed(e.target.checked)}
-                    className="mt-0.5 rounded text-amber-500 focus:ring-0"
+                    className="mt-1 w-4 h-4 rounded"
                   />
                   <span>
-                    I accept the rental terms, fuel full-to-full policy, and 72-hour cancellation rules of {companyDisplayName}.
+                    I agree to the rental rules (return full fuel tank, free cancel 3+ days before) of{' '}
+                    {companyDisplayName}.
                   </span>
                 </label>
 
                 {submissionError && (
-                  <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300">
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-sm text-rose-600 dark:text-rose-300">
                     {submissionError}
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-slate-800 flex justify-between">
-                  <button
-                    onClick={() => setBookingStep(4)}
-                    className="px-4 py-2 text-slate-400 hover:text-white text-xs"
-                  >
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between">
+                  <button onClick={() => setBookingStep(4)} className="px-4 py-2 text-sm font-semibold text-[#425466]">
                     ← Back
                   </button>
                   <button
                     onClick={handleConfirmReservation}
                     disabled={!termsAgreed || isSubmittingBooking}
-                    className={`py-3 px-6 rounded-xl font-bold text-xs shadow-md transition-all ${
+                    className={`py-3 px-6 rounded-full font-semibold text-sm ${
                       termsAgreed && !isSubmittingBooking
-                        ? `${activeBtnText} hover:brightness-105 active:scale-95`
-                        : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        ? `${activeBtnText}`
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                     }`}
                     style={termsAgreed && !isSubmittingBooking ? { backgroundColor: activeThemeColor } : undefined}
                   >
-                    {isSubmittingBooking
-                      ? 'Locking Inventory & Dispatching...'
-                      : `Confirm & Pay ${formatMoney(depositToPayNowRwf)}`}
+                    {isSubmittingBooking ? 'Saving Your Car...' : `Confirm & Pay ${formatMoney(depositToPayNowRwf)}`}
                   </button>
                 </div>
               </div>
@@ -3221,55 +2659,57 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 7: BOOKING CONFIRMATION (/booking/:slug/confirmation/:ref)
-        ===================================================================== */}
+        {/* VIEW 7: CONFIRMATION */}
         {currentView === 'confirmation' && confirmedBooking && (
           <div className="max-w-2xl mx-auto px-4 py-12 space-y-6">
-            <div className="p-6 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-center space-y-3">
-              <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-              <h1 className="text-xl font-extrabold text-white">Reservation Confirmed & Inventory Locked!</h1>
-              <div className="font-mono text-base text-amber-400 font-bold">
-                REFERENCE: #{bookingReferenceId || confirmedBooking.id}
+            <div className="p-8 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/40 text-center space-y-3">
+              <CheckCircle2 className="w-12 h-12 text-emerald-600 dark:text-emerald-400 mx-auto" />
+              <h1 className="text-2xl font-extrabold text-[#0a2540] dark:text-white">Your Car Is Booked!</h1>
+              <div className="font-mono text-base font-bold" style={{ color: activeThemeColor }}>
+                BOOKING CODE: #{bookingReferenceId || confirmedBooking.id}
               </div>
-              <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
-                An official confirmation SMS and email have been dispatched to <strong>{confirmedBooking.client_phone}</strong>. Your chauffeur and physical vehicle schedule are permanently locked.
+              <p className="text-sm text-[#425466] dark:text-slate-300 max-w-md mx-auto leading-relaxed">
+                We sent a text and email to <strong>{confirmedBooking.client_phone}</strong>. Your car is saved just for you.
               </p>
             </div>
 
-            {/* Next Steps Timeline (Section 10) */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 text-xs">
-              <h3 className="font-bold text-white text-sm">What Happens Next</h3>
+            <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 text-sm">
+              <h3 className="font-bold text-[#0a2540] dark:text-white text-base">What Happens Next</h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold shrink-0">1</div>
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+                    1
+                  </div>
                   <div>
-                    <strong className="text-white">Physical Vehicle Prep:</strong> Vehicle {selectedVehicle.plate_number} enters inspection and sanitization protocol.
+                    <strong>Car Prep:</strong> Car {selectedVehicle.plate_number} is cleaned and checked.
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold shrink-0">2</div>
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+                    2
+                  </div>
                   <div>
-                    <strong className="text-white">Chauffeur Contact:</strong> Your assigned driver details and live WhatsApp contact are sent 4 hours before pickup.
+                    <strong>Driver Message:</strong> We text you your driver's phone number 4 hours before pickup.
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold shrink-0">3</div>
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+                    3
+                  </div>
                   <div>
-                    <strong className="text-white">Meet & Greet:</strong> At KIA Arrivals Gate 1 or your designated address, your driver will present an official company signboard.
+                    <strong>Meet & Drive:</strong> Meet at Kigali Airport Gate 1 or your chosen pickup spot.
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <button
                 onClick={() => setCurrentView('voucher')}
-                className="w-full sm:w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700"
+                className="w-full sm:w-1/2 py-3 rounded-full bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white font-semibold text-sm flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
               >
                 <Printer className="w-4 h-4" />
-                <span>View Official Travel Voucher</span>
+                <span>Print Booking Pass</span>
               </button>
               <button
                 onClick={() => {
@@ -3278,297 +2718,202 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                   setTrackedBooking(confirmedBooking);
                   setCurrentView('track');
                 }}
-                className={`w-full sm:w-1/2 py-2.5 rounded-xl font-bold text-xs shadow-md ${activeBtnText}`}
+                className={`w-full sm:w-1/2 py-3 rounded-full font-semibold text-sm ${activeBtnText}`}
                 style={{ backgroundColor: activeThemeColor }}
               >
-                Track Live Booking Status →
+                Check Booking Status →
               </button>
             </div>
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 8: OFFICIAL TRAVEL DOCUMENT / VOUCHER (Section 11, Printable PDF)
-        ===================================================================== */}
+        {/* VIEW 8: PRINTABLE PASS */}
         {currentView === 'voucher' && (
           <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-            <div className="flex items-center justify-between no-print">
+            <div className="flex items-center justify-between">
               <button
                 onClick={() => setCurrentView('home')}
-                className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                className="text-sm font-semibold text-[#425466] dark:text-slate-400 flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Back to Storefront</span>
+                <span>Back Home</span>
               </button>
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-sm"
+                className={`px-5 py-2 rounded-full font-semibold text-sm flex items-center gap-2 ${activeBtnText}`}
+                style={{ backgroundColor: activeThemeColor }}
               >
                 <Printer className="w-4 h-4" />
                 <span>Print / Save PDF</span>
               </button>
             </div>
 
-            {/* Printable Letterhead Paper Document */}
-            <div className="p-8 sm:p-10 rounded-2xl bg-white text-slate-900 shadow-2xl border border-slate-300 space-y-6 font-sans">
-              {/* Header Letterhead */}
+            <div className="p-8 sm:p-10 rounded-2xl bg-white text-slate-900 shadow-lg border border-slate-200 space-y-6">
               <div className="flex items-start justify-between border-b-2 border-slate-900 pb-5">
                 <div>
-                  <h1 className="text-xl font-black uppercase tracking-wider text-slate-900">
-                    {companyDisplayName}
-                  </h1>
-                  <div className="text-xs text-slate-600 mt-0.5">
-                    RDB Registered Fleet Operator #RW-2024-9841 · Contrôle Technique Certified
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    Kigali International Airport Hub & Remera HQ, Kigali, Rwanda
-                  </div>
+                  <h1 className="text-xl font-extrabold uppercase text-slate-900">{companyDisplayName}</h1>
+                  <div className="text-sm text-slate-600 mt-0.5">Licensed Car Rental · Safety Checked</div>
+                  <div className="text-sm text-slate-600">Kigali Airport & Remera Office, Rwanda</div>
                 </div>
 
                 <div className="text-right">
-                  <span className="inline-block text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    CONFIRMED & GUARANTEED
+                  <span className="inline-block text-sm font-bold px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    CONFIRMED
                   </span>
-                  <div className="text-xs font-mono font-bold text-slate-800 mt-1">
-                    VOUCHER #{bookingReferenceId || confirmedBooking?.id || 'KGF-2026-90412'}
+                  <div className="text-sm font-mono font-bold text-slate-800 mt-1">
+                    PASS #{bookingReferenceId || confirmedBooking?.id || 'KGF-2026-90412'}
                   </div>
                 </div>
               </div>
 
-              {/* Barcode Mock & Verification Banner */}
-              <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex items-center justify-between text-xs">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase">Service Type:</span>
-                  <strong className="text-slate-900 capitalize">{serviceType} Service</strong>
+                  <span className="text-slate-500 block">Guest Name:</span>
+                  <strong className="text-slate-900">{confirmedBooking?.client_name || clientName}</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase">Booking Status:</span>
-                  <strong className="text-emerald-700">Physical Inventory Locked</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px] uppercase">RRA EBM Receipt:</span>
-                  <strong className="font-mono text-slate-900">EBM-2026-88491</strong>
-                </div>
-              </div>
-
-              {/* Customer & Vehicle Info Grid */}
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Lead Passenger:</span>
-                  <strong className="text-slate-900 text-sm">{confirmedBooking?.client_name || clientName}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Phone / WhatsApp:</span>
+                  <span className="text-slate-500 block">Phone / WhatsApp:</span>
                   <strong className="text-slate-900 font-mono">{confirmedBooking?.client_phone || clientPhone}</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Assigned Vehicle:</span>
-                  <strong className="text-slate-900 text-sm">
+                  <span className="text-slate-500 block">Car:</span>
+                  <strong className="text-slate-900">
                     {selectedVehicle.model_name} [{selectedVehicle.plate_number}]
                   </strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Rental Period:</span>
+                  <span className="text-slate-500 block">Dates:</span>
                   <strong className="text-slate-900 font-mono">
                     {startDate} to {endDate} ({days} days)
                   </strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Pickup Gate & Destination:</span>
+                  <span className="text-slate-500 block">Route:</span>
                   <strong className="text-slate-900">
                     {confirmedBooking?.destination || `${pickupLocation} -> ${returnLocation}`}
                   </strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">24/7 Dispatch Desk Hotline:</span>
-                  <strong className="text-amber-800 font-mono">{companyPhone}</strong>
+                  <span className="text-slate-500 block">24/7 Help Phone:</span>
+                  <strong className="font-mono">{companyPhone}</strong>
                 </div>
               </div>
 
-              {/* Financial Breakdown */}
-              <div className="border-t border-slate-200 pt-4 space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between text-slate-600">
-                  <span>Base Rental Rate ({days} days):</span>
-                  <span>{formatRwf(baseRentalRwf)}</span>
-                </div>
-                {safariSurgeRwf > 0 && (
-                  <div className="flex justify-between text-slate-600">
-                    <span>Safari Season Surcharge:</span>
-                    <span>{formatRwf(safariSurgeRwf)}</span>
-                  </div>
-                )}
-                {totalAddonsRwf > 0 && (
-                  <div className="flex justify-between text-slate-600">
-                    <span>Selected Equipment & Add-ons:</span>
-                    <span>{formatRwf(totalAddonsRwf)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-slate-600">
-                  <span>Rwanda 18% VAT (RRA Invoiced):</span>
-                  <span>{formatRwf(vatRwf)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-300 text-sm">
-                  <span>Total Amount Paid / Authorized:</span>
+              <div className="border-t border-slate-200 pt-4 space-y-1.5 text-sm font-mono">
+                <div className="flex justify-between font-bold text-slate-900 text-base">
+                  <span>Total Paid / Agreed:</span>
                   <span>{formatRwf(confirmedBooking?.total_rwf || grandTotalRwf)}</span>
                 </div>
-              </div>
-
-              {/* Pickup Instructions */}
-              <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs space-y-1.5 text-amber-950">
-                <strong className="block font-bold">Important Pickup Instructions:</strong>
-                <p>
-                  • For Airport Pickups: Proceed through Customs to Arrivals Gate 1. Your chauffeur will be holding an official signboard with your name.
-                </p>
-                <p>
-                  • For Self-Drive Handover: Present your original driving license and passport. Vehicle will be inspected and delivered with a 100% full fuel tank.
-                </p>
-              </div>
-
-              <div className="text-center text-[10px] text-slate-500 pt-4 border-t border-slate-200 font-mono">
-                Official travel document issued by {companyDisplayName}. Powered by KigaliFleet Platform.
               </div>
             </div>
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 9: LIVE BOOKING TRACKING (/booking/:slug/track)
-        ===================================================================== */}
+        {/* VIEW 9: CHECK BOOKING */}
         {currentView === 'track' && (
           <div className="max-w-3xl mx-auto px-4 py-12 space-y-8">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+            <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
               <div>
-                <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Search className="w-5 h-5 text-amber-400" />
-                  <span>Track Your Reservation Status</span>
+                <h1 className="text-2xl font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
+                  <Search className="w-5 h-5" style={{ color: activeThemeColor }} />
+                  <span>Check Your Booking</span>
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
-                  Enter your Booking Reference (e.g. KGF-2026-00128 or #bk-2026-089) and phone number.
+                <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">
+                  Enter your booking code (for example bk-2026-089) and phone number.
                 </p>
               </div>
 
-              <form onSubmit={handleTrackBookingLookup} className="space-y-4 text-xs">
+              <form onSubmit={handleTrackBookingLookup} className="space-y-4 text-sm">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Booking Reference</label>
+                    <label className="block font-semibold mb-1.5">Booking Code</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. KGF-2026-00128 or bk-2026-089"
+                      placeholder="bk-2026-089"
                       value={trackRefInput}
                       onChange={(e) => setTrackRefInput(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-400 font-mono font-bold outline-none"
+                      className={`${inputClass} font-mono font-bold`}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Customer Phone Number</label>
+                    <label className="block font-semibold mb-1.5">Phone Number</label>
                     <input
                       type="text"
                       placeholder="+250 788 123 456"
                       value={trackPhoneInput}
                       onChange={(e) => setTrackPhoneInput(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                 </div>
 
                 {trackError && (
-                  <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-xs text-rose-300">
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-sm text-rose-600 dark:text-rose-300">
                     {trackError}
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  className={`w-full py-2.5 rounded-xl font-bold text-xs shadow-md ${activeBtnText}`}
+                  className={`w-full py-3 rounded-full font-semibold text-sm ${activeBtnText}`}
                   style={{ backgroundColor: activeThemeColor }}
                 >
-                  Search Live Status
+                  Find My Booking
                 </button>
               </form>
 
-              {/* Tracked Booking Result */}
               {trackedBooking && (
-                <div className="mt-6 p-6 rounded-2xl bg-slate-950 border border-amber-500/30 space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="mt-6 p-6 rounded-2xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-5">
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                     <div>
-                      <span className="text-[10px] font-mono font-bold text-amber-400 uppercase">
-                        Reservation #{trackedBooking.id}
+                      <span className="text-sm font-mono font-bold" style={{ color: activeThemeColor }}>
+                        #{trackedBooking.id}
                       </span>
-                      <h3 className="text-base font-bold text-white mt-0.5">
+                      <h3 className="text-lg font-bold text-[#0a2540] dark:text-white mt-0.5">
                         {trackedBooking.client_name}
                       </h3>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    <span className="px-3 py-1 rounded-full text-sm font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
                       {trackedBooking.status}
                     </span>
                   </div>
 
-                  {/* 4-Stage Mission Timeline */}
-                  <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-mono">
-                    <div className="p-2.5 rounded-lg bg-slate-900 border border-emerald-500/40 text-emerald-400 font-bold">
-                      ✓ 1. Confirmed
-                    </div>
-                    <div className={`p-2.5 rounded-lg border ${
-                      trackedBooking.driver_id
-                        ? 'bg-slate-900 border-emerald-500/40 text-emerald-400 font-bold'
-                        : 'bg-slate-900 text-slate-500 border-slate-800'
-                    }`}>
-                      {trackedBooking.driver_id ? '✓ 2. Chauffeur Assigned' : '2. Assigning Chauffeur'}
-                    </div>
-                    <div className={`p-2.5 rounded-lg border ${
-                      trackedBooking.dispatch_status === 'Client Onboard' || trackedBooking.dispatch_status === 'Driver at Terminal'
-                        ? 'bg-slate-900 border-emerald-500/40 text-emerald-400 font-bold'
-                        : 'bg-slate-900 text-slate-500 border-slate-800'
-                    }`}>
-                      3. {trackedBooking.dispatch_status}
-                    </div>
-                    <div className={`p-2.5 rounded-lg border ${
-                      trackedBooking.status === 'Completed'
-                        ? 'bg-purple-950 text-purple-300 border-purple-500 font-bold'
-                        : 'bg-slate-900 text-slate-500 border-slate-800'
-                    }`}>
-                      4. Completed
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs bg-slate-900 p-4 rounded-xl">
+                  <div className="grid grid-cols-2 gap-3 text-sm bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Rental Period:</span>
-                      <span className="text-white font-mono font-semibold">
+                      <span className="text-[#425466] dark:text-slate-400 block">Dates:</span>
+                      <span className="font-mono font-semibold">
                         {trackedBooking.start_date} to {trackedBooking.end_date}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Pickup Destination:</span>
-                      <span className="text-white font-semibold truncate block">
-                        {trackedBooking.destination}
-                      </span>
+                      <span className="text-[#425466] dark:text-slate-400 block">Where:</span>
+                      <span className="font-semibold truncate block">{trackedBooking.destination}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Payment Status:</span>
-                      <span className="text-emerald-400 font-mono font-bold">
+                      <span className="text-[#425466] dark:text-slate-400 block">Payment:</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                         {trackedBooking.payment_status}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Total Booking Value:</span>
-                      <span className="text-amber-400 font-mono font-bold">
+                      <span className="text-[#425466] dark:text-slate-400 block">Total Price:</span>
+                      <span className="font-mono font-bold" style={{ color: activeThemeColor }}>
                         {formatRwf(trackedBooking.total_rwf)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-2">
+                  <div className="flex justify-end">
                     <button
                       onClick={() => {
                         setConfirmedBooking(trackedBooking);
                         setCurrentView('voucher');
                       }}
-                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 flex items-center gap-1.5"
+                      className="px-5 py-2 rounded-full bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white font-semibold text-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2"
                     >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>View Official Voucher</span>
+                      <Printer className="w-4 h-4" />
+                      <span>Open Booking Pass</span>
                     </button>
                   </div>
                 </div>
@@ -3577,119 +2922,121 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 10: CORPORATE MULTI-VEHICLE RFP QUOTATION (/booking/:slug/quote)
-        ===================================================================== */}
+        {/* VIEW 10: GROUP QUOTE */}
         {currentView === 'quote' && (
           <div className="max-w-2xl mx-auto px-4 py-12 space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 text-xs">
+            <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 text-sm">
               <div>
-                <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Building className="w-5 h-5 text-amber-400" />
-                  <span>Request Corporate Multi-Vehicle Quotation (RFP)</span>
+                <h1 className="text-2xl font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
+                  <Building className="w-5 h-5" style={{ color: activeThemeColor }} />
+                  <span>Ask for a Group Price</span>
                 </h1>
-                <p className="text-slate-400 mt-1">
-                  For NGOs, diplomatic embassies, governmental delegations, and multi-day international summits in Rwanda.
+                <p className="text-[#425466] dark:text-slate-400 mt-1">
+                  For NGOs, embassies, offices, and large events needing more than one car.
                 </p>
               </div>
 
               <form onSubmit={handleSubmitQuote} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Organization / Embassy Name</label>
+                    <label className="block font-semibold mb-1.5">Group or Company Name</label>
                     <input
                       type="text"
                       required
                       value={quoteOrganization}
                       onChange={(e) => setQuoteOrganization(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Lead Contact Person</label>
+                    <label className="block font-semibold mb-1.5">Your Name</label>
                     <input
                       type="text"
                       required
                       value={quoteContactName}
                       onChange={(e) => setQuoteContactName(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Official Email</label>
+                    <label className="block font-semibold mb-1.5">Email</label>
                     <input
                       type="email"
                       required
                       value={quoteEmail}
                       onChange={(e) => setQuoteEmail(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Telephone / WhatsApp</label>
+                    <label className="block font-semibold mb-1.5">Phone / WhatsApp</label>
                     <input
                       type="text"
                       required
                       value={quotePhone}
                       onChange={(e) => setQuotePhone(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-400 font-mono"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                  <span className="font-bold text-white block">Requested Fleet Allocation:</span>
+                <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <span className="font-bold text-[#0a2540] dark:text-white block">Cars Needed:</span>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-slate-400 font-semibold mb-1">4x4 Land Cruisers</label>
+                      <label className="block text-[#425466] dark:text-slate-400 font-semibold mb-1">4x4 Cars</label>
                       <select
                         value={quoteLandCruisers}
                         onChange={(e) => setQuoteLandCruisers(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
+                        className={inputClass}
                       >
                         {[0, 1, 2, 3, 5, 8, 10].map((n) => (
-                          <option key={n} value={n}>{n} Vehicles</option>
+                          <option key={n} value={n}>
+                            {n} Cars
+                          </option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-slate-400 font-semibold mb-1">30-Seat Coasters</label>
+                      <label className="block text-[#425466] dark:text-slate-400 font-semibold mb-1">Coaster Buses</label>
                       <select
                         value={quoteCoasters}
                         onChange={(e) => setQuoteCoasters(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
+                        className={inputClass}
                       >
                         {[0, 1, 2, 3, 4].map((n) => (
-                          <option key={n} value={n}>{n} Buses</option>
+                          <option key={n} value={n}>
+                            {n} Buses
+                          </option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-slate-400 font-semibold mb-1">Mission Duration</label>
+                      <label className="block text-[#425466] dark:text-slate-400 font-semibold mb-1">Days</label>
                       <input
                         type="number"
                         min={1}
                         max={60}
                         value={quoteDays}
                         onChange={(e) => setQuoteDays(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
+                        className={`${inputClass} font-mono`}
                       />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Itinerary / Security Notes</label>
+                  <label className="block font-semibold mb-1.5">Trip Notes</label>
                   <textarea
                     rows={3}
                     value={quoteNotes}
                     onChange={(e) => setQuoteNotes(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
+                    className={inputClass}
                   />
                 </div>
 
                 {quoteSuccessMsg && (
-                  <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300">
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
                     {quoteSuccessMsg}
                   </div>
                 )}
@@ -3698,16 +3045,16 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setCurrentView('home')}
-                    className="px-4 py-2 text-slate-400 hover:text-white"
+                    className="px-4 py-2 text-sm font-semibold text-[#425466]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className={`py-2.5 px-6 rounded-xl font-bold text-xs shadow-md ${activeBtnText}`}
+                    className={`py-2.5 px-6 rounded-full font-semibold text-sm ${activeBtnText}`}
                     style={{ backgroundColor: activeThemeColor }}
                   >
-                    Submit RFP Quotation
+                    Send Request
                   </button>
                 </div>
               </form>
@@ -3715,34 +3062,31 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 11: CUSTOMER SUPPORT & CONTACT (/booking/:slug/contact)
-        ===================================================================== */}
+        {/* VIEW 11: HELP & CONTACT */}
         {currentView === 'contact' && (
           <div className="max-w-4xl mx-auto px-4 py-12 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Left Column: Direct Contacts */}
               <div className="space-y-6">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 text-xs">
-                  <h3 className="text-sm font-bold text-white">Operations Desk</h3>
+                <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 text-sm">
+                  <h3 className="text-base font-bold text-[#0a2540] dark:text-white">Call or Message Us</h3>
                   <div className="space-y-3">
                     <div className="flex items-start gap-2.5">
-                      <Phone className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <Phone className="w-4 h-4 shrink-0 mt-1" style={{ color: activeThemeColor }} />
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Direct Phone:</span>
-                        <strong className="text-white font-mono">{companyPhone}</strong>
+                        <span className="text-[#425466] dark:text-slate-400 block">Phone:</span>
+                        <strong className="font-mono">{companyPhone}</strong>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-2.5">
-                      <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <MessageSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-1" />
                       <div>
-                        <span className="text-slate-400 block text-[10px]">WhatsApp Hotline:</span>
+                        <span className="text-[#425466] dark:text-slate-400 block">WhatsApp:</span>
                         <a
                           href="https://wa.me/250788312000"
                           target="_blank"
                           rel="noreferrer"
-                          className="text-emerald-400 font-mono font-bold hover:underline"
+                          className="text-emerald-600 dark:text-emerald-400 font-mono font-bold hover:underline"
                         >
                           +250 788 312 000
                         </a>
@@ -3750,153 +3094,142 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                     </div>
 
                     <div className="flex items-start gap-2.5">
-                      <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                      <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-1" />
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Airport Hub:</span>
-                        <span className="text-slate-300">
-                          Kigali International Airport Terminal Gate 1 & Remera HQ
-                        </span>
+                        <span className="text-[#425466] dark:text-slate-400 block">Office:</span>
+                        <span>Kigali Airport Gate 1 & Remera</span>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-2.5">
-                      <Clock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                      <Clock className="w-4 h-4 text-slate-400 shrink-0 mt-1" />
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Operating Hours:</span>
-                        <span className="text-slate-300">24/7 Flight Dispatch & Airport Standby</span>
+                        <span className="text-[#425466] dark:text-slate-400 block">Hours:</span>
+                        <span>Open 24 hours, every day</span>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="bg-amber-950/30 border border-amber-500/30 rounded-2xl p-5 text-xs space-y-2 text-amber-200">
-                  <strong className="block text-white font-bold">24/7 Roadside Assistance:</strong>
-                  <p className="text-[11px] leading-relaxed">
-                    Should you experience any tire puncture, battery drain, or mechanical alert while traveling upcountry, call our emergency hotline for immediate replacement vehicle deployment.
-                  </p>
-                </div>
               </div>
 
-              {/* Right Column: Support Ticket Form */}
-              <div className="md:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5 text-xs">
+              <div className="md:col-span-2 stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-5 text-sm">
                 <div>
-                  <h2 className="text-base font-bold text-white">Submit a Customer Support Ticket</h2>
-                  <p className="text-slate-400 mt-1">
-                    Every inquiry receives an official ticket reference and is reviewed by our lead dispatcher.
+                  <h2 className="text-xl font-bold text-[#0a2540] dark:text-white">Send Us a Help Message</h2>
+                  <p className="text-[#425466] dark:text-slate-400 mt-1">
+                    Our team reads every message and replies quickly.
                   </p>
                 </div>
 
                 {ticketSubmittedId ? (
-                  <div className="p-6 rounded-xl bg-emerald-950/60 border border-emerald-800 text-center space-y-3">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-                    <h3 className="text-base font-bold text-white">Ticket #{ticketSubmittedId} Submitted</h3>
-                    <p className="text-slate-300">
-                      Our dispatch team has received your inquiry. A response will be dispatched via SMS and email within 30 minutes.
+                  <div className="p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-3">
+                    <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                    <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Message #{ticketSubmittedId} Sent</h3>
+                    <p className="text-[#425466] dark:text-slate-300">
+                      We will reply by SMS or email within 30 minutes.
                     </p>
                     <button
                       onClick={() => setTicketSubmittedId(null)}
-                      className="px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold text-xs border border-slate-700"
+                      className="px-5 py-2 rounded-full bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white font-semibold text-sm border border-slate-200 dark:border-slate-700"
                     >
-                      Submit Another Inquiry
+                      Send Another Message
                     </button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmitTicket} className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Your Full Name</label>
+                        <label className="block font-semibold mb-1.5">Your Name</label>
                         <input
                           type="text"
                           required
                           value={ticketName}
                           onChange={(e) => setTicketName(e.target.value)}
-                          placeholder="e.g. David Henderson"
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
+                          placeholder="David Henderson"
+                          className={inputClass}
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Telephone / WhatsApp</label>
+                        <label className="block font-semibold mb-1.5">Phone / WhatsApp</label>
                         <input
                           type="text"
                           required
                           value={ticketPhone}
                           onChange={(e) => setTicketPhone(e.target.value)}
                           placeholder="+250 788 000 000"
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-400 font-mono"
+                          className={`${inputClass} font-mono`}
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Email Address</label>
+                        <label className="block font-semibold mb-1.5">Email</label>
                         <input
                           type="email"
                           required
                           value={ticketEmail}
                           onChange={(e) => setTicketEmail(e.target.value)}
-                          placeholder="your.name@example.com"
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
+                          placeholder="name@example.com"
+                          className={inputClass}
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Booking Reference (Optional)</label>
+                        <label className="block font-semibold mb-1.5">Booking Code (if you have one)</label>
                         <input
                           type="text"
                           value={ticketBookingRef}
                           onChange={(e) => setTicketBookingRef(e.target.value)}
-                          placeholder="e.g. KGF-2026-00128"
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono"
+                          placeholder="bk-2026-089"
+                          className={`${inputClass} font-mono`}
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Inquiry Category</label>
+                        <label className="block font-semibold mb-1.5">Topic</label>
                         <select
                           value={ticketCategory}
                           onChange={(e) => setTicketCategory(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-medium"
+                          className={inputClass}
                         >
-                          <option value="New booking inquiry">New booking inquiry</option>
-                          <option value="Existing reservation inquiry">Existing reservation inquiry</option>
-                          <option value="Flight delay adjustment">Flight delay adjustment</option>
-                          <option value="Payment / EBM receipt issue">Payment / EBM receipt issue</option>
-                          <option value="Vehicle handover question">Vehicle handover question</option>
-                          <option value="Cancellation / refund request">Cancellation / refund request</option>
+                          <option value="New booking question">New booking question</option>
+                          <option value="Question about a booking I already have">About my booking</option>
+                          <option value="Flight time changed">Flight time changed</option>
+                          <option value="Payment or tax receipt">Payment or tax receipt</option>
+                          <option value="Cancel or refund request">Cancel or refund</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Priority</label>
+                        <label className="block font-semibold mb-1.5">How Urgent?</label>
                         <select
                           value={ticketPriority}
                           onChange={(e) => setTicketPriority(e.target.value as any)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-medium"
+                          className={inputClass}
                         >
                           <option value="Normal">Normal</option>
-                          <option value="Urgent">Urgent (Flight Landing Soon)</option>
-                          <option value="Emergency">Emergency Roadside</option>
+                          <option value="Urgent">Urgent (Flight soon)</option>
+                          <option value="Emergency">Emergency on the road</option>
                         </select>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Message</label>
+                      <label className="block font-semibold mb-1.5">How Can We Help?</label>
                       <textarea
                         rows={4}
                         required
                         value={ticketMessage}
                         onChange={(e) => setTicketMessage(e.target.value)}
-                        placeholder="Please describe your question or requirement..."
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
+                        placeholder="Write your question here..."
+                        className={inputClass}
                       />
                     </div>
 
                     <div className="pt-2 flex justify-end">
                       <button
                         type="submit"
-                        className={`py-2.5 px-6 rounded-xl font-bold text-xs shadow-md ${activeBtnText}`}
+                        className={`py-2.5 px-6 rounded-full font-semibold text-sm ${activeBtnText}`}
                         style={{ backgroundColor: activeThemeColor }}
                       >
-                        Submit Support Ticket
+                        Send Help Message
                       </button>
                     </div>
                   </form>
@@ -3906,58 +3239,41 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 12: RENTAL TERMS & CONDITIONS (/booking/:slug/terms)
-        ===================================================================== */}
+        {/* VIEW 12: RENTAL RULES */}
         {currentView === 'terms' && (
-          <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 text-xs text-slate-300 leading-relaxed">
+          <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 text-sm leading-relaxed">
             <button
               onClick={() => setCurrentView('home')}
-              className="text-slate-400 hover:text-white flex items-center gap-1 mb-2"
+              className="text-[#425466] dark:text-slate-400 font-semibold flex items-center gap-1"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Storefront</span>
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back Home</span>
             </button>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6">
-              <h1 className="text-2xl font-extrabold text-white">Rental Terms and Conditions</h1>
-              <p className="text-slate-400">
-                Official contractual rental policies governing bookings made with {companyDisplayName}.
-              </p>
+            <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 space-y-6">
+              <h1 className="text-2xl font-extrabold text-[#0a2540] dark:text-white">Simple Rental Rules</h1>
 
-              <div className="space-y-4">
+              <div className="space-y-4 text-[#425466] dark:text-slate-300">
                 <div>
-                  <h3 className="text-white font-bold text-sm">01. Driver Eligibility & Licensing</h3>
+                  <h3 className="text-[#0a2540] dark:text-white font-bold text-base">01. Driver License</h3>
                   <p>
-                    Hirers must be at least 21 years old and possess a valid driving license held for at least one year. Foreign visitors may legally drive in Rwanda for up to 90 days with their original driving license in English or French, or an International Driving Permit.
+                    Drivers must be 21 or older with a valid license held for at least 1 year. Visitors may use an English or French license for 90 days.
                   </p>
                 </div>
-
                 <div>
-                  <h3 className="text-white font-bold text-sm">02. Fuel Policy: Full-to-Full</h3>
+                  <h3 className="text-[#0a2540] dark:text-white font-bold text-base">02. Fuel</h3>
+                  <p>We give you the car with a full tank. Please return it with a full tank.</p>
+                </div>
+                <div>
+                  <h3 className="text-[#0a2540] dark:text-white font-bold text-base">03. Distance</h3>
                   <p>
-                    All vehicles are handed over with a 100% full fuel tank and must be returned with a 100% full tank. If returned below full, refueling is billed at standard pump price plus a 5,000 RWF service convenience charge.
+                    Drive as many kilometers as you want inside Rwanda. Leaving Rwanda requires written permission first.
                   </p>
                 </div>
-
                 <div>
-                  <h3 className="text-white font-bold text-sm">03. Unlimited Mileage in Rwanda</h3>
+                  <h3 className="text-[#0a2540] dark:text-white font-bold text-base">04. Deposit</h3>
                   <p>
-                    Rentals include unlimited kilometers within all 30 administrative districts of Rwanda. Travel outside Rwanda (e.g., Uganda, DRC, Burundi, Tanzania) requires prior written authorization, a COMESA Yellow Card endorsement, and cross-border customs bond papers.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-white font-bold text-sm">04. Security Deposit & Handover</h3>
-                  <p>
-                    A refundable security deposit of 150,000 RWF ($110 USD) is pre-authorized prior to vehicle handover. Upon return and physical condition check, the deposit is refunded immediately to your MTN MoMo or credit card within 24 hours.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-white font-bold text-sm">05. RRA Tax Invoicing (EBM v2.0)</h3>
-                  <p>
-                    In accordance with Rwanda Revenue Authority law, an 18% VAT electronic invoice is generated for every reservation with valid customer TIN.
+                    A 150,000 RWF ($110) deposit is held when you take the car and given back within 24 hours after return.
                   </p>
                 </div>
               </div>
@@ -3965,160 +3281,138 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 13: CANCELLATION & REFUND POLICY (/booking/:slug/cancellation-policy)
-        ===================================================================== */}
+        {/* VIEW 13: CANCEL & REFUNDS */}
         {currentView === 'cancellation' && (
-          <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 text-xs text-slate-300 leading-relaxed">
+          <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 text-sm leading-relaxed">
             <button
               onClick={() => setCurrentView('home')}
-              className="text-slate-400 hover:text-white flex items-center gap-1 mb-2"
+              className="text-[#425466] dark:text-slate-400 font-semibold flex items-center gap-1"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Storefront</span>
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back Home</span>
             </button>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6">
-              <h1 className="text-2xl font-extrabold text-white">Cancellation & Refund Policy</h1>
-              <p className="text-slate-400">
-                Transparent cancellation windows and automated refund schedules.
-              </p>
+            <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 space-y-6">
+              <h1 className="text-2xl font-extrabold text-[#0a2540] dark:text-white">Cancel & Refund Rules</h1>
 
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 font-mono">
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="font-bold text-white">Notice Period Prior to Trip</span>
-                  <span className="font-bold text-white">Eligible Refund</span>
+              <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3 font-mono">
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                  <span>7+ days before pickup:</span>
+                  <span>100% refund</span>
                 </div>
-                <div className="flex justify-between text-emerald-400">
-                  <span>More than 7 days before pickup:</span>
-                  <span>100% Full Deposit Refund</span>
-                </div>
-                <div className="flex justify-between text-amber-400">
+                <div className="flex justify-between text-amber-600 dark:text-amber-400">
                   <span>3 to 7 days before pickup:</span>
-                  <span>50% Deposit Refund</span>
+                  <span>50% refund</span>
                 </div>
-                <div className="flex justify-between text-rose-400">
-                  <span>Less than 72 hours before pickup:</span>
-                  <span>Deposit Retained (Scheduling Lock)</span>
+                <div className="flex justify-between text-rose-600 dark:text-rose-400">
+                  <span>Under 3 days before pickup:</span>
+                  <span>No deposit refund</span>
                 </div>
               </div>
 
-              {/* Submit Cancellation Request Form */}
-              <div className="pt-4 border-t border-slate-800 space-y-4">
-                <h3 className="text-sm font-bold text-white">Submit a Cancellation Request</h3>
-                <form onSubmit={handleSubmitCancellation} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Booking Reference</label>
-                      <input
-                        type="text"
-                        required
-                        value={cancelBookingRef}
-                        onChange={(e) => setCancelBookingRef(e.target.value)}
-                        placeholder="e.g. KGF-2026-00128"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Telephone for MoMo Refund</label>
-                      <input
-                        type="text"
-                        required
-                        value={cancelPhone}
-                        onChange={(e) => setCancelPhone(e.target.value)}
-                        placeholder="+250 788 123 456"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-400 font-mono"
-                      />
-                    </div>
-                  </div>
-
+              <form onSubmit={handleSubmitCancellation} className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-[#0a2540] dark:text-white">Ask to Cancel a Booking</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Reason for Cancellation</label>
-                    <textarea
-                      rows={2}
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
+                    <label className="block font-semibold mb-1.5">Booking Code</label>
+                    <input
+                      type="text"
+                      required
+                      value={cancelBookingRef}
+                      onChange={(e) => setCancelBookingRef(e.target.value)}
+                      placeholder="bk-2026-089"
+                      className={`${inputClass} font-mono`}
                     />
                   </div>
-
-                  {cancelSuccessMsg && (
-                    <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300">
-                      {cancelSuccessMsg}
-                    </div>
-                  )}
-
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors"
-                    >
-                      Submit Official Cancellation Request
-                    </button>
+                  <div>
+                    <label className="block font-semibold mb-1.5">MoMo Phone for Refund</label>
+                    <input
+                      type="text"
+                      required
+                      value={cancelPhone}
+                      onChange={(e) => setCancelPhone(e.target.value)}
+                      placeholder="+250 788 123 456"
+                      className={`${inputClass} font-mono`}
+                    />
                   </div>
-                </form>
-              </div>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1.5">Why are you canceling?</label>
+                  <textarea
+                    rows={2}
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                {cancelSuccessMsg && (
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                    {cancelSuccessMsg}
+                  </div>
+                )}
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm"
+                  >
+                    Send Cancel Request
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
 
-        {/* =====================================================================
-            VIEW 14: SEARCHABLE FAQ (/booking/:slug/faq)
-        ===================================================================== */}
+        {/* VIEW 14: FAQ */}
         {currentView === 'faq' && (
           <div className="max-w-4xl mx-auto px-4 py-12 space-y-8">
             <div className="space-y-4">
               <button
                 onClick={() => setCurrentView('home')}
-                className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                className="text-sm font-semibold text-[#425466] dark:text-slate-400 flex items-center gap-1"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Storefront</span>
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back Home</span>
               </button>
-              <h1 className="text-2xl font-extrabold text-white">Frequently Asked Questions</h1>
-              <p className="text-xs text-slate-400">
-                Detailed answers regarding licenses, airport meeting gates, national parks, and payments.
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white">Common Questions</h1>
 
-              {/* Search Bar */}
               <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 <input
                   type="text"
-                  placeholder="Search questions (e.g. airport delay, deposit, gorillas, MoMo)..."
+                  placeholder="Type a word (e.g. airport, deposit, park, MoMo)..."
                   value={faqSearch}
                   onChange={(e) => setFaqSearch(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white outline-none focus:border-amber-400"
+                  className={`${inputClass} pl-10`}
                 />
               </div>
             </div>
 
-            {/* Accordion Items */}
             <div className="space-y-3">
               {[
                 {
-                  q: 'What documents do I need to rent a self-drive vehicle in Rwanda?',
-                  a: 'A valid National Driving License (or International Driving Permit for foreign visitors) and a Passport or National ID. For tourists, foreign driving licenses in English or French are legally accepted for up to 90 days in Rwanda.',
+                  q: 'What papers do I need to drive myself in Rwanda?',
+                  a: 'A valid driving license and your passport or national ID. Foreign licenses in English or French work for up to 90 days.',
                 },
                 {
-                  q: 'How does the Collision-Guarded booking system protect my reservation?',
-                  a: 'Our platform performs real-time physical inventory checks across every vehicle and date. Once you submit your reservation, the vehicle is atomically locked down to the millisecond, completely preventing double-bookings or replacement substitutions.',
+                  q: 'How do I know nobody else took my car?',
+                  a: 'When you book, the car dates lock right away so no one else can book the same car.',
                 },
                 {
-                  q: 'What happens if my flight to Kigali International Airport (KIA) is delayed?',
-                  a: 'Our dispatch center tracks inbound flights (RwandAir, Ethiopian, Qatar, KLM, Brussels Airlines) in real-time. When a flight is delayed, our dispatch team auto-adjusts the chauffeur pickup time without any extra waiting fees.',
+                  q: 'What if my flight to Kigali is late?',
+                  a: 'We watch your flight time and hold your driver at no extra waiting fee.',
                 },
                 {
-                  q: 'Can I travel to Akagera National Park, Nyungwe, or Volcanoes Gorilla Trek?',
-                  a: 'Yes! All our 4x4 SUVs and safari vans are authorized for travel across all 30 districts of Rwanda. When traveling upcountry, we ensure the vehicle is equipped with high ground clearance, emergency spare tire, and full police clearance documentation.',
+                  q: 'Can I drive to Akagera, Nyungwe, or Volcanoes Park?',
+                  a: 'Yes! Our 4x4 cars and safari vans can travel to every park and district in Rwanda.',
                 },
                 {
-                  q: 'How are security deposits and refunds processed?',
-                  a: 'A refundable security deposit (RWF 150,000 / $110 USD) is authorized at vehicle handover. Upon return and vehicle inspection, the deposit is refunded immediately to your MTN Mobile Money or bank card within 24 hours.',
+                  q: 'How do I get my deposit back?',
+                  a: 'After you return the car in good shape, we send back your 150,000 RWF ($110) deposit via MoMo or card within 24 hours.',
                 },
                 {
-                  q: 'Can I request multiple vehicles for an NGO delegation or conference?',
-                  a: 'Yes, our corporate quotation RFP tool allows you to select combinations of 4x4 Land Cruisers, 30-seat Coaster buses, and executive town sedans under a single consolidated pro-forma invoice.',
+                  q: 'Can my office book several cars together?',
+                  a: 'Yes, use the "Group & Business Quote" page to ask for a price on multiple 4x4s, buses, or sedans.',
                 },
               ]
                 .filter(
@@ -4130,21 +3424,21 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 .map((faq, idx) => (
                   <div
                     key={idx}
-                    className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden"
                   >
                     <button
                       onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
-                      className="w-full p-4 text-left flex items-center justify-between text-xs font-bold text-slate-200 hover:text-white"
+                      className="w-full p-4 text-left flex items-center justify-between text-base font-semibold text-[#0a2540] dark:text-slate-100"
                     >
                       <span>{faq.q}</span>
                       {openFaqIndex === idx ? (
-                        <ChevronUp className="w-4 h-4 text-amber-400" />
+                        <ChevronUp className="w-4 h-4 shrink-0" style={{ color: activeThemeColor }} />
                       ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-500" />
+                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                       )}
                     </button>
                     {openFaqIndex === idx && (
-                      <div className="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3">
+                      <div className="px-4 pb-4 text-sm text-[#425466] dark:text-slate-400 leading-relaxed border-t border-slate-200 dark:border-slate-800 pt-3">
                         {faq.a}
                       </div>
                     )}
@@ -4155,110 +3449,120 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
         )}
       </main>
 
-      {/* =========================================================================
-          FOOTER (Section 10 & 12: Business Identity & Legal Mirrors)
-      ========================================================================= */}
-      <footer className="mt-auto border-t border-slate-800 bg-slate-900/95 py-12 px-4 sm:px-8 text-xs">
+      <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-12 px-4 sm:px-8 text-sm">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-slate-950"
+                className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${activeBtnText}`}
                 style={{ backgroundColor: activeThemeColor }}
               >
                 <Car className="w-4 h-4 stroke-[2.5]" />
               </div>
-              <span className="font-extrabold text-white text-sm">
-                {companyDisplayName}
-              </span>
+              <span className="font-extrabold text-[#0a2540] dark:text-white text-base">{companyDisplayName}</span>
             </div>
-            <p className="text-slate-400 leading-relaxed">
-              Official fleet operator in Rwanda. Direct customer reservations with guaranteed physical inventory and RRA EBM invoicing.
+            <p className="text-[#425466] dark:text-slate-400 leading-relaxed">
+              Trusted car rental in Rwanda. Clean cars, clear prices, and official tax receipts.
             </p>
-            <div className="text-[11px] text-slate-500 font-mono">
-              RDB Reg: 109823471 · Contrôle Technique Certified
-            </div>
           </div>
 
           <div className="space-y-2">
-            <span className="font-bold text-white uppercase tracking-wider text-[11px] block">
-              Mobility Services
-            </span>
-            <ul className="space-y-1.5 text-slate-400">
+            <span className="font-bold text-[#0a2540] dark:text-white block">Trips</span>
+            <ul className="space-y-1.5 text-[#425466] dark:text-slate-400">
               <li>
-                <button onClick={() => { setServiceType('self-drive'); setCurrentView('home'); }} className="hover:text-white">
-                  Self-Drive Safari 4x4
+                <button
+                  onClick={() => {
+                    setServiceType('self-drive');
+                    setCurrentView('home');
+                  }}
+                  className="hover:text-[#0a2540] dark:hover:text-white"
+                >
+                  Drive Yourself 4x4
                 </button>
               </li>
               <li>
-                <button onClick={() => { setServiceType('chauffeur'); setCurrentView('home'); }} className="hover:text-white">
-                  Chauffeur-Driven VIP Shuttles
+                <button
+                  onClick={() => {
+                    setServiceType('chauffeur');
+                    setCurrentView('home');
+                  }}
+                  className="hover:text-[#0a2540] dark:hover:text-white"
+                >
+                  With a Driver
                 </button>
               </li>
               <li>
-                <button onClick={() => { setServiceType('airport'); setCurrentView('home'); }} className="hover:text-white">
-                  Kigali Airport (KIA) Transfers
+                <button
+                  onClick={() => {
+                    setServiceType('airport');
+                    setCurrentView('home');
+                  }}
+                  className="hover:text-[#0a2540] dark:hover:text-white"
+                >
+                  Kigali Airport Pickup
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView('quote')} className="hover:text-white">
-                  Corporate & NGO Multi-Vehicle RFP
+                <button
+                  onClick={() => setCurrentView('quote')}
+                  className="hover:text-[#0a2540] dark:hover:text-white"
+                >
+                  Group & Business Quote
                 </button>
               </li>
             </ul>
           </div>
 
           <div className="space-y-2">
-            <span className="font-bold text-white uppercase tracking-wider text-[11px] block">
-              Policies & Support
-            </span>
-            <ul className="space-y-1.5 text-slate-400">
+            <span className="font-bold text-[#0a2540] dark:text-white block">Rules & Help</span>
+            <ul className="space-y-1.5 text-[#425466] dark:text-slate-400">
               <li>
-                <button onClick={() => setCurrentView('terms')} className="hover:text-white">
-                  Rental Terms & Conditions
+                <button onClick={() => setCurrentView('terms')} className="hover:text-[#0a2540] dark:hover:text-white">
+                  Rental Rules
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView('cancellation')} className="hover:text-white">
-                  72-Hour Cancellation Policy
+                <button
+                  onClick={() => setCurrentView('cancellation')}
+                  className="hover:text-[#0a2540] dark:hover:text-white"
+                >
+                  Cancel & Refunds
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView('faq')} className="hover:text-white">
-                  Frequently Asked Questions
+                <button onClick={() => setCurrentView('faq')} className="hover:text-[#0a2540] dark:hover:text-white">
+                  Common Questions
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView('contact')} className="hover:text-white">
-                  Submit Support Ticket
+                <button onClick={() => setCurrentView('contact')} className="hover:text-[#0a2540] dark:hover:text-white">
+                  Contact Help Desk
                 </button>
               </li>
             </ul>
           </div>
 
           <div className="space-y-2">
-            <span className="font-bold text-white uppercase tracking-wider text-[11px] block">
-              24/7 Dispatch Desk
-            </span>
-            <div className="space-y-1 text-slate-300">
-              <div className="flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-amber-400" />
+            <span className="font-bold text-[#0a2540] dark:text-white block">24/7 Phone Desk</span>
+            <div className="space-y-1.5 text-[#425466] dark:text-slate-300">
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4" style={{ color: activeThemeColor }} />
                 <span className="font-mono">{companyPhone}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>WhatsApp: +250 788 312 000</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                <span>KIA Terminal Hub & Remera HQ</span>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-slate-400" />
+                <span>Kigali Airport & Remera</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto pt-8 mt-8 border-t border-slate-800 text-center text-slate-500 text-[11px]">
-          © 2026 {companyDisplayName}. All rights reserved. Powered by KigaliFleet SaaS platform.
+        <div className="max-w-7xl mx-auto pt-8 mt-8 border-t border-slate-200 dark:border-slate-800 text-center text-[#425466] dark:text-slate-500 text-sm">
+          © 2026 {companyDisplayName}. All rights reserved.
         </div>
       </footer>
     </div>

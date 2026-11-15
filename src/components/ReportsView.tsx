@@ -14,8 +14,6 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Star,
-  Fuel,
-  Wrench,
   Clock,
   Building,
   CreditCard,
@@ -49,10 +47,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const [period, setPeriod] = useState<PeriodFilter>('this_month');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeReportTab, setActiveReportTab] = useState<ReportTab>('utilization');
-  const [searchQuery, setSearchQuery] = useState('');
   const [showExportToast, setShowExportToast] = useState(false);
 
-  // Period label
   const periodLabel = useMemo(() => {
     switch (period) {
       case 'this_month':
@@ -62,16 +58,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       case 'last_30_days':
         return 'Last 30 Days';
       case 'q2_2026':
-        return 'Q2 2026 (Apr - Jun)';
+        return 'Apr – Jun 2026';
       case 'ytd_2026':
-        return 'Year to Date 2026';
+        return 'This Year (2026)';
       case 'all':
       default:
         return 'All Time';
     }
   }, [period]);
 
-  // Days in selected period for utilization math
   const daysInPeriod = useMemo(() => {
     switch (period) {
       case 'this_month':
@@ -83,26 +78,17 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       case 'q2_2026':
         return 91;
       case 'ytd_2026':
-        return 151; // Jan 1 - May 31
+        return 151;
       case 'all':
       default:
         return 180;
     }
   }, [period]);
 
-  // Filtered vehicles
   const filteredVehicles = useMemo(() => {
-    return vehicles.filter((v) => {
-      const matchesCategory = selectedCategory === 'all' || v.category === selectedCategory;
-      const matchesSearch =
-        v.plate_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.model_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.category.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [vehicles, selectedCategory, searchQuery]);
+    return vehicles.filter((v) => selectedCategory === 'all' || v.category === selectedCategory);
+  }, [vehicles, selectedCategory]);
 
-  // Financial aggregates
   const financials = useMemo(() => {
     const totalGrossRevenue = bookings.reduce((sum, b) => {
       if (b.status === 'Cancelled') return sum;
@@ -121,11 +107,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       return sum;
     }, 0);
 
-    // VAT 18% calculation for RRA EBM standard
     const totalVAT = Math.round((totalGrossRevenue * 18) / 118);
     const totalNetRevenue = totalGrossRevenue - totalVAT;
 
-    // Maintenance estimate: 12% of gross revenue plus base servicing
     const estimatedMaintenance = Math.round(totalGrossRevenue * 0.11) + 450000;
     const netFleetProfit = totalGrossRevenue - estimatedMaintenance;
     const netMarginPct = totalGrossRevenue > 0 ? Math.round((netFleetProfit / totalGrossRevenue) * 100) : 0;
@@ -142,12 +126,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     };
   }, [bookings, payments]);
 
-  // Fleet utilization metrics
   const utilizationMetrics = useMemo(() => {
     const totalCapacityDays = vehicles.length * daysInPeriod;
     let totalBookedDays = 0;
 
-    // Map booked days per vehicle
     const vehicleDaysMap: Record<string, number> = {};
     const vehicleRevenueMap: Record<string, number> = {};
 
@@ -181,7 +163,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     };
   }, [vehicles, bookings, daysInPeriod]);
 
-  // Category breakdown
   const categoryStats = useMemo(() => {
     const categories = ['RAV4', 'LandCruiser', 'Coaster', 'Safari Van', 'Luxury Sedan'];
     return categories.map((cat) => {
@@ -212,29 +193,20 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     });
   }, [vehicles, bookings, daysInPeriod]);
 
-  // Driver metrics
   const driverPerformance = useMemo(() => {
     return drivers.map((driver) => {
       const driverBookings = bookings.filter((b) => b.driver_id === driver.id && b.status !== 'Cancelled');
-      const completedTrips = driverBookings.filter((b) => b.status === 'Completed').length;
-      const activeTrips = driverBookings.filter((b) => b.status === 'In Progress').length;
       const totalDrivenRevenue = driverBookings.reduce((sum, b) => sum + b.total_rwf, 0);
-
-      // On time score (94% - 100% realistic high score in Rwanda)
       const onTimePct = driver.trips_completed > 15 ? 98.4 : 96.0;
 
       return {
         ...driver,
-        assignedTripsCount: driverBookings.length,
-        completedTripsCount: completedTrips,
-        activeTripsCount: activeTrips,
         revenueGenerated: totalDrivenRevenue,
         onTimePct,
       };
     });
   }, [drivers, bookings]);
 
-  // Payment channel distribution
   const paymentChannelStats = useMemo(() => {
     const momoPayments = payments.filter((p) => p.payment_method === 'MTN Mobile Money' || p.payment_method === 'Airtel Money');
     const bankPayments = payments.filter((p) => p.payment_method === 'Bank Transfer');
@@ -252,35 +224,34 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         pct: Math.round((momoTotal / grandTotal) * 100),
         count: momoPayments.length,
         icon: DollarSign,
-        color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+        color: 'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20',
       },
       {
-        channel: 'Bank of Kigali (Wire)',
+        channel: 'Bank Transfers',
         amount: bankTotal,
         pct: Math.round((bankTotal / grandTotal) * 100),
         count: bankPayments.length,
         icon: Building,
-        color: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+        color: 'text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-500/10 dark:border-blue-500/20',
       },
       {
-        channel: 'Cards & Corporate Invoices',
+        channel: 'Cards & Cash',
         amount: cardTotal,
         pct: Math.round((cardTotal / grandTotal) * 100),
         count: cardPayments.length,
         icon: CreditCard,
-        color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+        color: 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20',
       },
     ];
   }, [payments]);
 
-  // Customer segment distribution
   const customerSegmentStats = useMemo(() => {
-    const segments: Record<string, { count: number; totalSpent: number }> = {
-      'Corporate': { count: 0, totalSpent: 0 },
-      'NGO / Diplomatic': { count: 0, totalSpent: 0 },
-      'Tourist / Expat': { count: 0, totalSpent: 0 },
-      'Travel Agency': { count: 0, totalSpent: 0 },
-      'Individual': { count: 0, totalSpent: 0 },
+    const segments: Record<string, { label: string; count: number; totalSpent: number }> = {
+      Corporate: { label: 'Companies', count: 0, totalSpent: 0 },
+      'NGO / Diplomatic': { label: 'NGOs & Embassies', count: 0, totalSpent: 0 },
+      'Tourist / Expat': { label: 'Visitors & Tourists', count: 0, totalSpent: 0 },
+      'Travel Agency': { label: 'Tour Partners', count: 0, totalSpent: 0 },
+      Individual: { label: 'Personal Customers', count: 0, totalSpent: 0 },
     };
 
     customers.forEach((c) => {
@@ -291,15 +262,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
     const totalSpentAll = Object.values(segments).reduce((s, x) => s + x.totalSpent, 0) || 1;
 
-    return Object.entries(segments).map(([name, data]) => ({
-      name,
+    return Object.entries(segments).map(([key, data]) => ({
+      name: data.label || key,
       count: data.count,
       totalSpent: data.totalSpent,
       pct: Math.round((data.totalSpent / totalSpentAll) * 100),
     }));
   }, [customers]);
 
-  // Booking funnel metrics
   const funnelMetrics = useMemo(() => {
     const total = bookings.length || 1;
     const confirmed = bookings.filter((b) => b.status === 'Confirmed').length;
@@ -318,19 +288,17 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     };
   }, [bookings]);
 
-  // Export CSV handler
   const handleExportCSV = () => {
     const rows = [
-      ['KigaliFleet Operational & Utilization Report'],
+      ['KigaliFleet Money and Car Report'],
       ['Period', periodLabel],
-      ['Generated On', new Date().toISOString()],
-      ['Gross Fleet Revenue (RWF)', financials.grossRevenue.toString()],
-      ['Fleet Utilization Rate', `${utilizationMetrics.fleetUtilizationPct}%`],
-      ['Total Active Vehicles', vehicles.length.toString()],
-      ['Total Trips Recorded', bookings.length.toString()],
+      ['Total Money Earned (RWF)', financials.grossRevenue.toString()],
+      ['Cars Used Rate', `${utilizationMetrics.fleetUtilizationPct}%`],
+      ['Total Cars', vehicles.length.toString()],
+      ['Total Trips', bookings.length.toString()],
       [''],
-      ['Vehicle Breakdown'],
-      ['Plate Number', 'Model', 'Category', 'Daily Rate (RWF)', 'Days Booked', 'Utilization %', 'Gross Revenue (RWF)', 'Estimated Maintenance (RWF)', 'Net Profit (RWF)'],
+      ['Car Breakdown'],
+      ['Plate Number', 'Car', 'Type', 'Day Price (RWF)', 'Days Booked', 'Used %', 'Money Earned (RWF)', 'Repair Cost (RWF)', 'Money Left (RWF)'],
       ...vehicles.map((v) => {
         const days = utilizationMetrics.vehicleDaysMap[v.id] || 0;
         const rev = utilizationMetrics.vehicleRevenueMap[v.id] || 0;
@@ -349,24 +317,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           net.toString(),
         ];
       }),
-      [''],
-      ['Chauffeur Mission Performance'],
-      ['Driver Name', 'Phone', 'Trips Completed', 'Rating', 'Languages', 'License'],
-      ...drivers.map((d) => [
-        d.name,
-        d.phone,
-        d.trips_completed.toString(),
-        `${d.rating} / 5.0`,
-        d.language,
-        d.license_number,
-      ]),
     ];
 
     const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.join(',')).join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `kigalifleet_analytics_${period}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `kigalifleet_report_${period}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -377,260 +334,207 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Toast notification */}
       {showExportToast && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-lg shadow-xl animate-fade-in text-sm font-semibold">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-full shadow-xl text-sm font-bold">
           <CheckCircle2 className="w-5 h-5" />
-          <span>Report downloaded: kigalifleet_analytics_{period}.csv</span>
+          <span>File saved: kigalifleet_report_{period}.csv</span>
         </div>
       )}
 
-      {/* Top Banner & Title Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm"
-              style={{ backgroundColor: currentTheme.hex }}
-            >
-              <BarChart3 className="w-5 h-5" />
+      {/* Top Header */}
+      <div className="stripe-card flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl">
+        <div className="flex items-start gap-3.5">
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white shadow-sm shrink-0"
+            style={{ backgroundColor: currentTheme.hex }}
+          >
+            <BarChart3 className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white tracking-tight">
+                Reports & Money
+              </h1>
+              <span className="text-sm font-mono px-3 py-0.5 rounded-full bg-[#f6f9fc] dark:bg-slate-800 text-[#0a2540] dark:text-slate-200 font-semibold border border-slate-200 dark:border-slate-700">
+                {periodLabel}
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-extrabold text-white tracking-tight">Reports & Fleet Analytics</h1>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold border border-slate-700">
-                  {periodLabel}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                Real-time utilization, vehicle ROI, chauffeur scorecards, and RRA EBM tax compliance summaries
-              </p>
-            </div>
+            <p className="text-base text-[#425466] dark:text-slate-300 mt-1">
+              See which cars earn the most, how drivers are doing, and how much tax is due.
+            </p>
           </div>
         </div>
 
-        {/* Controls: Time Period Filter & Export Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Period selector */}
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative">
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value as PeriodFilter)}
-              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-2 pr-8 font-medium focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none appearance-none cursor-pointer"
+              className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-200 text-sm rounded-full px-4 py-2.5 pr-9 font-semibold outline-none appearance-none cursor-pointer"
             >
               <option value="this_month">This Month (May 2026)</option>
               <option value="last_month">Last Month (April 2026)</option>
               <option value="last_30_days">Last 30 Days</option>
-              <option value="q2_2026">Q2 2026 (Apr - Jun)</option>
-              <option value="ytd_2026">Year to Date 2026</option>
-              <option value="all">All Time History</option>
+              <option value="q2_2026">Apr – Jun 2026</option>
+              <option value="ytd_2026">This Year 2026</option>
+              <option value="all">All Time</option>
             </select>
-            <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Calendar className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Export CSV button */}
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors shadow-xs active:scale-95"
-            title="Download complete analytics data as CSV"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700 transition-colors"
           >
-            <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Export CSV</span>
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Download File</span>
           </button>
 
-          {/* Print Brief button */}
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors shadow-xs active:scale-95"
-            title="Print Executive PDF Brief"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700 transition-colors"
           >
-            <Printer className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline">Print</span>
+            <Printer className="w-4 h-4 text-[#425466] dark:text-slate-300" />
+            <span>Print</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Highlights Ribbon */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* Gross Revenue Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
+      {/* 4 Big Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Gross Fleet Revenue</span>
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
-              <DollarSign className="w-4 h-4" />
+            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Money Earned</span>
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <DollarSign className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-xl lg:text-2xl font-black text-white tracking-tight">
-              {financials.grossRevenue.toLocaleString()} <span className="text-xs font-normal text-slate-400">RWF</span>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono">
+              {financials.grossRevenue.toLocaleString()} RWF
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-400 font-medium">
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>+18.4% vs last period</span>
+            <div className="flex items-center gap-1 mt-1 text-sm text-emerald-700 dark:text-emerald-400 font-semibold">
+              <ArrowUpRight className="w-4 h-4" />
+              <span>+18.4% more than before</span>
             </div>
           </div>
         </div>
 
-        {/* Fleet Utilization Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
+        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Fleet Utilization</span>
+            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Cars Used</span>
             <div
-              className="p-1.5 rounded-lg text-white"
-              style={{ backgroundColor: `${currentTheme.hex}25`, color: currentTheme.hex }}
+              className="p-2 rounded-xl"
+              style={{ backgroundColor: `${currentTheme.hex}20`, color: currentTheme.hex }}
             >
-              <Percent className="w-4 h-4" />
+              <Percent className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-xl lg:text-2xl font-black text-white tracking-tight">
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono">
               {utilizationMetrics.fleetUtilizationPct}%
-              <span className="text-xs font-normal text-slate-400 ml-1.5">
+              <span className="text-sm font-normal text-[#425466] dark:text-slate-400 ml-2">
                 ({utilizationMetrics.totalBookedDays}/{utilizationMetrics.totalCapacityDays} days)
               </span>
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-400 font-medium">
-              <span>Target: &gt; 70% · </span>
-              <span className="text-emerald-400 font-semibold">Exceeding by +{Math.max(0, utilizationMetrics.fleetUtilizationPct - 70)}%</span>
+            <div className="mt-1 text-sm text-[#425466] dark:text-slate-400 font-medium">
+              Goal: 70%+ · <span className="text-emerald-700 dark:text-emerald-400 font-semibold">On track</span>
             </div>
           </div>
         </div>
 
-        {/* Net Profit Margin Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
+        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Net Fleet Profit</span>
-            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
-              <TrendingUp className="w-4 h-4" />
+            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Money Left (Profit)</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400">
+              <TrendingUp className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-xl lg:text-2xl font-black text-white tracking-tight">
-              {financials.profit.toLocaleString()} <span className="text-xs font-normal text-slate-400">RWF</span>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono">
+              {financials.profit.toLocaleString()} RWF
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-blue-400 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>{financials.marginPct}% Operating Net Margin</span>
+            <div className="flex items-center gap-1.5 mt-1 text-sm text-blue-700 dark:text-blue-400 font-semibold">
+              <ShieldCheck className="w-4 h-4" />
+              <span>{financials.marginPct}% profit after costs</span>
             </div>
           </div>
         </div>
 
-        {/* Chauffeur On-Time & Rating Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
+        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Service Delivery</span>
-            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
-              <Star className="w-4 h-4 fill-amber-400" />
+            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Driver Rating</span>
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Star className="w-5 h-5 fill-amber-400" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-xl lg:text-2xl font-black text-white tracking-tight">
-              4.92 <span className="text-xs font-normal text-slate-400">/ 5.0 ★</span>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono">
+              4.9 <span className="text-sm font-normal text-[#425466] dark:text-slate-400">/ 5.0</span>
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-amber-400 font-medium">
-              <Clock className="w-3.5 h-3.5" />
-              <span>98.2% on-time flight arrivals at KIA</span>
+            <div className="flex items-center gap-1.5 mt-1 text-sm text-amber-700 dark:text-amber-400 font-semibold">
+              <Clock className="w-4 h-4" />
+              <span>98.2% on time at airport</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveReportTab('utilization')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-            activeReportTab === 'utilization'
-              ? 'bg-slate-800 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-          }`}
-          style={activeReportTab === 'utilization' ? { color: currentTheme.hex } : undefined}
-        >
-          <Car className="w-4 h-4" />
-          <span>Fleet Utilization & Vehicles</span>
-        </button>
-
-        <button
-          onClick={() => setActiveReportTab('profitability')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-            activeReportTab === 'profitability'
-              ? 'bg-slate-800 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-          }`}
-          style={activeReportTab === 'profitability' ? { color: currentTheme.hex } : undefined}
-        >
-          <TrendingUp className="w-4 h-4" />
-          <span>Vehicle ROI & Maintenance</span>
-        </button>
-
-        <button
-          onClick={() => setActiveReportTab('drivers')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-            activeReportTab === 'drivers'
-              ? 'bg-slate-800 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-          }`}
-          style={activeReportTab === 'drivers' ? { color: currentTheme.hex } : undefined}
-        >
-          <Users className="w-4 h-4" />
-          <span>Chauffeur Performance</span>
-        </button>
-
-        <button
-          onClick={() => setActiveReportTab('revenue')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-            activeReportTab === 'revenue'
-              ? 'bg-slate-800 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-          }`}
-          style={activeReportTab === 'revenue' ? { color: currentTheme.hex } : undefined}
-        >
-          <DollarSign className="w-4 h-4" />
-          <span>Revenue & Tax (RRA EBM)</span>
-        </button>
-
-        <button
-          onClick={() => setActiveReportTab('funnel')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-            activeReportTab === 'funnel'
-              ? 'bg-slate-800 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-          }`}
-          style={activeReportTab === 'funnel' ? { color: currentTheme.hex } : undefined}
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span>Booking Funnel & Cancellation</span>
-        </button>
+      {/* Simple Section Tabs */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        {[
+          { id: 'utilization' as ReportTab, label: 'Cars Used', icon: Car },
+          { id: 'profitability' as ReportTab, label: 'Money Per Car', icon: TrendingUp },
+          { id: 'drivers' as ReportTab, label: 'Driver Scores', icon: Users },
+          { id: 'revenue' as ReportTab, label: 'Money & Tax', icon: DollarSign },
+          { id: 'funnel' as ReportTab, label: 'Trip Results', icon: FileSpreadsheet },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeReportTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveReportTab(tab.id)}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full text-sm font-bold transition-all border min-w-0 ${
+                isActive
+                  ? 'text-white border-transparent shadow-sm'
+                  : 'bg-white dark:bg-slate-900 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+              style={isActive ? { backgroundColor: currentTheme.hex } : undefined}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="truncate">{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Sub-View 1: Fleet Utilization & Vehicles */}
+      {/* Tab 1: Cars Used */}
       {activeReportTab === 'utilization' && (
         <div className="space-y-6">
-          {/* Category Utilization Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
             {categoryStats.map((cat) => (
               <div
                 key={cat.category}
                 onClick={() => setSelectedCategory(selectedCategory === cat.category ? 'all' : cat.category)}
-                className={`bg-slate-900 border rounded-xl p-4 cursor-pointer transition-all ${
+                className={`stripe-card bg-white dark:bg-slate-900 border rounded-2xl p-4 cursor-pointer transition-all ${
                   selectedCategory === cat.category
-                    ? 'border-amber-500 ring-1 ring-amber-500 shadow-md'
-                    : 'border-slate-800 hover:border-slate-700'
+                    ? 'border-blue-500 ring-2 ring-blue-500/20'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-white truncate">{cat.category}</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                  <span className="text-sm font-bold text-[#0a2540] dark:text-white truncate">{cat.category}</span>
+                  <span className="text-sm font-mono px-2 py-0.5 rounded-full bg-[#f6f9fc] dark:bg-slate-800 text-[#425466] dark:text-slate-300">
                     {cat.count} {cat.count === 1 ? 'car' : 'cars'}
                   </span>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Utilization</span>
-                    <span className="font-bold text-white">{cat.utilPct}%</span>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[#425466] dark:text-slate-400">Used</span>
+                    <span className="font-bold text-[#0a2540] dark:text-white font-mono">{cat.utilPct}%</span>
                   </div>
-                  {/* Progress bar */}
-                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
@@ -640,31 +544,33 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                       }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                    <span>{cat.bookedDays} days booked</span>
-                    <span className="font-mono text-slate-300">{(cat.revenue / 1000).toFixed(0)}k RWF</span>
+                  <div className="flex items-center justify-between text-sm text-[#425466] dark:text-slate-400 pt-1">
+                    <span>{cat.bookedDays} days</span>
+                    <span className="font-mono font-semibold text-[#0a2540] dark:text-slate-200">
+                      {(cat.revenue / 1000).toFixed(0)}k RWF
+                    </span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Vehicle Inventory Ranking Table */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60">
+          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-white">Vehicle Utilization & Allocation Breakdown</h3>
-                <p className="text-xs text-slate-400">Days booked vs physical downtime and generated revenue per vehicle</p>
+                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">How Much Each Car Is Used</h3>
+                <p className="text-sm text-[#425466] dark:text-slate-400">
+                  Days each car worked vs days parked, and money it brought in
+                </p>
               </div>
 
-              {/* Category filter pills */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors ${
+                  className={`text-sm font-semibold px-3 py-1.5 rounded-full transition-colors border ${
                     selectedCategory === 'all'
-                      ? 'bg-white text-slate-900 font-bold'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                      ? 'bg-[#0a2540] text-white border-[#0a2540] dark:bg-white dark:text-slate-900'
+                      : 'bg-[#f6f9fc] dark:bg-slate-800 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   All ({vehicles.length})
@@ -673,10 +579,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   <button
                     key={c}
                     onClick={() => setSelectedCategory(c)}
-                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors ${
+                    className={`text-sm font-semibold px-3 py-1.5 rounded-full transition-colors border ${
                       selectedCategory === c
-                        ? 'bg-white text-slate-900 font-bold'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        ? 'bg-[#0a2540] text-white border-[#0a2540] dark:bg-white dark:text-slate-900'
+                        : 'bg-[#f6f9fc] dark:bg-slate-800 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-700'
                     }`}
                   >
                     {c}
@@ -685,385 +591,373 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/70 border-b border-slate-800 text-slate-400 uppercase font-mono text-[10px]">
-                  <tr>
-                    <th className="px-4 py-3">Vehicle / Plate</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3 text-right">Daily Rate</th>
-                    <th className="px-4 py-3 text-center">Days Booked</th>
-                    <th className="px-4 py-3">Utilization Rate ({periodLabel})</th>
-                    <th className="px-4 py-3 text-right">Revenue (RWF)</th>
-                    <th className="px-4 py-3 text-center">Compliance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                  {filteredVehicles.map((v) => {
-                    const daysBooked = utilizationMetrics.vehicleDaysMap[v.id] || 0;
-                    const rev = utilizationMetrics.vehicleRevenueMap[v.id] || 0;
-                    const util = Math.min(100, Math.round((daysBooked / daysInPeriod) * 100));
-
-                    return (
-                      <tr key={v.id} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="font-bold text-white flex items-center gap-2">
-                            <span className="font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded text-[11px] border border-amber-500/20">
-                              {v.plate_number}
-                            </span>
-                            <span>{v.model_name}</span>
-                          </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">
-                            {v.location} · {v.seating_capacity} seats · {v.transmission}
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300">
-                            {v.category}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-3 text-right font-mono font-medium">
-                          {v.daily_rate_rwf.toLocaleString()} RWF
-                        </td>
-
-                        <td className="px-4 py-3 text-center font-mono">
-                          <span className="font-bold text-white">{daysBooked}</span>
-                          <span className="text-slate-500"> / {daysInPeriod}d</span>
-                        </td>
-
-                        <td className="px-4 py-3 w-48">
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="font-mono font-semibold text-slate-300">{util}%</span>
-                              <span className="text-slate-500 text-[10px]">
-                                {daysInPeriod - daysBooked}d idle
-                              </span>
-                            </div>
-                            <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${util}%`,
-                                  backgroundColor: util >= 70 ? '#10b981' : util >= 40 ? currentTheme.hex : '#f59e0b',
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3 text-right font-mono font-bold text-emerald-400">
-                          {rev > 0 ? `${rev.toLocaleString()} RWF` : '—'}
-                        </td>
-
-                        <td className="px-4 py-3 text-center">
-                          {v.controle_technique_expiry ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Valid CT</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                              <AlertTriangle className="w-3 h-3" />
-                              <span>Check</span>
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sub-View 2: Vehicle ROI & Maintenance Profitability */}
-      {activeReportTab === 'profitability' && (
-        <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <h3 className="text-base font-bold text-white mb-1">Vehicle Profitability & Maintenance Ledger</h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Revenue per Available Vehicle (RevPAV), operating fuel & service costs, and net return by car
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">RevPAV (Avg / Day)</span>
-                <div className="text-xl font-black text-white mt-1">
-                  {Math.round(financials.grossRevenue / (vehicles.length * daysInPeriod)).toLocaleString()} RWF
-                </div>
-                <p className="text-[11px] text-slate-500 mt-0.5">Average revenue earned per available vehicle day</p>
-              </div>
-
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Maintenance Allocation</span>
-                <div className="text-xl font-black text-amber-400 mt-1">
-                  {financials.maintenance.toLocaleString()} RWF
-                </div>
-                <p className="text-[11px] text-slate-500 mt-0.5">Tires, brake pads, oil servicing & Contrôle Technique</p>
-              </div>
-
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Fleet Operating Margin</span>
-                <div className="text-xl font-black text-emerald-400 mt-1">
-                  {financials.marginPct}% Net
-                </div>
-                <p className="text-[11px] text-slate-500 mt-0.5">Net income after direct vehicle operating costs</p>
-              </div>
+            <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 bg-[#f6f9fc] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-400 text-xs font-bold uppercase">
+              <div className="lg:col-span-3">Car & Plate</div>
+              <div className="lg:col-span-2">Type</div>
+              <div className="lg:col-span-2 text-right">Price / Day</div>
+              <div className="lg:col-span-2">How Busy ({periodLabel})</div>
+              <div className="lg:col-span-2 text-right">Money Earned</div>
+              <div className="lg:col-span-1 text-center">Safety</div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/70 border-b border-slate-800 text-slate-400 uppercase font-mono text-[10px]">
-                  <tr>
-                    <th className="px-4 py-3">Vehicle</th>
-                    <th className="px-4 py-3 text-right">Gross Revenue</th>
-                    <th className="px-4 py-3 text-right">Maintenance & Service</th>
-                    <th className="px-4 py-3 text-right">Net Profit</th>
-                    <th className="px-4 py-3 text-center">Net Margin</th>
-                    <th className="px-4 py-3">Odometer Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                  {vehicles.map((v) => {
-                    const gross = utilizationMetrics.vehicleRevenueMap[v.id] || 0;
-                    // Realistic maintenance calculation based on vehicle category and odometer
-                    const baseService = v.category === 'Coaster' ? 180000 : v.category === 'LandCruiser' ? 120000 : 75000;
-                    const maint = Math.round(gross * 0.10) + baseService;
-                    const net = gross - maint;
-                    const margin = gross > 0 ? Math.round((net / gross) * 100) : 0;
+            <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
+              {filteredVehicles.map((v) => {
+                const daysBooked = utilizationMetrics.vehicleDaysMap[v.id] || 0;
+                const rev = utilizationMetrics.vehicleRevenueMap[v.id] || 0;
+                const util = Math.min(100, Math.round((daysBooked / daysInPeriod) * 100));
 
-                    return (
-                      <tr key={v.id} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="font-bold text-white">{v.model_name}</div>
-                          <div className="font-mono text-slate-400 text-[11px]">{v.plate_number} · {v.category}</div>
-                        </td>
-
-                        <td className="px-4 py-3 text-right font-mono font-bold text-white">
-                          {gross.toLocaleString()} RWF
-                        </td>
-
-                        <td className="px-4 py-3 text-right font-mono text-amber-400">
-                          {maint.toLocaleString()} RWF
-                        </td>
-
-                        <td className="px-4 py-3 text-right font-mono font-bold text-emerald-400">
-                          {net.toLocaleString()} RWF
-                        </td>
-
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[11px] font-bold font-mono ${
-                              margin >= 80
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : margin >= 50
-                                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            }`}
-                          >
-                            {margin}%
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-3">
-                          <div className="font-mono text-[11px] text-slate-300">
-                            {v.current_odometer_km.toLocaleString()} km
-                          </div>
-                          {v.next_service_km && (
-                            <div className="text-[10px] text-slate-500">
-                              Next service at {v.next_service_km.toLocaleString()} km
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sub-View 3: Chauffeur Performance */}
-      {activeReportTab === 'drivers' && (
-        <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-white">Driver Mission Scorecard & Safety Ledger</h3>
-                <p className="text-xs text-slate-400">
-                  Trips completed, customer feedback ratings, on-time airport arrivals, and bilingual capability
-                </p>
-              </div>
-
-              {onNavigateToTab && (
-                <button
-                  onClick={() => onNavigateToTab('drivers')}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
-                >
-                  Manage Drivers Directory →
-                </button>
-              )}
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/70 border-b border-slate-800 text-slate-400 uppercase font-mono text-[10px]">
-                  <tr>
-                    <th className="px-4 py-3">Chauffeur</th>
-                    <th className="px-4 py-3">Languages</th>
-                    <th className="px-4 py-3 text-center">Completed Missions</th>
-                    <th className="px-4 py-3 text-center">Guest Rating</th>
-                    <th className="px-4 py-3 text-center">On-Time %</th>
-                    <th className="px-4 py-3 text-right">Revenue Driven</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                  {driverPerformance.map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="font-bold text-white">{d.name}</div>
-                        <div className="font-mono text-slate-400 text-[11px]">{d.phone}</div>
-                        {d.national_id && (
-                          <div className="text-[10px] text-slate-500 font-mono">ID: {d.national_id}</div>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300">
-                          {d.language}
+                return (
+                  <div
+                    key={v.id}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-5 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <div className="lg:col-span-3 min-w-0">
+                      <div className="font-bold text-[#0a2540] dark:text-white flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-500/20 whitespace-nowrap">
+                          {v.plate_number}
                         </span>
-                      </td>
+                        <span className="truncate">{v.model_name}</span>
+                      </div>
+                      <div className="text-xs text-[#425466] dark:text-slate-400 mt-0.5 truncate">
+                        {v.location} · {v.seating_capacity} seats · {v.transmission}
+                      </div>
+                    </div>
 
-                      <td className="px-4 py-3 text-center font-mono font-bold text-white">
-                        {d.trips_completed}
-                      </td>
+                    <div className="lg:col-span-2 min-w-0">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-200 whitespace-nowrap">
+                        {v.category}
+                      </span>
+                    </div>
 
-                      <td className="px-4 py-3 text-center">
-                        <div className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-bold font-mono text-[11px] border border-amber-500/20">
-                          <Star className="w-3 h-3 fill-amber-400" />
-                          <span>{d.rating.toFixed(1)}</span>
+                    <div className="lg:col-span-2 lg:text-right font-mono font-semibold whitespace-nowrap tabular-nums">
+                      {v.daily_rate_rwf.toLocaleString()} RWF
+                    </div>
+
+                    <div className="lg:col-span-2 min-w-0">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-mono font-bold">
+                            {util}% ({daysBooked}/{daysInPeriod}d)
+                          </span>
+                          <span className="text-[#425466] dark:text-slate-400">
+                            {daysInPeriod - daysBooked}d free
+                          </span>
                         </div>
-                      </td>
+                        <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${util}%`,
+                              backgroundColor: util >= 70 ? '#10b981' : util >= 40 ? currentTheme.hex : '#f59e0b',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-                      <td className="px-4 py-3 text-center font-mono font-bold text-emerald-400">
-                        {d.onTimePct}%
-                      </td>
+                    <div className="lg:col-span-2 lg:text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap tabular-nums">
+                      {rev > 0 ? `${rev.toLocaleString()} RWF` : '—'}
+                    </div>
 
-                      <td className="px-4 py-3 text-right font-mono font-bold text-white">
-                        {d.revenueGenerated > 0 ? `${d.revenueGenerated.toLocaleString()} RWF` : '—'}
-                      </td>
-
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                            d.status === 'Available'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : d.status === 'On Trip'
-                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}
-                        >
-                          {d.status}
+                    <div className="lg:col-span-1 flex lg:justify-center">
+                      {v.controle_technique_expiry ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20 whitespace-nowrap">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Valid</span>
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-500/20 whitespace-nowrap">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          <span>Check</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       )}
 
-      {/* Sub-View 4: Revenue & Tax (RRA EBM) */}
+      {/* Tab 2: Money Per Car */}
+      {activeReportTab === 'profitability' && (
+        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-6">
+          <div>
+            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Money Left After Repairs</h3>
+            <p className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">
+              See what each car earned, what repairs cost, and how much money is left.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Average Earned / Car / Day</span>
+              <div className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono mt-1">
+                {Math.round(financials.grossRevenue / Math.max(1, vehicles.length * daysInPeriod)).toLocaleString()} RWF
+              </div>
+              <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">Daily average across all cars</p>
+            </div>
+
+            <div className="bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Estimated Repair Costs</span>
+              <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 font-mono mt-1">
+                {financials.maintenance.toLocaleString()} RWF
+              </div>
+              <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">Tires, brakes, oil & safety checks</p>
+            </div>
+
+            <div className="bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Profit Kept</span>
+              <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-1">
+                {financials.marginPct}% Kept
+              </div>
+              <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">Share left after car costs</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-400 text-xs font-bold uppercase">
+              <div className="lg:col-span-3">Car</div>
+              <div className="lg:col-span-2 text-right">Money Earned</div>
+              <div className="lg:col-span-2 text-right">Repair Cost</div>
+              <div className="lg:col-span-2 text-right">Money Left</div>
+              <div className="lg:col-span-1 text-center">Profit %</div>
+              <div className="lg:col-span-2 text-right">Distance Driven</div>
+            </div>
+            <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
+              {vehicles.map((v) => {
+                const gross = utilizationMetrics.vehicleRevenueMap[v.id] || 0;
+                const baseService = v.category === 'Coaster' ? 180000 : v.category === 'LandCruiser' ? 120000 : 75000;
+                const maint = Math.round(gross * 0.1) + baseService;
+                const net = gross - maint;
+                const margin = gross > 0 ? Math.round((net / gross) * 100) : 0;
+
+                return (
+                  <div
+                    key={v.id}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-4 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <div className="lg:col-span-3 min-w-0">
+                      <div className="font-bold text-[#0a2540] dark:text-white truncate">{v.model_name}</div>
+                      <div className="font-mono text-[#425466] dark:text-slate-400 text-xs truncate">
+                        {v.plate_number} · {v.category}
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-2 lg:text-right font-mono font-bold whitespace-nowrap tabular-nums">
+                      {gross.toLocaleString()} RWF
+                    </div>
+
+                    <div className="lg:col-span-2 lg:text-right font-mono text-amber-700 dark:text-amber-400 whitespace-nowrap tabular-nums">
+                      {maint.toLocaleString()} RWF
+                    </div>
+
+                    <div className="lg:col-span-2 lg:text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap tabular-nums">
+                      {net.toLocaleString()} RWF
+                    </div>
+
+                    <div className="lg:col-span-1 flex lg:justify-center">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono whitespace-nowrap ${
+                          margin >= 80
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/20'
+                            : margin >= 50
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/20'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/20'
+                        }`}
+                      >
+                        {margin}%
+                      </span>
+                    </div>
+
+                    <div className="lg:col-span-2 lg:text-right min-w-0">
+                      <div className="font-mono font-medium whitespace-nowrap">
+                        {v.current_odometer_km.toLocaleString()} km
+                      </div>
+                      {v.next_service_km && (
+                        <div className="text-xs text-[#425466] dark:text-slate-400 whitespace-nowrap">
+                          Next: {v.next_service_km.toLocaleString()} km
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Driver Scores */}
+      {activeReportTab === 'drivers' && (
+        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">How Your Drivers Are Doing</h3>
+              <p className="text-sm text-[#425466] dark:text-slate-400">
+                Completed trips, star ratings, and airport on-time scores
+              </p>
+            </div>
+
+            {onNavigateToTab && (
+              <button
+                onClick={() => onNavigateToTab('drivers')}
+                className="text-sm font-bold px-4 py-2 rounded-full bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700 transition-colors"
+              >
+                Open Drivers List →
+              </button>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-400 text-xs font-bold uppercase">
+              <div className="lg:col-span-3">Driver</div>
+              <div className="lg:col-span-2">Languages</div>
+              <div className="lg:col-span-1 text-center">Trips</div>
+              <div className="lg:col-span-2 text-center">Rating</div>
+              <div className="lg:col-span-1 text-center">On-Time</div>
+              <div className="lg:col-span-2 text-right">Money Brought In</div>
+              <div className="lg:col-span-1 text-center">Status</div>
+            </div>
+            <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
+              {driverPerformance.map((d) => (
+                <div
+                  key={d.id}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-4 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors"
+                >
+                  <div className="lg:col-span-3 min-w-0">
+                    <div className="font-bold text-[#0a2540] dark:text-white truncate">{d.name}</div>
+                    <div className="font-mono text-[#425466] dark:text-slate-400 text-xs whitespace-nowrap">{d.phone}</div>
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-200 whitespace-nowrap">
+                      {d.language}
+                    </span>
+                  </div>
+
+                  <div className="lg:col-span-1 lg:text-center font-mono font-bold">
+                    {d.trips_completed}
+                  </div>
+
+                  <div className="lg:col-span-2 flex lg:justify-center">
+                    <div className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full font-bold font-mono text-xs border border-amber-200 dark:border-amber-500/20 whitespace-nowrap">
+                      <Star className="w-3.5 h-3.5 fill-amber-400" />
+                      <span>{d.rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-1 lg:text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                    {d.onTimePct}%
+                  </div>
+
+                  <div className="lg:col-span-2 lg:text-right font-mono font-bold whitespace-nowrap tabular-nums">
+                    {d.revenueGenerated > 0 ? `${d.revenueGenerated.toLocaleString()} RWF` : '—'}
+                  </div>
+
+                  <div className="lg:col-span-1 flex lg:justify-center">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                        d.status === 'Available'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/20'
+                          : d.status === 'On Trip'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/20'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                      }`}
+                    >
+                      {d.status === 'Available' ? 'Ready' : d.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Money & Tax */}
       {activeReportTab === 'revenue' && (
         <div className="space-y-6">
-          {/* Payment Channels Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {paymentChannelStats.map((chan) => {
               const Icon = chan.icon;
               return (
-                <div key={chan.channel} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                <div key={chan.channel} className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-slate-300">{chan.channel}</span>
-                    <div className={`p-2 rounded-lg border ${chan.color}`}>
+                    <span className="text-sm font-bold text-[#0a2540] dark:text-white">{chan.channel}</span>
+                    <div className={`p-2 rounded-xl border ${chan.color}`}>
                       <Icon className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="text-2xl font-black text-white tracking-tight">
-                    {chan.amount.toLocaleString()} <span className="text-xs font-normal text-slate-400">RWF</span>
+                  <div className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono">
+                    {chan.amount.toLocaleString()} RWF
                   </div>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80 text-xs">
-                    <span className="text-slate-400">{chan.count} transactions</span>
-                    <span className="font-mono font-bold text-white">{chan.pct}% share</span>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-sm">
+                    <span className="text-[#425466] dark:text-slate-400">{chan.count} payments</span>
+                    <span className="font-mono font-bold text-[#0a2540] dark:text-white">{chan.pct}% share</span>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* RRA EBM Tax Compliance Summary */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-white">Rwanda Revenue Authority (RRA) EBM v2.0 Ledger</h3>
-                <p className="text-xs text-slate-400">
-                  Standard 18% Value Added Tax (TVA) accounting for verified commercial transport invoicing
+                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Rwanda Tax Summary (18% VAT)</h3>
+                <p className="text-sm text-[#425466] dark:text-slate-400">
+                  Simple breakdown of money before tax, 18% VAT, and total billed to customers
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-mono font-bold border border-emerald-500/20">
-                  RRA EBM SDC Online
-                </span>
-              </div>
+              <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-sm font-bold border border-emerald-200 dark:border-emerald-500/20 w-fit">
+                Tax Ready
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-950 border border-slate-800 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
               <div>
-                <span className="text-[11px] text-slate-400 uppercase font-semibold">Total Taxable Net</span>
-                <div className="text-lg font-black text-white font-mono mt-1">
+                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Before Tax</span>
+                <div className="text-xl font-extrabold text-[#0a2540] dark:text-white font-mono mt-1">
                   {financials.netRevenue.toLocaleString()} RWF
                 </div>
-                <span className="text-[10px] text-slate-500">Excluding 18% VAT</span>
+                <span className="text-sm text-[#425466] dark:text-slate-400">Net earnings</span>
               </div>
 
               <div>
-                <span className="text-[11px] text-slate-400 uppercase font-semibold">18% VAT Collected (TVA)</span>
-                <div className="text-lg font-black text-amber-400 font-mono mt-1">
+                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">18% Tax (VAT)</span>
+                <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 font-mono mt-1">
                   {financials.vat.toLocaleString()} RWF
                 </div>
-                <span className="text-[10px] text-slate-500">Payable to RRA on 15th</span>
+                <span className="text-sm text-[#425466] dark:text-slate-400">Paid to RRA</span>
               </div>
 
               <div>
-                <span className="text-[11px] text-slate-400 uppercase font-semibold">Total Invoiced (Inclusive)</span>
-                <div className="text-lg font-black text-emerald-400 font-mono mt-1">
+                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Total With Tax</span>
+                <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-1">
                   {financials.grossRevenue.toLocaleString()} RWF
                 </div>
-                <span className="text-[10px] text-slate-500">Gross customer billings</span>
+                <span className="text-sm text-[#425466] dark:text-slate-400">Full customer total</span>
               </div>
             </div>
 
-            {/* Customer Segments Breakdown */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Revenue by Customer Segment</h4>
+              <h4 className="text-sm font-bold text-[#0a2540] dark:text-white">Money By Customer Type</h4>
               <div className="space-y-2">
                 {customerSegmentStats.map((seg) => (
-                  <div key={seg.name} className="flex items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <div
+                    key={seg.name}
+                    className="flex items-center justify-between p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
+                  >
                     <div>
-                      <div className="text-xs font-bold text-white">{seg.name}</div>
-                      <div className="text-[10px] text-slate-400">{seg.count} client accounts</div>
+                      <div className="text-sm font-bold text-[#0a2540] dark:text-white">{seg.name}</div>
+                      <div className="text-sm text-[#425466] dark:text-slate-400">{seg.count} accounts</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-mono font-bold text-white text-xs">{seg.totalSpent.toLocaleString()} RWF</div>
-                      <div className="text-[10px] text-slate-400 font-mono">{seg.pct}% of total billing</div>
+                      <div className="font-mono font-bold text-[#0a2540] dark:text-white text-sm">
+                        {seg.totalSpent.toLocaleString()} RWF
+                      </div>
+                      <div className="text-sm text-[#425466] dark:text-slate-400 font-mono">{seg.pct}% of total</div>
                     </div>
                   </div>
                 ))}
@@ -1073,59 +967,56 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       )}
 
-      {/* Sub-View 5: Booking Funnel & Cancellation Analytics */}
+      {/* Tab 5: Trip Results */}
       {activeReportTab === 'funnel' && (
-        <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <h3 className="text-base font-bold text-white mb-1">Booking Conversion & Cancellation Funnel</h3>
-            <p className="text-xs text-slate-400 mb-6">
-              Reservation throughput from storefront/dispatch creation to completion and airport pickups
+        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-6">
+          <div>
+            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Completed vs Cancelled Trips</h3>
+            <p className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">
+              How many bookings finish well and why some get cancelled
             </p>
+          </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Total Reservations</span>
-                <div className="text-2xl font-black text-white font-mono mt-1">{funnelMetrics.total}</div>
-                <span className="text-[10px] text-slate-500">Created in system</span>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Completed Trips</span>
-                <div className="text-2xl font-black text-emerald-400 font-mono mt-1">{funnelMetrics.completed}</div>
-                <span className="text-[10px] text-emerald-500 font-semibold">{funnelMetrics.completedRatePct}% completion rate</span>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Active / Dispatched</span>
-                <div className="text-2xl font-black text-blue-400 font-mono mt-1">{funnelMetrics.inProgress}</div>
-                <span className="text-[10px] text-slate-500">Currently on road</span>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Cancelled</span>
-                <div className="text-2xl font-black text-red-400 font-mono mt-1">{funnelMetrics.cancelled}</div>
-                <span className="text-[10px] text-red-400 font-semibold">{funnelMetrics.cancellationRatePct}% churn</span>
-              </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center">
+              <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">All Bookings</span>
+              <div className="text-3xl font-extrabold text-[#0a2540] dark:text-white font-mono mt-1">{funnelMetrics.total}</div>
+              <span className="text-sm text-[#425466] dark:text-slate-400">Created</span>
             </div>
 
-            {/* Cancellation Root Cause Analysis */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
-                Identified Cancellation Reasons
-              </h4>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-slate-300">Client Itinerary Changed / Postponed</span>
-                  <span className="font-mono font-bold text-slate-400">60%</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-slate-300">Airline Flight Cancelled at Kigali Int'l Airport (KIA)</span>
-                  <span className="font-mono font-bold text-slate-400">25%</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-slate-300">MoMo Payment Timeout (Expired prompt)</span>
-                  <span className="font-mono font-bold text-slate-400">15%</span>
-                </div>
+            <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center">
+              <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Finished Trips</span>
+              <div className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-1">{funnelMetrics.completed}</div>
+              <span className="text-sm text-emerald-700 dark:text-emerald-400 font-semibold">{funnelMetrics.completedRatePct}% success</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center">
+              <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">On Road Now</span>
+              <div className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 font-mono mt-1">{funnelMetrics.inProgress}</div>
+              <span className="text-sm text-[#425466] dark:text-slate-400">Driving today</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center">
+              <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Cancelled</span>
+              <div className="text-3xl font-extrabold text-rose-600 dark:text-rose-400 font-mono mt-1">{funnelMetrics.cancelled}</div>
+              <span className="text-sm text-rose-600 dark:text-rose-400 font-semibold">{funnelMetrics.cancellationRatePct}% cancelled</span>
+            </div>
+          </div>
+
+          <div className="p-5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <h4 className="text-sm font-bold text-[#0a2540] dark:text-white">Common Reasons For Cancelling</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span className="text-[#0a2540] dark:text-slate-200">Guest changed their travel plans</span>
+                <span className="font-mono font-bold text-[#425466] dark:text-slate-400">60%</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span className="text-[#0a2540] dark:text-slate-200">Flight to Kigali was cancelled</span>
+                <span className="font-mono font-bold text-[#425466] dark:text-slate-400">25%</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span className="text-[#0a2540] dark:text-slate-200">MoMo payment was not finished in time</span>
+                <span className="font-mono font-bold text-[#425466] dark:text-slate-400">15%</span>
               </div>
             </div>
           </div>

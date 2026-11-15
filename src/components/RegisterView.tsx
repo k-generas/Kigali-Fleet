@@ -4,7 +4,6 @@ import {
   Building2,
   User,
   ShieldCheck,
-  CheckCircle2,
   ArrowRight,
   ArrowLeft,
   Mail,
@@ -12,7 +11,6 @@ import {
   MapPin,
   Lock,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -42,7 +40,6 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
 }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  // Form State
   const [companyName, setCompanyName] = useState('Volcanoes Expeditions Ltd');
   const [businessType, setBusinessType] = useState<
     'Car Rental' | 'Tour Operator' | 'Airport Shuttle' | 'Corporate Transport'
@@ -82,105 +79,96 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950">
-      {/* Top Header */}
-      <header className="p-4 sm:p-6 flex items-center justify-between border-b border-slate-800/80">
-        <button
-          onClick={onNavigateToLanding}
-          className="flex items-center gap-2.5 text-left group transition-transform"
-        >
+    <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 flex flex-col justify-between transition-colors">
+      <header className="px-5 sm:px-8 py-4 flex items-center justify-between bg-white dark:bg-[#0d1424] border-b border-slate-200 dark:border-slate-800">
+        <button onClick={onNavigateToLanding} className="flex items-center gap-2.5 text-left">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center font-extrabold shadow-md ${activeBtnText}`}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold ${activeBtnText}`}
             style={{ backgroundColor: activeColor }}
           >
             <Car className="w-5 h-5" />
           </div>
-          <div>
-            <span className="font-extrabold text-lg text-white font-mono tracking-tight">
-              Kigali<span style={{ color: activeColor }}>Fleet</span>
-            </span>
-            <span className="text-[10px] text-slate-400 block -mt-1">← Return to Homepage</span>
-          </div>
+          <span className="font-extrabold text-xl text-[#0a2540] dark:text-white tracking-tight">
+            Kigali<span style={{ color: activeColor }}>Fleet</span>
+          </span>
         </button>
 
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400 hidden sm:inline">Already registered?</span>
-          <button
-            onClick={onNavigateToLogin}
-            className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1"
-          >
-            <span>Sign In</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <button
+          onClick={onNavigateToLogin}
+          className="text-sm sm:text-[15px] font-bold flex items-center gap-1.5"
+          style={{ color: activeColor }}
+        >
+          <span>Sign in</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 flex items-center justify-center p-5 sm:p-8">
         <div className="w-full max-w-xl space-y-6">
-          {/* Header Title */}
           <div className="text-center space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Register Your Transport Company
+            <h1 className="text-3xl font-extrabold text-[#0a2540] dark:text-white">
+              Add your car rental company
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400">
-              Set up your fleet in Kigali with collision-free scheduling and automated SMS dispatch.
+            <p className="text-base text-[#425466] dark:text-slate-300">
+              Takes 1 minute. Start managing your cars and drivers right away.
             </p>
           </div>
 
-          {/* Stepper Indicator */}
-          <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
+          <div className="grid grid-cols-3 gap-2.5 text-center text-sm font-bold">
             <div
-              className={`p-2 rounded-lg border transition-all ${
-                step >= 1 ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-800 text-slate-600'
+              className={`p-3 rounded-xl border ${
+                step >= 1
+                  ? 'bg-white dark:bg-slate-900 border-amber-500 text-[#0a2540] dark:text-white'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}
             >
-              1. Business Details
+              1. Company
             </div>
             <div
-              className={`p-2 rounded-lg border transition-all ${
-                step >= 2 ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-800 text-slate-600'
+              className={`p-3 rounded-xl border ${
+                step >= 2
+                  ? 'bg-white dark:bg-slate-900 border-amber-500 text-[#0a2540] dark:text-white'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}
             >
-              2. Owner Account
+              2. Owner
             </div>
             <div
-              className={`p-2 rounded-lg border transition-all ${
-                step === 3 ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-800 text-slate-600'
+              className={`p-3 rounded-xl border ${
+                step === 3
+                  ? 'bg-white dark:bg-slate-900 border-amber-500 text-[#0a2540] dark:text-white'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-400'
               }`}
             >
-              3. Fleet Plan
+              3. Plan
             </div>
           </div>
 
-          {/* Stepper Card */}
           <form
             onSubmit={handleSubmit}
-            className="p-6 sm:p-8 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl space-y-5"
+            className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-5"
           >
-            {/* Step 1: Company Profile */}
             {step === 1 && (
               <div className="space-y-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4" />
-                  <span>Company Profile & Licensing</span>
+                <div className="text-base font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
+                  <Building2 className="w-5 h-5" style={{ color: activeColor }} />
+                  <span>About your company</span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Registered Company Name</label>
+                  <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">Company name</label>
                   <input
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Akagera Car Rentals & Tours Ltd"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Business Category</label>
+                    <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">What do you do?</label>
                     <select
                       value={businessType}
                       onChange={(e) =>
@@ -188,38 +176,36 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                           e.target.value as 'Car Rental' | 'Tour Operator' | 'Airport Shuttle' | 'Corporate Transport'
                         )
                       }
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     >
-                      <option value="Car Rental">Car Rental Agency (Self-Drive & Chauffeur)</option>
-                      <option value="Tour Operator">Safari & Tour Operator</option>
-                      <option value="Airport Shuttle">Airport Transfer & Executive VIP</option>
-                      <option value="Corporate Transport">Corporate & NGO Transport</option>
+                      <option value="Car Rental">Car Rental</option>
+                      <option value="Tour Operator">Safari &amp; Tours</option>
+                      <option value="Airport Shuttle">Airport Transfers</option>
+                      <option value="Corporate Transport">Company Transport</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Rwanda Tax ID (TIN / RRA)</label>
+                    <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">Tax Number (TIN)</label>
                     <input
                       type="text"
                       value={tinNumber}
                       onChange={(e) => setTinNumber(e.target.value)}
-                      placeholder="9-digit TIN Number"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none font-mono"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Base Station / City</label>
+                  <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">City</label>
                   <div className="relative">
-                    <MapPin className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      placeholder="e.g. Kigali (Remera) / Musanze"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                       required
                     />
                   </div>
@@ -227,52 +213,48 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               </div>
             )}
 
-            {/* Step 2: Administrator Profile */}
             {step === 2 && (
               <div className="space-y-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                  <User className="w-4 h-4" />
-                  <span>Company Owner / Executive Administrator</span>
+                <div className="text-base font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
+                  <User className="w-5 h-5" style={{ color: activeColor }} />
+                  <span>Owner details</span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Owner Full Name</label>
+                  <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">Your full name</label>
                   <input
                     type="text"
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
-                    placeholder="e.g. Jean-Damascene Karemera"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Rwanda Telephone Number</label>
+                    <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">Phone number</label>
                     <div className="relative">
-                      <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+250 78..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none font-mono"
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Business Email</label>
+                    <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">Email</label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="owner@company.rw"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                         required
                       />
                     </div>
@@ -280,15 +262,14 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Create Secure Password</label>
+                  <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">Password</label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2.5 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
                       required
                     />
                   </div>
@@ -296,94 +277,89 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               </div>
             )}
 
-            {/* Step 3: Subscription Tier Selection */}
             {step === 3 && (
               <div className="space-y-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4" />
-                  <span>Select Subscription Package (RWF / Month)</span>
+                <div className="text-base font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
+                  <Layers className="w-5 h-5" style={{ color: activeColor }} />
+                  <span>Choose a monthly plan</span>
                 </div>
 
                 <div className="space-y-3">
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setSelectedTier('starter')}
-                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                    className={`w-full text-left p-4 rounded-xl border flex items-center justify-between transition-all ${
                       selectedTier === 'starter'
-                        ? 'border-amber-400 bg-amber-500/10'
-                        : 'border-slate-800 bg-slate-950 hover:bg-slate-800/40'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10'
+                        : 'border-slate-200 dark:border-slate-800'
                     }`}
                   >
                     <div>
-                      <div className="text-xs font-bold text-white">Starter Plan (Up to 5 Cars)</div>
-                      <div className="text-[11px] text-slate-400">Collision engine, standard driver directory</div>
+                      <div className="text-base font-bold text-[#0a2540] dark:text-white">Small Fleet (Up to 5 cars)</div>
+                      <div className="text-sm text-[#425466] dark:text-slate-400">Booking calendar and driver SMS</div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-amber-400 font-mono">35,000 RWF</div>
-                      <div className="text-[10px] text-slate-500">monthly</div>
+                    <div className="text-right font-mono font-bold text-base text-[#0a2540] dark:text-white">
+                      35,000 RWF/mo
                     </div>
-                  </div>
+                  </button>
 
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setSelectedTier('growth')}
-                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                    className={`w-full text-left p-4 rounded-xl border flex items-center justify-between transition-all ${
                       selectedTier === 'growth'
-                        ? 'border-amber-400 bg-amber-500/10'
-                        : 'border-slate-800 bg-slate-950 hover:bg-slate-800/40'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10'
+                        : 'border-slate-200 dark:border-slate-800'
                     }`}
                   >
                     <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span>Growth Plan (Up to 20 Cars)</span>
-                        <span className="text-[10px] bg-amber-400 text-slate-950 font-extrabold px-1.5 py-0.2 rounded">
-                          Recommended
-                        </span>
+                      <div className="text-base font-bold text-[#0a2540] dark:text-white">
+                        Growing Fleet (Up to 20 cars) · Most Popular
                       </div>
-                      <div className="text-[11px] text-slate-400">
-                        7-Day timeline, Africa&apos;s Talking SMS, KIA flight tracker
+                      <div className="text-sm text-[#425466] dark:text-slate-400">
+                        Calendar, SMS, Online Booking Website &amp; Flight Alerts
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-amber-400 font-mono">75,000 RWF</div>
-                      <div className="text-[10px] text-slate-500">monthly</div>
+                    <div className="text-right font-mono font-bold text-base text-[#0a2540] dark:text-white">
+                      75,000 RWF/mo
                     </div>
-                  </div>
+                  </button>
 
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setSelectedTier('enterprise')}
-                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                    className={`w-full text-left p-4 rounded-xl border flex items-center justify-between transition-all ${
                       selectedTier === 'enterprise'
-                        ? 'border-amber-400 bg-amber-500/10'
-                        : 'border-slate-800 bg-slate-950 hover:bg-slate-800/40'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10'
+                        : 'border-slate-200 dark:border-slate-800'
                     }`}
                   >
                     <div>
-                      <div className="text-xs font-bold text-white">Enterprise Plan (Unlimited Fleet)</div>
-                      <div className="text-[11px] text-slate-400">Multi-branch, RRA EBM tax invoicing, dedicated SLA</div>
+                      <div className="text-base font-bold text-[#0a2540] dark:text-white">Large Fleet (Unlimited cars)</div>
+                      <div className="text-sm text-[#425466] dark:text-slate-400">Multiple offices and full tax reports</div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-amber-400 font-mono">150,000 RWF</div>
-                      <div className="text-[10px] text-slate-500">monthly</div>
+                    <div className="text-right font-mono font-bold text-base text-[#0a2540] dark:text-white">
+                      150,000 RWF/mo
                     </div>
-                  </div>
+                  </button>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-400 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>14-day free trial included. No credit card required to start onboarding.</span>
+                <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-[#425466] dark:text-slate-300 flex items-center gap-2.5">
+                  <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0" />
+                  <span>Try free for 14 days. No bank card needed today.</span>
                 </div>
               </div>
             )}
 
-            {/* Stepper Navigation Buttons */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
               {step > 1 ? (
                 <button
                   type="button"
                   onClick={() => setStep((step - 1) as 1 | 2)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5"
+                  className="px-4 py-2.5 rounded-full text-sm font-bold text-[#425466] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Previous</span>
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
                 </button>
               ) : (
                 <div />
@@ -391,20 +367,19 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
 
               <button
                 type="submit"
-                className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold shadow-md transition-all hover:brightness-110 active:scale-95 ${activeBtnText}`}
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-bold shadow-sm transition-all hover:brightness-105 ${activeBtnText}`}
                 style={{ backgroundColor: activeColor }}
               >
-                <span>{step === 3 ? 'Launch Company Workspace' : 'Continue to Next Step'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>{step === 3 ? 'Start Now' : 'Next'}</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </form>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="p-4 text-center text-xs text-slate-500 border-t border-slate-800/80">
-        © 2026 KigaliFleet. All rights reserved. Multi-tenant Fleet Management & Dispatch for Rwanda.
+      <footer className="p-5 text-center text-sm text-[#425466] dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
+        © 2026 KigaliFleet · Kigali, Rwanda
       </footer>
     </div>
   );

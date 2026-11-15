@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -124,6 +124,8 @@ interface SuperAdminViewProps {
     reason: string
   ) => { success: boolean; error?: string };
   onNavigateToTab?: (tab: string) => void;
+  requestedModule?: SuperAdminModuleId | null;
+  onClearRequestedModule?: () => void;
 }
 
 interface NavGroup {
@@ -181,8 +183,17 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   onCreatePlatformAdmin,
   onUpdatePlatformAdmin,
   onNavigateToTab,
+  requestedModule,
+  onClearRequestedModule,
 }) => {
   const [activeModule, setActiveModule] = useState<SuperAdminModuleId>('overview');
+
+  useEffect(() => {
+    if (requestedModule) {
+      setActiveModule(requestedModule);
+      onClearRequestedModule?.();
+    }
+  }, [requestedModule, onClearRequestedModule]);
 
   const activePlatformAdmin = useMemo(() => {
     return (
@@ -201,47 +212,47 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   const navGroups: NavGroup[] = useMemo(() => {
     const raw: NavGroup[] = [
       {
-        groupLabel: 'Command & Telemetry',
+        groupLabel: 'Overview & Numbers',
         items: [
-          { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-          { id: 'analytics', label: 'Platform Analytics', icon: BarChart3 },
+          { id: 'overview', label: 'Home Summary', icon: LayoutDashboard },
+          { id: 'analytics', label: 'Growth & Usage', icon: BarChart3 },
         ],
       },
       {
-        groupLabel: 'Tenants & Identity',
+        groupLabel: 'Companies & People',
         items: [
           { id: 'companies', label: 'Companies', icon: Building2, badge: pendingCompaniesCount || undefined },
-          { id: 'users', label: 'Global Users', icon: Users },
+          { id: 'users', label: 'All People', icon: Users },
         ],
       },
       {
-        groupLabel: 'SaaS Billing & Revenue',
+        groupLabel: 'Plans & Money',
         items: [
-          { id: 'subscriptions', label: 'Subscriptions', icon: Layers },
-          { id: 'plans', label: 'Plans & Pricing', icon: FileText },
-          { id: 'saas_payments', label: 'SaaS Payments', icon: CreditCard },
-          { id: 'revenue', label: 'Revenue Intelligence', icon: DollarSign },
+          { id: 'subscriptions', label: 'Active Plans', icon: Layers },
+          { id: 'plans', label: 'Price List', icon: FileText },
+          { id: 'saas_payments', label: 'Plan Payments', icon: CreditCard },
+          { id: 'revenue', label: 'Money Summary', icon: DollarSign },
         ],
       },
       {
-        groupLabel: 'Operations & Support',
+        groupLabel: 'Trips & Help',
         items: [
-          { id: 'bookings', label: 'Bookings (Audited)', icon: ClipboardList },
-          { id: 'fleet', label: 'Global Fleet', icon: Car },
-          { id: 'support', label: 'Support Center', icon: LifeBuoy, badge: openTicketCount || undefined },
-          { id: 'notifications', label: 'Notifications', icon: Mail },
+          { id: 'bookings', label: 'All Bookings', icon: ClipboardList },
+          { id: 'fleet', label: 'All Cars', icon: Car },
+          { id: 'support', label: 'Help Desk', icon: LifeBuoy, badge: openTicketCount || undefined },
+          { id: 'notifications', label: 'SMS & Emails', icon: Mail },
         ],
       },
       {
-        groupLabel: 'Governance & Infrastructure',
+        groupLabel: 'Safety & Rules',
         items: [
-          { id: 'integrations', label: 'Integrations', icon: Radio },
-          { id: 'health', label: 'System Health & Jobs', icon: Activity },
-          { id: 'security', label: 'Security Center', icon: ShieldAlert, badge: openSecCount || undefined },
-          { id: 'audit', label: 'Immutable Audit Logs', icon: Lock },
-          { id: 'content', label: 'Content & Policies', icon: FileText },
-          { id: 'settings', label: 'Platform Settings', icon: Settings },
-          { id: 'admins', label: 'Admins & Permissions', icon: ShieldCheck },
+          { id: 'integrations', label: 'Connected Tools', icon: Radio },
+          { id: 'health', label: 'System Status', icon: Activity },
+          { id: 'security', label: 'Safety Alerts', icon: ShieldAlert, badge: openSecCount || undefined },
+          { id: 'audit', label: 'Change History', icon: Lock },
+          { id: 'content', label: 'Notices & Rules', icon: FileText },
+          { id: 'settings', label: 'Main Settings', icon: Settings },
+          { id: 'admins', label: 'Admin Team', icon: ShieldCheck },
         ],
       },
     ];
@@ -284,104 +295,126 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   const defaultTenantId = companies[0]?.id || 'comp-kigali-exec';
   const isContextSwitched = currentCompany.id !== defaultTenantId;
 
-  return (
-    <div className="space-y-5">
-      {/* Control Center Header */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-3.5">
-          <div
-            className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${currentTheme.btnText}`}
-            style={{ backgroundColor: currentTheme.hex }}
-          >
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-                KigaliFleet Platform Control Center
-              </h2>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
-                {activePlatformAdmin?.sub_role || 'platform_owner'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Signed in as <span className="font-mono">{currentUser.email}</span> · Multi-tenant governance, billing
-              reconciliation &amp; immutable auditing
-            </p>
-          </div>
-        </div>
+  const allNavItems = useMemo(() => navGroups.flatMap((g) => g.items), [navGroups]);
+  const quickMobileModules: { id: SuperAdminModuleId; label: string }[] = [
+    { id: 'overview', label: 'Summary' },
+    { id: 'companies', label: 'Companies' },
+    { id: 'revenue', label: 'Money' },
+    { id: 'settings', label: 'Settings' },
+  ];
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs">
-            <div className="text-[10px] text-slate-500 uppercase font-semibold">Inspected Tenant Context</div>
-            <div className="font-semibold text-slate-900 dark:text-white truncate max-w-[200px]">
-              {currentCompany.name}
-            </div>
-          </div>
+  return (
+    <div className="space-y-4">
+      {/* Compact Context Bar (Identity & role now live cleanly in the Profile Menu) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-xs font-semibold text-[#425466] dark:text-slate-400 shrink-0">
+            Company:
+          </span>
+          <select
+            value={currentCompany.id}
+            onChange={(e) => {
+              const targetId = e.target.value;
+              const targetComp = companies.find((c) => c.id === targetId);
+              onSwitchCompanyContext(
+                targetId,
+                `Switched view to ${targetComp?.name || targetId}.`
+              );
+            }}
+            aria-label="Select company to view"
+            className="min-w-0 flex-1 sm:max-w-[280px] text-sm font-semibold text-[#0a2540] dark:text-white bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none"
+          >
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
 
           {isContextSwitched && (
             <button
               onClick={() =>
-                onSwitchCompanyContext(defaultTenantId, 'Cleared temporary tenant inspection context back to default.')
+                onSwitchCompanyContext(defaultTenantId, 'Switched back to main company view.')
               }
-              className="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Clear Context</span>
+              <span>Reset</span>
             </button>
           )}
         </div>
+
+        {/* Mobile All-Section Dropdown Picker */}
+        <div className="lg:hidden flex items-center gap-2 w-full sm:w-auto">
+          <label htmlFor="admin-mobile-section" className="text-xs font-semibold text-[#425466] dark:text-slate-400 shrink-0">
+            Section:
+          </label>
+          <select
+            id="admin-mobile-section"
+            value={activeModule}
+            onChange={(e) => setActiveModule(e.target.value as SuperAdminModuleId)}
+            className="flex-1 sm:w-56 text-sm font-semibold text-[#0a2540] dark:text-white bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none"
+          >
+            {navGroups.map((group) => (
+              <optgroup key={group.groupLabel} label={group.groupLabel}>
+                {group.items.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                    {item.badge ? ` (${item.badge})` : ''}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Maintenance Mode Active Indicator */}
+      {/* Maintenance Mode Banner */}
       {platformSettings.maintenance_mode && (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
             <span>
-              <strong>Platform Maintenance Mode is ACTIVE:</strong> {platformSettings.maintenance_message}
+              <strong>Site Pause Is On:</strong> {platformSettings.maintenance_message}
             </span>
           </div>
           <button
             onClick={() => setActiveModule('settings')}
-            className="px-2.5 py-1 rounded-md bg-rose-600 text-white font-semibold whitespace-nowrap"
+            className="px-4 py-1.5 rounded-full bg-rose-600 text-white font-semibold whitespace-nowrap text-sm"
           >
-            Configure
+            Change
           </button>
         </div>
       )}
 
-      {/* Mobile Horizontal Navigation */}
-      <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-2">
-        {navGroups.flatMap((g) => g.items).map((item) => {
-          const Icon = item.icon;
-          const isActive = activeModule === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveModule(item.id)}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 border transition-colors ${
-                isActive
-                  ? `${currentTheme.primaryBg} ${currentTheme.btnText} border-transparent`
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{item.label}</span>
-              {item.badge ? (
-                <span className="px-1.5 py-0.2 rounded bg-black/15 text-[10px] font-mono">{item.badge}</span>
-              ) : null}
-            </button>
-          );
-        })}
+      {/* Compact Mobile Quick Tabs (4 main actions, zero clutter) */}
+      <div className="lg:hidden grid grid-cols-4 gap-1.5">
+        {quickMobileModules
+          .filter((qm) => allNavItems.some((item) => item.id === qm.id))
+          .map((qm) => {
+            const isActive = activeModule === qm.id;
+            return (
+              <button
+                key={qm.id}
+                onClick={() => setActiveModule(qm.id)}
+                className={`px-2 py-2 rounded-xl text-xs sm:text-sm font-semibold text-center truncate border transition-colors ${
+                  isActive
+                    ? `${currentTheme.primaryBg} ${currentTheme.btnText} border-transparent`
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-300'
+                }`}
+              >
+                {qm.label}
+              </button>
+            );
+          })}
       </div>
 
-      {/* Desktop Left Sub-Navigation + Active Module Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        <aside className="hidden lg:block lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-4 sticky top-20">
+      {/* Desktop Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <aside className="hidden lg:block lg:col-span-3 stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-5 sticky top-20">
           {navGroups.map((group) => (
             <div key={group.groupLabel} className="space-y-1">
-              <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <div className="px-3 py-1 text-sm font-bold text-[#425466] dark:text-slate-400">
                 {group.groupLabel}
               </div>
               {group.items.map((item) => {
@@ -391,20 +424,18 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                   <button
                     key={item.id}
                     onClick={() => setActiveModule(item.id)}
-                    className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-xs transition-colors ${
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                       isActive
-                        ? 'font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800'
-                        : 'font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        ? 'font-bold text-[#0a2540] dark:text-white bg-[#f6f9fc] dark:bg-slate-800'
+                        : 'font-medium text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
-                    <span className="flex items-center gap-2 min-w-0">
-                      <Icon
-                        className={`w-4 h-4 shrink-0 ${isActive ? currentTheme.primaryText : ''}`}
-                      />
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? currentTheme.primaryText : ''}`} />
                       <span className="truncate">{item.label}</span>
                     </span>
                     {item.badge ? (
-                      <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-sm font-bold">
                         {item.badge}
                       </span>
                     ) : null}
@@ -415,7 +446,6 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           ))}
         </aside>
 
-        {/* Active Module Workspace */}
         <section className="lg:col-span-9 min-w-0">
           {(activeModule === 'overview' || activeModule === 'analytics') && (
             <SuperAdminOverviewAndAnalytics

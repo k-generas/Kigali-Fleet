@@ -31,14 +31,13 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
   }>({ top: 0 });
   const [isMobile, setIsMobile] = useState(false);
 
-  // Measure viewport and trigger rect
   const updatePosition = () => {
     const mobile = typeof window !== 'undefined' && window.innerWidth < 640;
     setIsMobile(mobile);
 
     if (triggerRef.current && !mobile) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const popoverWidth = 340; // width of popover
+      const popoverWidth = 340;
       const margin = 12;
 
       let left: number | undefined;
@@ -46,7 +45,6 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
 
       if (align === 'right') {
         const calculatedRight = window.innerWidth - rect.right;
-        // Ensure it doesn't overflow off the left of screen
         if (window.innerWidth - calculatedRight < popoverWidth) {
           left = margin;
           right = undefined;
@@ -76,7 +74,6 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
       updatePosition();
       const handleResize = () => updatePosition();
       const handleScroll = (e: Event) => {
-        // If scrolling inside the popover itself, ignore. Otherwise close or update
         const target = e.target as HTMLElement;
         if (target && target.closest && target.closest('[data-theme-popover="true"]')) {
           return;
@@ -93,7 +90,6 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
     }
   }, [isOpen, align]);
 
-  // Handle escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -106,19 +102,17 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
 
   const popoverContent = (
     <div data-theme-popover="true" className="contents">
-      {/* Click-outside backdrop */}
       <div
-        className="fixed inset-0 z-[9998] bg-slate-950/60 backdrop-blur-2xs transition-opacity animate-in fade-in duration-150"
+        className="fixed inset-0 z-[9998] bg-slate-900/50 backdrop-blur-2xs transition-opacity"
         onClick={() => setIsOpen(false)}
         aria-hidden="true"
       />
 
-      {/* Popover Container: Bottom Sheet on Mobile, Anchored Dropdown on Desktop */}
       <div
         className={
           isMobile
-            ? 'fixed inset-x-0 bottom-0 z-[9999] max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-2xl p-4 sm:p-5 space-y-4 animate-in slide-in-from-bottom duration-200'
-            : 'fixed z-[9999] w-[340px] max-h-[88vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-4 space-y-4 animate-in fade-in zoom-in-95 duration-150'
+            ? 'fixed inset-x-0 bottom-0 z-[9999] max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4'
+            : 'fixed z-[9999] w-[340px] max-h-[88vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4'
         }
         style={
           !isMobile
@@ -130,88 +124,86 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
             : undefined
         }
       >
-        {/* Mobile Pull Handle Indicator */}
         {isMobile && (
           <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-1 mb-2" />
         )}
 
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5">
             <div
-              className="w-6 h-6 rounded-lg flex items-center justify-center text-white shadow-xs"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-xs"
               style={{ backgroundColor: currentTheme.hex }}
             >
-              <Palette className="w-3.5 h-3.5" />
+              <Palette className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                Appearance & Colors
+              <h4 className="text-sm font-bold text-[#0a2540] dark:text-white">
+                Screen & Colors
               </h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                Personalize dashboard theme & mode
+              <p className="text-sm text-[#425466] dark:text-slate-400">
+                Pick light or dark and your favorite color
               </p>
             </div>
           </div>
           <button
             onClick={() => setIsOpen(false)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            aria-label="Close menu"
+            aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* 1. Interface Background Mode: Dark vs Light Switcher */}
+        {/* Light vs Dark */}
         <div className="space-y-1.5">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-            Theme Mode
+          <span className="text-sm font-bold text-[#0a2540] dark:text-slate-200">
+            Screen Mode
           </span>
-          <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800/80">
-            <button
-              type="button"
-              onClick={() => {
-                if (themeMode !== 'dark') onToggleThemeMode();
-              }}
-              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                themeMode === 'dark'
-                  ? 'bg-slate-900 text-white shadow-xs border border-slate-700'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <Moon className="w-3.5 h-3.5 text-amber-400" />
-              <span>Dark Mode</span>
-              {themeMode === 'dark' && <Check className="w-3 h-3 text-emerald-400 ml-auto" />}
-            </button>
-
+          <div className="grid grid-cols-2 gap-2 bg-[#f6f9fc] dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => {
                 if (themeMode !== 'light') onToggleThemeMode();
               }}
-              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-bold transition-all ${
                 themeMode === 'light'
-                  ? 'bg-white text-slate-950 shadow-xs border border-slate-300'
-                  : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white text-[#0a2540] shadow-xs border border-slate-200'
+                  : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
               }`}
             >
-              <Sun className="w-3.5 h-3.5 text-amber-500" />
-              <span>Light Mode</span>
-              {themeMode === 'light' && <Check className="w-3 h-3 text-emerald-500 ml-auto" />}
+              <Sun className="w-4 h-4 text-amber-500" />
+              <span>Light</span>
+              {themeMode === 'light' && <Check className="w-3.5 h-3.5 text-emerald-600 ml-auto" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (themeMode !== 'dark') onToggleThemeMode();
+              }}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-bold transition-all ${
+                themeMode === 'dark'
+                  ? 'bg-slate-900 text-white shadow-xs border border-slate-700'
+                  : 'text-[#425466] hover:text-[#0a2540] dark:hover:text-white'
+              }`}
+            >
+              <Moon className="w-4 h-4 text-amber-400" />
+              <span>Dark</span>
+              {themeMode === 'dark' && <Check className="w-3.5 h-3.5 text-emerald-400 ml-auto" />}
             </button>
           </div>
         </div>
 
-        {/* 2. System Accent Palette (12 Regional Rwandan Colors) */}
-        <div className="space-y-1.5">
+        {/* Colors */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              System Color Palette (12 Themes)
+            <span className="text-sm font-bold text-[#0a2540] dark:text-slate-200">
+              Pick a Color
             </span>
             <span
-              className="text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold truncate max-w-[140px]"
+              className="text-sm px-2 py-0.5 rounded-full font-semibold truncate max-w-[150px]"
               style={{
-                backgroundColor: `${currentTheme.hex}22`,
+                backgroundColor: `${currentTheme.hex}20`,
                 color: currentTheme.hex,
               }}
             >
@@ -227,10 +219,10 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
                   key={t.id}
                   type="button"
                   onClick={() => onSelectAccentColor(t.id)}
-                  className={`flex items-center gap-2 p-1.5 rounded-xl text-left transition-all border ${
+                  className={`flex items-center gap-2 p-2 rounded-xl text-left transition-all border ${
                     isSelected
-                      ? 'bg-slate-100 dark:bg-slate-800/90 border-slate-400 dark:border-slate-600 shadow-xs'
-                      : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      ? 'bg-[#f6f9fc] dark:bg-slate-800 border-slate-300 dark:border-slate-600 shadow-xs'
+                      : 'border-transparent hover:bg-[#f6f9fc] dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <span
@@ -246,11 +238,8 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
                     )}
                   </span>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
+                    <div className="text-sm font-bold text-[#0a2540] dark:text-slate-200 truncate">
                       {t.name}
-                    </div>
-                    <div className="text-[9px] text-slate-400 dark:text-slate-500 truncate">
-                      {t.badge}
                     </div>
                   </div>
                 </button>
@@ -259,30 +248,14 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
           </div>
         </div>
 
-        {/* 3. Live Preview Chip */}
-        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
-          <span className="text-[10px] text-slate-400 font-medium">Applied Instantly</span>
-          <div className="flex items-center gap-2">
-            <span
-              className="px-2 py-0.5 rounded text-[10px] font-semibold font-mono"
-              style={{
-                backgroundColor: `${currentTheme.hex}22`,
-                color: currentTheme.hex,
-              }}
-            >
-              {currentTheme.hex}
-            </span>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-md text-[10px] font-bold shadow-xs transition-opacity hover:opacity-90"
-              style={{
-                backgroundColor: currentTheme.hex,
-                color: currentTheme.btnText === 'text-white' ? '#fff' : '#020617',
-              }}
-            >
-              Done
-            </button>
-          </div>
+        <div className="pt-2 flex justify-end">
+          <button
+            onClick={() => setIsOpen(false)}
+            className="px-5 py-2 rounded-full text-sm font-bold text-white shadow-xs transition-opacity hover:opacity-95"
+            style={{ backgroundColor: currentTheme.hex }}
+          >
+            Done
+          </button>
         </div>
       </div>
     </div>
@@ -290,7 +263,6 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
 
   return (
     <div className={`relative inline-block ${className}`}>
-      {/* Unified Small Icon Button: Palette + Sun/Moon indicator in ONE compact trigger */}
       <button
         ref={triggerRef}
         type="button"
@@ -300,9 +272,9 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
           }
           setIsOpen(!isOpen);
         }}
-        className="relative flex items-center justify-center p-2 rounded-lg bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 transition-all shadow-xs group cursor-pointer"
-        title={`Appearance: ${currentTheme.name} · ${themeMode === 'dark' ? 'Dark' : 'Light'} Mode`}
-        aria-label="Appearance settings"
+        className="relative flex items-center justify-center p-2.5 rounded-full bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 transition-all shadow-xs group cursor-pointer"
+        title={`Colors & Screen: ${currentTheme.name} · ${themeMode === 'dark' ? 'Dark' : 'Light'}`}
+        aria-label="Screen and color settings"
         aria-expanded={isOpen}
       >
         <div className="relative flex items-center justify-center">
@@ -310,7 +282,6 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
             className="w-4 h-4 transition-transform group-hover:scale-110"
             style={{ color: currentTheme.hex }}
           />
-          {/* Micro indicator badge showing current mode */}
           <span
             className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full flex items-center justify-center border border-white dark:border-slate-900 shadow-xs"
             style={{ backgroundColor: themeMode === 'dark' ? '#0f172a' : '#fef08a' }}
@@ -324,7 +295,6 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
         </div>
       </button>
 
-      {/* Render popover in document.body via Portal to prevent any parent clipping or overflow traps */}
       {isOpen && typeof document !== 'undefined' && createPortal(popoverContent, document.body)}
     </div>
   );

@@ -7,28 +7,18 @@ import {
   CheckCircle2,
   Plane,
   AlertTriangle,
-  ShieldCheck,
   Phone,
   Search,
-  Filter,
-  DollarSign,
-  Calendar,
   MapPin,
-  Clock,
   Car,
   UserCheck,
   Check,
   X,
-  CreditCard,
   Printer,
-  ChevronRight,
-  ExternalLink,
   Plus,
   Trash2,
-  Sparkles,
   ArrowUpRight,
   Activity,
-  Layers,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -62,20 +52,17 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   onUpdateFlightStatus,
   onUpdateBooking,
   onDeleteBooking,
-  onAssignDriver,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterPayment, setFilterPayment] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
-  const [isEbmReceiptOpen, setIsEbmReceiptOpen] = useState(false);
-  const [momoRefInput, setMomoRefInput] = useState('');
-  const [reassignSuccessMsg, setReassignSuccessMsg] = useState<string | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
-  const activeThemeColor = currentTheme?.hex || '#f59e0b';
-  const activeBtnText = currentTheme?.btnText || 'text-slate-950';
+  const activeThemeColor = currentTheme?.hex || '#635bff';
+  const activeBtnText = currentTheme?.btnText || 'text-white';
 
-  // Metrics calculation
   const metrics = useMemo(() => {
     const total = bookings.length;
     const confirmed = bookings.filter((b) => b.status === 'Confirmed').length;
@@ -91,7 +78,6 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     return { total, confirmed, inProgress, completed, totalRevenueRwf, pendingBalanceRwf };
   }, [bookings]);
 
-  // Filtered bookings
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       if (filterStatus !== 'All' && b.status !== filterStatus) return false;
@@ -123,163 +109,125 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     }
   };
 
-  const handleReassignDriver = (bookingId: string, newDriverId: string) => {
-    if (onAssignDriver) {
-      const res = onAssignDriver(bookingId, newDriverId);
-      if (res.success) {
-        setReassignSuccessMsg('Chauffeur reassigned with zero schedule conflicts!');
-        setTimeout(() => setReassignSuccessMsg(null), 3500);
-        if (selectedBookingDetails?.id === bookingId) {
-          setSelectedBookingDetails({ ...selectedBookingDetails, driver_id: newDriverId });
-        }
-      } else {
-        alert(res.error || 'Failed to reassign chauffeur.');
-      }
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* 1. Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 stripe-card">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FileText className="w-5 h-5" style={{ color: activeThemeColor }} />
-              <span>Collision-Guarded Bookings & Dispatch Ledger</span>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-[#0a2540] dark:text-white flex items-center gap-2.5">
+              <FileText className="w-6 h-6" style={{ color: activeThemeColor }} />
+              <span>Bookings</span>
             </h2>
             <span
-              className="text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold"
+              className="text-xs font-mono px-3 py-1 rounded-full font-semibold"
               style={{
-                backgroundColor: `${activeThemeColor}20`,
+                backgroundColor: `${activeThemeColor}18`,
                 color: activeThemeColor,
               }}
             >
-              {bookings.length} RESERVATIONS
+              {bookings.length} total
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Real-time itinerary locking, MTN MoMo payment tracking, RRA EBM invoicing, and Africa's Talking driver dispatch.
+          <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">
+            All customer trips, dates, prices, and payments in one simple list.
           </p>
         </div>
 
         <button
           onClick={onOpenNewBooking}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all shadow-xs active:scale-95 self-start sm:self-auto ${activeBtnText}`}
+          className={`inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all shadow-xs active:scale-95 self-start sm:self-auto ${activeBtnText}`}
           style={{ backgroundColor: activeThemeColor }}
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>+ New Collision-Guarded Booking</span>
+          <span>New Booking</span>
         </button>
       </div>
 
-      {/* 2. Key Metrics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-          <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">
-            Total Bookings
-          </span>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">
-              {metrics.total}
-            </span>
+      {/* Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-[#425466] dark:text-slate-400">All Bookings</span>
+          <div className="flex items-baseline justify-between mt-1.5">
+            <span className="text-2xl font-bold text-[#0a2540] dark:text-white font-mono">{metrics.total}</span>
             <FileText className="w-4 h-4 text-slate-400" />
           </div>
         </div>
 
-        <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-          <span className="text-[10px] font-semibold uppercase text-sky-600 dark:text-sky-400">
-            Confirmed
-          </span>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-extrabold text-sky-600 dark:text-sky-400 font-mono">
-              {metrics.confirmed}
-            </span>
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-sky-600 dark:text-sky-400">Booked</span>
+          <div className="flex items-baseline justify-between mt-1.5">
+            <span className="text-2xl font-bold text-sky-600 dark:text-sky-400 font-mono">{metrics.confirmed}</span>
             <CheckCircle2 className="w-4 h-4 text-sky-500" />
           </div>
         </div>
 
-        <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-          <span className="text-[10px] font-semibold uppercase text-amber-600 dark:text-amber-400">
-            On Road (In Progress)
-          </span>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
-              {metrics.inProgress}
-            </span>
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">On Trip</span>
+          <div className="flex items-baseline justify-between mt-1.5">
+            <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">{metrics.inProgress}</span>
             <Activity className="w-4 h-4 text-amber-500" />
           </div>
         </div>
 
-        <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-          <span className="text-[10px] font-semibold uppercase text-purple-600 dark:text-purple-400">
-            Completed Trips
-          </span>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-extrabold text-purple-600 dark:text-purple-400 font-mono">
-              {metrics.completed}
-            </span>
-            <Check className="w-4 h-4 text-purple-500" />
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Done</span>
+          <div className="flex items-baseline justify-between mt-1.5">
+            <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-mono">{metrics.completed}</span>
+            <Check className="w-4 h-4 text-indigo-500" />
           </div>
         </div>
 
-        <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-          <span className="text-[10px] font-semibold uppercase text-emerald-600 dark:text-emerald-400">
-            Gross Bookings Value
-          </span>
-          <div className="mt-1">
-            <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 font-mono truncate block">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Total Money</span>
+          <div className="mt-1.5">
+            <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono truncate block">
               {formatRwf(metrics.totalRevenueRwf)}
             </span>
-            <span className="text-[10px] text-slate-400">Rwandan Francs</span>
           </div>
         </div>
 
-        <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-          <span className="text-[10px] font-semibold uppercase text-rose-600 dark:text-rose-400">
-            Pending Balance
-          </span>
-          <div className="mt-1">
-            <span className="text-sm font-extrabold text-rose-600 dark:text-rose-400 font-mono truncate block">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
+          <span className="text-xs font-medium text-rose-600 dark:text-rose-400">Still Unpaid</span>
+          <div className="mt-1.5">
+            <span className="text-base font-bold text-rose-600 dark:text-rose-400 font-mono truncate block">
               {formatRwf(metrics.pendingBalanceRwf)}
             </span>
-            <span className="text-[10px] text-slate-400">Uncollected MoMo</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Search and Multi-Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
+      {/* Search & Filters */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 stripe-card">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search booking (#bk...), customer, plate, flight (WB 212), or route..."
+            placeholder="Search customer, car plate, flight, or place..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-amber-500 font-medium"
+            className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-8 py-2 text-sm text-[#0a2540] dark:text-white outline-none focus:border-indigo-500"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0a2540] dark:hover:text-white"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {/* Trip Status filter */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
             {['All', 'Confirmed', 'In Progress', 'Completed', 'Cancelled'].map((st) => (
               <button
                 key={st}
                 onClick={() => setFilterStatus(st)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
                   filterStatus === st
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-900 text-[#0a2540] dark:text-white shadow-xs'
+                    : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
                 }`}
               >
                 {st}
@@ -287,495 +235,410 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             ))}
           </div>
 
-          {/* Payment Status filter */}
           <select
             value={filterPayment}
             onChange={(e) => setFilterPayment(e.target.value)}
-            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
+            className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-[#0a2540] dark:text-slate-200 outline-none"
           >
             <option value="All">All Payments</option>
             <option value="Fully Paid">Fully Paid</option>
-            <option value="Deposit Paid (MoMo)">Deposit Paid (MoMo)</option>
-            <option value="Pending Payment">Pending Payment</option>
+            <option value="Deposit Paid (MoMo)">Deposit Paid</option>
+            <option value="Pending Payment">Unpaid</option>
           </select>
         </div>
       </div>
 
-      {/* 4. Bookings Ledger Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider border-b border-slate-200 dark:border-slate-800 text-[10px]">
-              <tr>
-                <th className="py-3 px-4">Ref & Customer</th>
-                <th className="py-3 px-4">Vehicle & Plate</th>
-                <th className="py-3 px-4">Chauffeur</th>
-                <th className="py-3 px-4">Mission Itinerary & Dates</th>
-                <th className="py-3 px-4">Flight Tracking</th>
-                <th className="py-3 px-4">Payment & Amount</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-slate-700 dark:text-slate-300">
-              {filteredBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
-                    <FileText className="w-8 h-8 mx-auto opacity-40 mb-2" />
-                    <p className="font-semibold">No bookings found matching filters.</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredBookings.map((b) => {
-                  const vehicle = vehicles.find((v) => v.id === b.vehicle_id);
-                  const driver = drivers.find((d) => d.id === b.driver_id);
+      {/* Horizontal Grid Ledger */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden stripe-card">
+        <div className="hidden xl:grid xl:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-800/70 text-[#425466] dark:text-slate-300 text-xs font-bold uppercase border-b border-slate-200 dark:border-slate-800">
+          <div className="xl:col-span-3">Customer</div>
+          <div className="xl:col-span-2">Car & Driver</div>
+          <div className="xl:col-span-3">Trip & Flight</div>
+          <div className="xl:col-span-2">Payment</div>
+          <div className="xl:col-span-2 text-right">Status & Actions</div>
+        </div>
 
-                  return (
-                    <tr
-                      key={b.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
+        <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
+          {filteredBookings.length === 0 ? (
+            <div className="py-12 text-center text-[#425466] dark:text-slate-400">
+              <FileText className="w-8 h-8 mx-auto opacity-40 mb-2" />
+              <p className="font-semibold">No bookings match your search.</p>
+            </div>
+          ) : (
+            filteredBookings.map((b) => {
+              const vehicle = vehicles.find((v) => v.id === b.vehicle_id);
+              const driver = drivers.find((d) => d.id === b.driver_id);
+
+              return (
+                <div
+                  key={b.id}
+                  className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 items-center px-4 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setSelectedBookingDetails(b);
+                    setConfirmCancelId(null);
+                  }}
+                >
+                  <div className="xl:col-span-3 min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <div
                       onClick={() => setSelectedBookingDetails(b)}
+                      className="font-mono font-bold text-xs cursor-pointer hover:underline whitespace-nowrap"
+                      style={{ color: activeThemeColor }}
                     >
-                      {/* Booking ID & Client */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <div
-                          onClick={() => setSelectedBookingDetails(b)}
-                          className="font-mono font-bold text-xs cursor-pointer hover:underline"
-                          style={{ color: activeThemeColor }}
-                        >
-                          #{b.id}
-                        </div>
-                        <div className="font-bold text-slate-900 dark:text-white text-xs mt-0.5">
-                          {b.client_name}
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-mono">{b.client_phone}</div>
-                      </td>
+                      #{b.id}
+                    </div>
+                    <div className="font-semibold text-[#0a2540] dark:text-white mt-0.5 truncate">
+                      {b.client_name}
+                    </div>
+                    <div className="text-xs text-[#425466] dark:text-slate-400 font-mono whitespace-nowrap">
+                      {b.client_phone}
+                    </div>
+                  </div>
 
-                      {/* Vehicle */}
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-900 dark:text-white">
-                          {vehicle?.model_name || 'Unassigned'}
-                        </div>
-                        <div className="inline-flex items-center border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.2 rounded font-mono text-[10px] font-bold text-amber-500 mt-0.5">
-                          <span className="text-[8px] bg-amber-500 text-slate-950 px-1 rounded mr-1 font-bold">
-                            RW
+                  <div className="xl:col-span-2 min-w-0 space-y-1">
+                    <div className="font-medium text-[#0a2540] dark:text-white truncate">
+                      {vehicle?.model_name || 'No car'}
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center border border-amber-400/50 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded font-mono text-xs font-bold text-amber-700 dark:text-amber-300 whitespace-nowrap">
+                        {vehicle?.plate_number}
+                      </span>
+                      {driver ? (
+                        <span className="text-xs text-[#425466] dark:text-slate-300 truncate font-medium">
+                          {driver.name}
+                        </span>
+                      ) : (
+                        <span className="text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1 whitespace-nowrap">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                          <span>No driver</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="xl:col-span-3 min-w-0 space-y-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="font-medium text-[#0a2540] dark:text-slate-200 flex items-center gap-1.5 min-w-0">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{b.destination}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-[#425466] dark:text-slate-400 font-mono whitespace-nowrap">
+                        {b.start_date} → {b.end_date}
+                      </span>
+                      {b.flight_number && (
+                        <div className="inline-flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-sky-600 dark:text-sky-400 whitespace-nowrap">
+                            <Plane className="w-3.5 h-3.5 shrink-0" />
+                            <span>{b.flight_number}</span>
                           </span>
-                          {vehicle?.plate_number}
-                        </div>
-                      </td>
-
-                      {/* Driver */}
-                      <td className="py-3 px-4">
-                        {driver ? (
-                          <>
-                            <div className="font-semibold text-slate-900 dark:text-white">{driver.name}</div>
-                            <div className="text-[11px] text-slate-400 font-mono">{driver.phone}</div>
-                            <span className="text-[10px] text-slate-500">Lang: {driver.language}</span>
-                          </>
-                        ) : (
-                          <span className="text-rose-500 text-[11px] font-semibold flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>Unassigned</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Itinerary */}
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-slate-900 dark:text-slate-200 truncate max-w-xs flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span className="truncate">{b.destination}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          {b.start_date} → {b.end_date}
-                        </div>
-                      </td>
-
-                      {/* Flight */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        {b.flight_number ? (
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1 font-mono text-[11px] font-bold text-sky-500">
-                              <Plane className="w-3.5 h-3.5" />
-                              <span>{b.flight_number}</span>
-                            </div>
-                            <select
-                              value={b.flight_status || 'Scheduled'}
-                              onChange={(e) =>
-                                onUpdateFlightStatus(b.id, e.target.value as any)
-                              }
-                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border outline-none cursor-pointer ${
-                                b.flight_status === 'Delayed'
-                                  ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700'
-                                  : b.flight_status === 'On Time'
-                                  ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
-                              }`}
-                            >
-                              <option value="Scheduled">Scheduled</option>
-                              <option value="On Time">On Time</option>
-                              <option value="Delayed">Delayed 45m</option>
-                              <option value="Landed">Landed</option>
-                            </select>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-[11px] italic">Direct Booking</span>
-                        )}
-                      </td>
-
-                      {/* Total & Payment */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="font-mono font-bold text-slate-900 dark:text-white text-xs tabular-nums">
-                          {formatRwf(b.total_rwf)}
-                        </div>
-                        <select
-                          value={b.payment_status}
-                          onChange={(e) =>
-                            handleUpdatePaymentStatus(b.id, e.target.value as PaymentStatus)
-                          }
-                          className={`text-[9px] font-bold rounded px-1.5 py-0.5 mt-0.5 border outline-none cursor-pointer ${
-                            b.payment_status === 'Fully Paid'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                              : b.payment_status === 'Deposit Paid (MoMo)'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-700'
-                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-700'
-                          }`}
-                        >
-                          <option value="Fully Paid">Fully Paid</option>
-                          <option value="Deposit Paid (MoMo)">Deposit Paid (MoMo)</option>
-                          <option value="Pending Payment">Pending Payment</option>
-                        </select>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                          {b.payment_method}
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={b.status}
-                          onChange={(e) =>
-                            onUpdateBookingStatus(b.id, e.target.value as BookingStatus)
-                          }
-                          className={`text-xs font-semibold rounded px-2 py-1 outline-none border cursor-pointer ${
-                            b.status === 'Confirmed'
-                              ? 'bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-700'
-                              : b.status === 'In Progress'
-                              ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
-                              : b.status === 'Completed'
-                              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                              : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700'
-                          }`}
-                        >
-                          <option value="Confirmed">Confirmed</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
-                      </td>
-
-                      {/* Dispatch & Dossier Action */}
-                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          {b.dispatch_status === 'Not Sent' && (
-                            <button
-                              onClick={() => onSelectBookingForDispatch(b.id)}
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap shadow-xs active:scale-95 ${activeBtnText}`}
-                              style={{ backgroundColor: activeThemeColor }}
-                              title="Send Africa's Talking SMS dispatch to chauffeur"
-                            >
-                              <Send className="w-3 h-3" />
-                              <span>Dispatch</span>
-                            </button>
-                          )}
-
-                          {b.dispatch_status === 'Dispatched (SMS)' && (
-                            <button
-                              onClick={() => onAcknowledgeCheckin(b.id)}
-                              className="px-2 py-1 text-[10px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-300 dark:border-slate-700 font-semibold"
-                              title="Driver dial *134# USSD check-in"
-                            >
-                              *134# Check-in
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => setSelectedBookingDetails(b)}
-                            className="p-1 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
-                            title="Open full booking dossier and EBM receipt"
+                          <select
+                            value={b.flight_status || 'Scheduled'}
+                            onChange={(e) =>
+                              onUpdateFlightStatus(b.id, e.target.value as 'On Time' | 'Delayed' | 'Landed' | 'Scheduled')
+                            }
+                            className="text-xs font-medium px-2 py-0.5 rounded-lg border bg-[#f6f9fc] dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 outline-none cursor-pointer"
                           >
-                            <ArrowUpRight className="w-4 h-4" />
-                          </button>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="On Time">On Time</option>
+                            <option value="Delayed">Late</option>
+                            <option value="Landed">Landed</option>
+                          </select>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="xl:col-span-2 min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="font-mono font-bold text-[#0a2540] dark:text-white tabular-nums whitespace-nowrap">
+                      {formatRwf(b.total_rwf)}
+                    </div>
+                    <select
+                      value={b.payment_status}
+                      onChange={(e) =>
+                        handleUpdatePaymentStatus(b.id, e.target.value as PaymentStatus)
+                      }
+                      className="text-xs font-semibold rounded-lg px-2 py-1 mt-1 border bg-[#f6f9fc] dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 outline-none cursor-pointer max-w-full"
+                    >
+                      <option value="Fully Paid">Fully Paid</option>
+                      <option value="Deposit Paid (MoMo)">Deposit Paid</option>
+                      <option value="Pending Payment">Unpaid</option>
+                    </select>
+                  </div>
+
+                  <div className="xl:col-span-2 flex items-center md:justify-end gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={b.status}
+                      onChange={(e) =>
+                        onUpdateBookingStatus(b.id, e.target.value as BookingStatus)
+                      }
+                      className="text-xs font-semibold rounded-lg px-2.5 py-1.5 outline-none border bg-[#f6f9fc] dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 cursor-pointer"
+                    >
+                      <option value="Confirmed">Booked</option>
+                      <option value="In Progress">On Trip</option>
+                      <option value="Completed">Done</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+
+                    {b.dispatch_status === 'Not Sent' && (
+                      <button
+                        onClick={() => onSelectBookingForDispatch(b.id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all whitespace-nowrap shadow-xs active:scale-95 ${activeBtnText}`}
+                        style={{ backgroundColor: activeThemeColor }}
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Send SMS</span>
+                      </button>
+                    )}
+
+                    {b.dispatch_status === 'Dispatched (SMS)' && (
+                      <button
+                        onClick={() => onAcknowledgeCheckin(b.id)}
+                        className="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full border border-slate-200 dark:border-slate-700 font-semibold whitespace-nowrap"
+                      >
+                        Mark Ready
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setSelectedBookingDetails(b);
+                        setConfirmCancelId(null);
+                      }}
+                      className="p-2 rounded-lg text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                      title="See booking details"
+                    >
+                      <ArrowUpRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
-      {/* 5. Detailed Booking Dossier & RRA EBM Receipt Modal */}
+      {/* Booking Details Modal */}
       {selectedBookingDetails && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl">
-            {/* Header */}
             <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-sm text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">
+                  <span
+                    className="font-mono font-bold text-sm px-2.5 py-0.5 rounded-lg"
+                    style={{ backgroundColor: `${activeThemeColor}18`, color: activeThemeColor }}
+                  >
                     #{selectedBookingDetails.id}
                   </span>
-                  <span
-                    className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                      selectedBookingDetails.status === 'Confirmed'
-                        ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
-                        : selectedBookingDetails.status === 'In Progress'
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                        : selectedBookingDetails.status === 'Completed'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                    }`}
-                  >
+                  <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-200">
                     {selectedBookingDetails.status}
                   </span>
                 </div>
-                <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
+                <h3 className="text-xl font-bold text-[#0a2540] dark:text-white mt-2">
                   {selectedBookingDetails.client_name}
                 </h3>
-                <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-3">
-                  <span>{selectedBookingDetails.client_phone}</span>
-                  <span>•</span>
+                <div className="text-sm text-[#425466] dark:text-slate-400 mt-1 flex items-center gap-3">
+                  <span className="flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5" />
+                    {selectedBookingDetails.client_phone}
+                  </span>
+                  <span>·</span>
                   <span>{selectedBookingDetails.client_email}</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsEbmReceiptOpen(!isEbmReceiptOpen)}
-                  className="p-2 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  title="Print / View RRA EBM v2 Tax Receipt"
+                  onClick={() => setIsReceiptOpen(!isReceiptOpen)}
+                  className="p-2 rounded-lg text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  title="Show receipt"
                 >
-                  <Printer className="w-4 h-4" />
+                  <Printer className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => {
                     setSelectedBookingDetails(null);
-                    setIsEbmReceiptOpen(false);
+                    setIsReceiptOpen(false);
+                    setConfirmCancelId(null);
                   }}
-                  className="p-2 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="p-2 rounded-lg text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {reassignSuccessMsg && (
-              <div className="p-3 text-xs font-semibold text-emerald-400 bg-emerald-950/50 border border-emerald-800 rounded-lg flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{reassignSuccessMsg}</span>
-              </div>
-            )}
-
-            {/* Quick Specs Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Total Amount</span>
-                <p className="text-sm font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">
+              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-xs text-[#425466] dark:text-slate-400 font-medium">Total Price</span>
+                <p className="text-base font-bold text-[#0a2540] dark:text-white font-mono mt-1">
                   {formatRwf(selectedBookingDetails.total_rwf)}
                 </p>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Payment Status</span>
-                <p className="text-xs font-bold text-amber-500 mt-0.5 truncate">
+              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-xs text-[#425466] dark:text-slate-400 font-medium">Payment</span>
+                <p className="text-sm font-semibold text-[#0a2540] dark:text-white mt-1 truncate">
                   {selectedBookingDetails.payment_status}
                 </p>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Payment Method</span>
-                <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">
+              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-xs text-[#425466] dark:text-slate-400 font-medium">Method</span>
+                <p className="text-sm font-semibold text-[#0a2540] dark:text-white mt-1">
                   {selectedBookingDetails.payment_method}
                 </p>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Dates (Inclusive)</span>
-                <p className="text-xs font-bold text-slate-900 dark:text-white font-mono mt-0.5">
+              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-xs text-[#425466] dark:text-slate-400 font-medium">Start Date</span>
+                <p className="text-sm font-semibold text-[#0a2540] dark:text-white font-mono mt-1">
                   {selectedBookingDetails.start_date}
                 </p>
               </div>
             </div>
 
-            {/* Physical Vehicle & Assigned Chauffeur Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Vehicle Card */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {(() => {
                 const vehicle = vehicles.find((v) => v.id === selectedBookingDetails.vehicle_id);
                 return (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
-                        <Car className="w-3.5 h-3.5 text-amber-500" />
-                        Allocated Fleet Vehicle
-                      </span>
-                      <span className="text-[10px] font-mono text-emerald-500 font-bold">
-                        Collision-Locked
-                      </span>
+                  <div className="p-4 bg-[#f6f9fc] dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-semibold text-[#425466] dark:text-slate-400 flex items-center gap-1.5">
+                      <Car className="w-4 h-4" style={{ color: activeThemeColor }} />
+                      <span>Car</span>
                     </div>
-                    <div className="text-sm font-bold text-slate-900 dark:text-white">
-                      {vehicle?.model_name || 'Vehicle'}
+                    <div className="text-base font-bold text-[#0a2540] dark:text-white">
+                      {vehicle?.model_name || 'Car'}
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono text-amber-500 font-bold">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-mono font-bold" style={{ color: activeThemeColor }}>
                         {vehicle?.plate_number}
                       </span>
-                      <span className="text-slate-400">{vehicle?.location}</span>
+                      <span className="text-[#425466] dark:text-slate-400">{vehicle?.location}</span>
                     </div>
                   </div>
                 );
               })()}
 
-              {/* Chauffeur Card */}
               {(() => {
                 const driver = drivers.find((d) => d.id === selectedBookingDetails.driver_id);
                 return (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
-                        <UserCheck className="w-3.5 h-3.5 text-amber-500" />
-                        Assigned Chauffeur
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {driver?.status || 'Active'}
-                      </span>
+                  <div className="p-4 bg-[#f6f9fc] dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-semibold text-[#425466] dark:text-slate-400 flex items-center gap-1.5">
+                      <UserCheck className="w-4 h-4" style={{ color: activeThemeColor }} />
+                      <span>Driver</span>
                     </div>
-                    <div className="text-sm font-bold text-slate-900 dark:text-white">
-                      {driver?.name || 'Unassigned'}
+                    <div className="text-base font-bold text-[#0a2540] dark:text-white">
+                      {driver?.name || 'No driver yet'}
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono text-slate-500">{driver?.phone}</span>
-                      <span className="text-slate-400">Rating: {driver?.rating || 5.0} ★</span>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-mono text-[#425466] dark:text-slate-400">{driver?.phone}</span>
+                      <span className="text-[#425466] dark:text-slate-400">{driver?.rating || 5.0} ★</span>
                     </div>
                   </div>
                 );
               })()}
             </div>
 
-            {/* KIA Airport Flight Radar section if flight exists */}
             {selectedBookingDetails.flight_number && (
-              <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sky-700 dark:text-sky-300 flex items-center gap-1.5">
+              <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 space-y-1.5 text-sm">
+                <div className="flex items-center justify-between font-bold text-sky-800 dark:text-sky-300">
+                  <span className="flex items-center gap-2">
                     <Plane className="w-4 h-4" />
-                    <span>Kigali International Airport (KIA) Flight Radar</span>
+                    <span>Airport Flight</span>
                   </span>
-                  <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
-                    {selectedBookingDetails.flight_number}
-                  </span>
+                  <span className="font-mono">{selectedBookingDetails.flight_number}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-300">
-                  <div>
-                    Origin: <strong>{selectedBookingDetails.flight_origin || 'Entebbe (EBB)'}</strong>
-                  </div>
-                  <div>
-                    Live Radar Status:{' '}
-                    <strong
-                      className={
-                        selectedBookingDetails.flight_status === 'Delayed'
-                          ? 'text-rose-500'
-                          : 'text-emerald-500'
-                      }
-                    >
-                      {selectedBookingDetails.flight_status || 'On Time'}
-                    </strong>
-                  </div>
+                <div className="text-sky-900 dark:text-sky-200">
+                  From <strong>{selectedBookingDetails.flight_origin || 'Entebbe'}</strong> · Status:{' '}
+                  <strong>{selectedBookingDetails.flight_status || 'On Time'}</strong>
                 </div>
               </div>
             )}
 
-            {/* RRA EBM Electronic Tax Invoice Preview */}
-            {isEbmReceiptOpen && (
-              <div className="p-5 bg-white dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-xl space-y-3 font-mono text-xs shadow-inner">
-                <div className="text-center border-b border-slate-200 dark:border-slate-800 pb-2">
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                    RWANDA REVENUE AUTHORITY (RRA)
-                  </h4>
-                  <p className="text-[10px] text-slate-500">ELECTRONIC BILLING MACHINE (EBM v2)</p>
-                  <p className="text-[10px] text-slate-400">TIN: 100984512 · KIGALI FLEET LTD</p>
+            {isReceiptOpen && (
+              <div className="p-5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3 font-mono text-sm">
+                <div className="text-center border-b border-slate-200 dark:border-slate-800 pb-3">
+                  <h4 className="font-bold text-base text-[#0a2540] dark:text-white">Payment Receipt</h4>
+                  <p className="text-xs text-[#425466] dark:text-slate-400">KigaliFleet · TIN 100984512</p>
                 </div>
 
-                <div className="space-y-1 text-[11px]">
+                <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between">
-                    <span>CUSTOMER:</span>
+                    <span>Customer:</span>
                     <span className="font-bold">{selectedBookingDetails.client_name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>BOOKING REF:</span>
+                    <span>Booking:</span>
                     <span>#{selectedBookingDetails.id}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>DATE:</span>
-                    <span>{new Date().toISOString().split('T')[0]}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>ROUTE:</span>
-                    <span className="truncate max-w-[200px]">{selectedBookingDetails.destination}</span>
+                    <span>Trip:</span>
+                    <span className="truncate max-w-[240px]">{selectedBookingDetails.destination}</span>
                   </div>
                 </div>
 
-                <div className="border-t border-b border-dashed border-slate-300 dark:border-slate-700 py-2 space-y-1">
+                <div className="border-t border-b border-dashed border-slate-300 dark:border-slate-700 py-3 space-y-1.5 text-xs">
                   <div className="flex justify-between">
-                    <span>NET CHARGE (EXCL. VAT):</span>
+                    <span>Subtotal:</span>
                     <span>{formatRwf(Math.round(selectedBookingDetails.total_rwf / 1.18))}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>VAT (18%):</span>
+                  <div className="flex justify-between text-[#425466] dark:text-slate-400">
+                    <span>Tax (18%):</span>
                     <span>{formatRwf(Math.round(selectedBookingDetails.total_rwf - selectedBookingDetails.total_rwf / 1.18))}</span>
                   </div>
-                  <div className="flex justify-between font-bold text-sm text-slate-900 dark:text-white pt-1">
-                    <span>TOTAL RWF:</span>
+                  <div className="flex justify-between font-bold text-sm text-[#0a2540] dark:text-white pt-1">
+                    <span>Total Paid:</span>
                     <span>{formatRwf(selectedBookingDetails.total_rwf)}</span>
                   </div>
-                </div>
-
-                <div className="text-center text-[10px] text-slate-400">
-                  SDC INVOICE NUMBER: SDC-RWA-{selectedBookingDetails.id.replace('bk-', '')}
                 </div>
               </div>
             )}
 
-            {/* Modal Footer Controls */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  if (onDeleteBooking && confirm(`Cancel & release reservation #${selectedBookingDetails.id}?`)) {
-                    onDeleteBooking(selectedBookingDetails.id);
-                    setSelectedBookingDetails(null);
-                  }
-                }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Cancel Reservation</span>
-              </button>
-
-              <div className="flex items-center gap-2">
+            {/* Footer */}
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+              {confirmCancelId === selectedBookingDetails.id ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">Cancel this booking?</span>
+                  <button
+                    onClick={() => {
+                      onDeleteBooking?.(selectedBookingDetails.id);
+                      setSelectedBookingDetails(null);
+                      setConfirmCancelId(null);
+                    }}
+                    className="px-3.5 py-1.5 rounded-full bg-rose-600 text-white text-xs font-semibold"
+                  >
+                    Yes, Cancel
+                  </button>
+                  <button
+                    onClick={() => setConfirmCancelId(null)}
+                    className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold"
+                  >
+                    Keep
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={() => setIsEbmReceiptOpen(!isEbmReceiptOpen)}
-                  className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
+                  onClick={() => setConfirmCancelId(selectedBookingDetails.id)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full transition-colors"
                 >
-                  {isEbmReceiptOpen ? 'Hide EBM Receipt' : 'Print EBM Receipt'}
+                  <Trash2 className="w-4 h-4" />
+                  <span>Cancel Booking</span>
+                </button>
+              )}
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => setIsReceiptOpen(!isReceiptOpen)}
+                  className="px-4 py-2 text-sm font-semibold rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#0a2540] dark:text-slate-200"
+                >
+                  {isReceiptOpen ? 'Hide Receipt' : 'Show Receipt'}
                 </button>
                 <button
                   onClick={() => {
                     onSelectBookingForDispatch(selectedBookingDetails.id);
                     setSelectedBookingDetails(null);
                   }}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-all shadow-sm ${activeBtnText}`}
+                  className={`px-5 py-2 text-sm font-semibold rounded-full transition-all shadow-xs ${activeBtnText}`}
                   style={{ backgroundColor: activeThemeColor }}
                 >
-                  Dispatch via SMS
+                  Send Driver SMS
                 </button>
               </div>
             </div>

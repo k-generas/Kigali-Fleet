@@ -84,7 +84,7 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
   title,
   description,
   confirmLabel,
-  placeholder = 'Document the operational, billing, or security reason for the immutable audit trail...',
+  placeholder = 'Write why you are making this change (saved in the history log)...',
   danger = false,
   currentTheme,
   onCancel,
@@ -98,7 +98,7 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (reason.trim().length < 5) {
-      setError('Please enter an audit reason (at least 5 characters).');
+      setError('Please write a short reason (at least 5 letters).');
       return;
     }
     onConfirm(reason.trim());
@@ -108,21 +108,21 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <div
-              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                 danger
                   ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
                   : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
               }`}
             >
-              {danger ? <ShieldAlert className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+              {danger ? <ShieldAlert className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
+              <h3 className="text-base font-bold text-[#0a2540] dark:text-white">{title}</h3>
+              <p className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">{description}</p>
             </div>
           </div>
           <button
@@ -132,16 +132,16 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
               setError(null);
               onCancel();
             }}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-md"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-full"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Mandatory Audit Reason
+            <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-300 mb-1.5">
+              Reason for This Change
             </label>
             <textarea
               rows={3}
@@ -151,13 +151,13 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
                 if (error) setError(null);
               }}
               placeholder={placeholder}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 text-xs text-slate-900 dark:text-white outline-none focus:border-amber-500"
+              className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-sm text-[#0a2540] dark:text-white outline-none focus:border-amber-500"
               required
             />
-            {error && <p className="text-[11px] text-rose-500 mt-1">{error}</p>}
+            {error && <p className="text-sm text-rose-500 mt-1">{error}</p>}
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => {
@@ -165,13 +165,13 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
                 setError(null);
                 onCancel();
               }}
-              className="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 whitespace-nowrap"
+              className="px-4 py-2 rounded-full text-sm font-semibold text-[#425466] dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 whitespace-nowrap"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-opacity hover:opacity-90 ${
+              className={`px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-opacity hover:opacity-90 ${
                 danger ? 'bg-rose-600 text-white' : currentTheme.btnText
               }`}
               style={!danger ? { backgroundColor: currentTheme.hex } : undefined}

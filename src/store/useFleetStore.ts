@@ -1758,8 +1758,14 @@ export function useFleetStore() {
             created_at: new Date().toISOString().slice(0, 10),
           };
           setDoc(doc(db, 'users', matchedUser.id), cleanForFirestore(matchedUser)).catch(() => {});
-        } else if (isSuper && matchedUser.role !== 'superadmin') {
-          matchedUser = { ...matchedUser, role: 'superadmin' };
+        } else {
+          matchedUser = {
+            ...matchedUser,
+            name: res.user.displayName || matchedUser.name,
+            avatar_url: res.user.photoURL || matchedUser.avatar_url,
+            role: isSuper ? 'superadmin' : matchedUser.role,
+          };
+          setDoc(doc(db, 'users', matchedUser.id), cleanForFirestore(matchedUser), { merge: true }).catch(() => {});
         }
 
         setState((prev) => ({

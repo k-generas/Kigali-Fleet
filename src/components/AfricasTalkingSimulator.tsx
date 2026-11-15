@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Booking, Driver, Vehicle } from '../types';
-import { generateDriverSMS, generateFlightDelaySMS, formatRwf } from '../utils/collision';
+import { generateDriverSMS, generateFlightDelaySMS } from '../utils/collision';
 import {
   MessageSquare,
   Plane,
@@ -8,11 +8,7 @@ import {
   Send,
   CheckCircle2,
   AlertTriangle,
-  Clock,
   Radio,
-  RotateCw,
-  Hash,
-  Car,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -42,8 +38,7 @@ export const AfricasTalkingSimulator: React.FC<AfricasTalkingSimulatorProps> = (
   onAdvanceCheckin,
   onUpdateFlightStatus,
 }) => {
-  const activeThemeColor = currentTheme?.hex || '#f59e0b';
-  const activeBtnText = currentTheme?.btnText || 'text-slate-950';
+  const activeThemeColor = currentTheme?.hex || '#635bff';
   const activeBookings = bookings.filter((b) => b.status === 'Confirmed' || b.status === 'In Progress');
   const [selectedBookingId, setSelectedBookingId] = useState<string>(activeBookings[0]?.id || bookings[0]?.id || '');
   const [ussdInput, setUssdInput] = useState('*134#');
@@ -55,289 +50,257 @@ export const AfricasTalkingSimulator: React.FC<AfricasTalkingSimulatorProps> = (
   const currentDriver = currentBooking ? drivers.find((d) => d.id === currentBooking.driver_id) : null;
   const currentVehicle = currentBooking ? vehicles.find((v) => v.id === currentBooking.vehicle_id) : null;
 
-  // Language selection: AUTO uses driver's registered preference
   const effectiveLang: 'RW' | 'EN' =
     customLanguage === 'AUTO'
       ? currentDriver?.language === 'RW'
         ? 'RW'
-        : 'RW' // default to RW or EN
+        : 'RW'
       : customLanguage;
 
-  const smsPayload = currentBooking && currentDriver && currentVehicle
-    ? generateDriverSMS({
-        driver: currentDriver,
-        vehicle: currentVehicle,
-        booking: currentBooking,
-        language: effectiveLang,
-      })
-    : null;
+  const smsPayload =
+    currentBooking && currentDriver && currentVehicle
+      ? generateDriverSMS({
+          driver: currentDriver,
+          vehicle: currentVehicle,
+          booking: currentBooking,
+          language: effectiveLang,
+        })
+      : null;
 
-  const flightDelayPayload = currentBooking && currentDriver
-    ? generateFlightDelaySMS({
-        driver: currentDriver,
-        booking: currentBooking,
-        delayMinutes,
-        language: effectiveLang,
-      })
-    : null;
+  const flightDelayPayload =
+    currentBooking && currentDriver
+      ? generateFlightDelaySMS({
+          driver: currentDriver,
+          booking: currentBooking,
+          delayMinutes,
+          language: effectiveLang,
+        })
+      : null;
 
-  const handleSimulateUSSD = (code: string) => {
-    setUssdResponse('Connecting to Rwanda USSD Gateway (*134#)...');
+  const handleSimulateUSSD = () => {
+    setUssdResponse('Dialing *134#...');
     setTimeout(() => {
       if (currentBooking) {
         onAdvanceCheckin(currentBooking.id);
         setUssdResponse(
-          `[USSD KIGALI-FLEET]\nMurakoze ${currentDriver?.name || 'Mushoferi'}.\nUrugendo #${currentBooking.id.slice(-4)} rwemejwe neza.\nImodoka: ${currentVehicle?.plate_number}.\nAho kwakira: KIA Terminal.`
+          `Murakoze ${currentDriver?.name || 'Driver'}.\nTrip #${currentBooking.id.slice(-4)} confirmed.\nCar: ${currentVehicle?.plate_number}.\nPickup: Kigali Airport.`
         );
       }
     }, 400);
   };
 
-  const handleTriggerFlightDelay = () => {
-    if (!currentBooking) return;
-    onUpdateFlightStatus(currentBooking.id, 'Delayed', delayMinutes);
-  };
-
-  const handleClearDelay = () => {
-    if (!currentBooking) return;
-    onUpdateFlightStatus(currentBooking.id, 'On Time', 0);
-  };
-
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+      {/* Header */}
+      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-bold" style={{ color: activeThemeColor }}>
-              <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span>AFRICA'S TALKING RWANDA SMS / USSD GATEWAY</span>
+            <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-400">
+              <Radio className="w-4 h-4" />
+              <span>Driver Text & Phone Line Active</span>
             </div>
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-              Automated Chauffeur Dispatch & Flight Telemetry Console
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white tracking-tight">
+              Driver Text & Phone Demo
             </h2>
-            <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-              Monitors pickup windows at Kigali International Airport (KIA), generates bilingual Kinyarwanda/English SMS dispatches, and handles zero-data USSD driver check-in hooks.
+            <p className="text-base text-[#425466] dark:text-slate-300 max-w-2xl">
+              Send trip texts to your driver in Kinyarwanda or English, and test how drivers check in with *134# with zero internet.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs">
+          <div className="flex items-center gap-4 bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-sm shrink-0">
             <div>
-              <div className="text-[10px] text-slate-400">Gateway Status</div>
-              <div className="text-emerald-400 font-bold font-mono">MTN / Airtel Active</div>
+              <div className="text-[#425466] dark:text-slate-400">Phone Line</div>
+              <div className="text-emerald-700 dark:text-emerald-400 font-bold">MTN / Airtel Ready</div>
             </div>
-            <span className="text-slate-600">|</span>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
             <div>
-              <div className="text-[10px] text-slate-400">Delivery SLA</div>
-              <div className="text-white font-mono font-bold">&lt; 3.2s</div>
+              <div className="text-[#425466] dark:text-slate-400">Speed</div>
+              <div className="text-[#0a2540] dark:text-white font-mono font-bold">Under 3 sec</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Booking Selector Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        <span className="text-slate-400 font-semibold whitespace-nowrap">Select Active Mission:</span>
-        {activeBookings.map((b) => {
-          const isSelected = (currentBooking?.id || '') === b.id;
-          const v = vehicles.find((veh) => veh.id === b.vehicle_id);
+      {/* Active Trip Picker */}
+      <div className="space-y-2 text-sm">
+        <div className="text-[#425466] dark:text-slate-400 font-bold">Pick a Trip:</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {activeBookings.map((b) => {
+            const isSelected = (currentBooking?.id || '') === b.id;
+            const v = vehicles.find((veh) => veh.id === b.vehicle_id);
 
-          return (
-            <button
-              key={b.id}
-              onClick={() => {
-                setSelectedBookingId(b.id);
-                setUssdResponse(null);
-              }}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                isSelected
-                  ? `${activeBtnText} shadow-sm font-bold`
-                  : 'bg-slate-800 text-slate-300 hover:text-white'
-              }`}
-              style={isSelected ? { backgroundColor: activeThemeColor } : undefined}
-            >
-              <span>#{b.id}</span>
-              <span>·</span>
-              <span className="font-normal truncate max-w-[130px]">{b.client_name}</span>
-              <span className="font-mono text-[10px]">({v?.plate_number || 'Car'})</span>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={b.id}
+                onClick={() => {
+                  setSelectedBookingId(b.id);
+                  setUssdResponse(null);
+                }}
+                className={`w-full px-4 py-2.5 rounded-xl font-semibold transition-all flex items-center justify-between gap-2 border min-w-0 ${
+                  isSelected
+                    ? 'text-white border-transparent shadow-sm'
+                    : 'bg-white dark:bg-slate-900 text-[#0a2540] dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                }`}
+                style={isSelected ? { backgroundColor: activeThemeColor } : undefined}
+              >
+                <span className="truncate">{b.client_name}</span>
+                <span className="font-mono text-xs opacity-90 shrink-0">({v?.plate_number || 'Car'})</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Main Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (7 cols): SMS Dispatch Engine & Flight Delay Trigger */}
+        {/* Left: SMS & Flight Delay */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Card 1: Africa's Talking SMS Dispatcher */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-bold text-white">
-                  Automated Africa's Talking SMS Dispatch
+          {/* Card 1: Send Text to Driver */}
+          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <MessageSquare className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
+                  Send Text to Driver
                 </h3>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20 font-bold">
-                API v1.0
+              <span className="text-sm font-semibold px-3 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20">
+                SMS Ready
               </span>
             </div>
 
-            {/* Chauffeur and Language settings */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Chauffeur</span>
-                <div className="font-bold text-white mt-0.5">{currentDriver?.name || 'Unassigned'}</div>
-                <div className="text-amber-400 font-mono text-[11px]">{currentDriver?.phone}</div>
-                <div className="text-slate-400 text-[10px] mt-0.5">Language: {currentDriver?.language}</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[#425466] dark:text-slate-400 font-semibold">Driver</span>
+                <div className="font-bold text-[#0a2540] dark:text-white mt-0.5">{currentDriver?.name || 'Not picked'}</div>
+                <div className="text-amber-700 dark:text-amber-400 font-mono">{currentDriver?.phone}</div>
               </div>
 
-              <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Assigned Fleet Car</span>
-                <div className="font-bold text-white mt-0.5">{currentVehicle?.model_name}</div>
-                <div className="text-amber-400 font-mono text-[11px] font-bold">
-                  {currentVehicle?.plate_number}
-                </div>
-                <div className="text-slate-400 text-[10px] mt-0.5">{currentVehicle?.location}</div>
+              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[#425466] dark:text-slate-400 font-semibold">Car</span>
+                <div className="font-bold text-[#0a2540] dark:text-white mt-0.5">{currentVehicle?.model_name}</div>
+                <div className="text-amber-700 dark:text-amber-400 font-mono font-bold">{currentVehicle?.plate_number}</div>
               </div>
             </div>
 
-            {/* Language switch */}
             <div>
-              <label className="block text-slate-300 text-xs font-semibold mb-1.5">
-                Format Dispatch Language:
+              <label className="block text-[#0a2540] dark:text-slate-200 text-sm font-bold mb-2">
+                Text Language:
               </label>
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <button
-                  onClick={() => setCustomLanguage('AUTO')}
-                  className={`py-1.5 px-2 rounded-lg font-semibold border transition-all ${
-                    customLanguage === 'AUTO'
-                      ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-sm'
-                      : 'bg-slate-800 border-slate-700 text-slate-300'
-                  }`}
-                >
-                  Auto (Driver Profile)
-                </button>
-                <button
-                  onClick={() => setCustomLanguage('RW')}
-                  className={`py-1.5 px-2 rounded-lg font-semibold border transition-all ${
-                    customLanguage === 'RW'
-                      ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-sm'
-                      : 'bg-slate-800 border-slate-700 text-slate-300'
-                  }`}
-                >
-                  Kinyarwanda
-                </button>
-                <button
-                  onClick={() => setCustomLanguage('EN')}
-                  className={`py-1.5 px-2 rounded-lg font-semibold border transition-all ${
-                    customLanguage === 'EN'
-                      ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-sm'
-                      : 'bg-slate-800 border-slate-700 text-slate-300'
-                  }`}
-                >
-                  English
-                </button>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                {[
+                  { id: 'AUTO' as const, label: 'Auto' },
+                  { id: 'RW' as const, label: 'Kinyarwanda' },
+                  { id: 'EN' as const, label: 'English' },
+                ].map((lang) => (
+                  <button
+                    key={lang.id}
+                    onClick={() => setCustomLanguage(lang.id)}
+                    className={`py-2.5 px-3 rounded-full font-bold border transition-all ${
+                      customLanguage === lang.id
+                        ? 'text-white border-transparent shadow-sm'
+                        : 'bg-[#f6f9fc] dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-300'
+                    }`}
+                    style={customLanguage === lang.id ? { backgroundColor: activeThemeColor } : undefined}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Dispatched Payload */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Inbound SMS Dispatch Payload</span>
-                <span className="font-mono text-[10px] text-amber-400">POST /version1/messaging</span>
+              <div className="text-sm font-semibold text-[#425466] dark:text-slate-400">
+                Message Preview
               </div>
-              <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 whitespace-pre-line leading-relaxed shadow-inner">
+              <div className="p-4 bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono text-[#0a2540] dark:text-slate-200 whitespace-pre-line leading-relaxed">
                 {smsPayload?.messageText}
               </div>
             </div>
 
-            {/* Action */}
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-slate-400">
-                Dispatch status:{' '}
-                <strong className="text-amber-400 font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <span className="text-sm text-[#425466] dark:text-slate-400">
+                Status:{' '}
+                <strong className="text-amber-700 dark:text-amber-400">
                   {currentBooking?.dispatch_status || 'Not Sent'}
                 </strong>
               </span>
 
               <button
                 onClick={() => currentBooking && onDispatchSMS(currentBooking.id, effectiveLang)}
-                className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all shadow-sm active:scale-95 ${activeBtnText}`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-full text-white transition-opacity hover:opacity-95 shadow-sm"
                 style={{ backgroundColor: activeThemeColor }}
               >
                 <Send className="w-4 h-4" />
-                <span>Transmit Africa's Talking SMS</span>
+                <span>Send Text to Driver</span>
               </button>
             </div>
           </div>
 
-          {/* Card 2: Kigali International Airport Flight Delay Simulator */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Plane className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-bold text-white">
-                  Kigali International Airport (KIA) Flight Delay Hook
+          {/* Card 2: Airport Flight Delay Test */}
+          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <Plane className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
+                  Airport Flight Delay Test
                 </h3>
               </div>
-              <span className="text-xs font-mono text-slate-400">Terminal Telemetry</span>
+              <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Kigali Airport</span>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              When flights are delayed entering Kigali airspace, the system automatically detects the new ETA and alerts the assigned driver via Africa's Talking SMS, preventing stranded VIPs.
+            <p className="text-sm text-[#425466] dark:text-slate-300 leading-relaxed">
+              If a guest&apos;s plane is late, the driver gets a text right away with the new pickup time.
             </p>
 
-            <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-between text-xs">
+            <div className="p-4 bg-[#f6f9fc] dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
               <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Tracked Flight</span>
-                <div className="font-mono text-sm font-bold text-white mt-0.5">
-                  {currentBooking?.flight_number || 'Direct Transfer (No Flight)'}
+                <span className="text-[#425466] dark:text-slate-400 font-semibold">Flight</span>
+                <div className="font-mono text-base font-bold text-[#0a2540] dark:text-white mt-0.5">
+                  {currentBooking?.flight_number || 'No flight on this trip'}
                 </div>
-                <div className="text-slate-400 text-[11px] mt-0.5">
-                  Current Status: <strong className={currentBooking?.flight_status === 'Delayed' ? 'text-rose-400' : 'text-emerald-400'}>
+                <div className="text-[#425466] dark:text-slate-400 mt-0.5">
+                  Status:{' '}
+                  <strong className={currentBooking?.flight_status === 'Delayed' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
                     {currentBooking?.flight_status || 'On Time'}
                   </strong>
                   {currentBooking?.flight_delay_minutes ? ` (+${currentBooking.flight_delay_minutes} mins)` : ''}
                 </div>
               </div>
 
-              {/* Delay simulator controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={delayMinutes}
                   onChange={(e) => setDelayMinutes(Number(e.target.value))}
-                  className="bg-slate-800 border border-slate-700 text-white rounded p-1.5 text-xs font-mono"
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3 py-2 text-sm font-mono"
                 >
-                  <option value={30}>+30 Min Delay</option>
-                  <option value={45}>+45 Min Delay</option>
-                  <option value={90}>+90 Min Delay</option>
+                  <option value={30}>+30 Min Late</option>
+                  <option value={45}>+45 Min Late</option>
+                  <option value={90}>+90 Min Late</option>
                 </select>
 
                 <button
-                  onClick={handleTriggerFlightDelay}
-                  className="px-3 py-1.5 text-xs font-bold rounded bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+                  onClick={() => currentBooking && onUpdateFlightStatus(currentBooking.id, 'Delayed', delayMinutes)}
+                  className="px-4 py-2 text-sm font-bold rounded-full bg-rose-600 hover:bg-rose-500 text-white transition-colors"
                 >
-                  Trigger Delay
+                  Test Late Flight
                 </button>
 
                 <button
-                  onClick={handleClearDelay}
-                  className="px-2.5 py-1.5 text-xs font-medium rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+                  onClick={() => currentBooking && onUpdateFlightStatus(currentBooking.id, 'On Time', 0)}
+                  className="px-4 py-2 text-sm font-semibold rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200"
                 >
-                  Reset On Time
+                  Reset
                 </button>
               </div>
             </div>
 
-            {/* Delay SMS Preview */}
             {currentBooking?.flight_status === 'Delayed' && (
-              <div className="p-3.5 bg-rose-950/40 border border-rose-800/60 rounded-lg space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-rose-300 font-bold">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                  <span>AUTOMATED CHAUFFEUR DELAY ALERT SENT</span>
+              <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded-xl space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>Text Sent to Driver About Late Flight</span>
                 </div>
-                <div className="font-mono text-[11px] text-rose-200 bg-slate-950/80 p-2.5 rounded border border-rose-900/60 whitespace-pre-line">
+                <div className="font-mono text-sm text-rose-900 dark:text-rose-200 bg-white dark:bg-slate-950 p-3 rounded-lg border border-rose-200 dark:border-rose-900/60 whitespace-pre-line">
                   {flightDelayPayload?.messageText}
                 </div>
               </div>
@@ -345,102 +308,93 @@ export const AfricasTalkingSimulator: React.FC<AfricasTalkingSimulatorProps> = (
           </div>
         </div>
 
-        {/* Right Column (5 cols): Driver Phone Screen & Zero-Data USSD Check-In */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">
-                  Zero-Data USSD Check-In Hook
+        {/* Right: Driver Phone (*134#) */}
+        <div className="lg:col-span-5">
+          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <Phone className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
+                  Driver Phone (*134#)
                 </h3>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">
-                NO DATA REQUIRED
+              <span className="text-sm px-3 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold">
+                Free · No Internet
               </span>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Drivers dial free USSD shortcode <strong>*134#</strong> to acknowledge pickup windows without consuming mobile data bundles.
+            <p className="text-sm text-[#425466] dark:text-slate-300 leading-relaxed">
+              Drivers dial <strong>*134#</strong> on any phone to confirm they got the job—no mobile data needed.
             </p>
 
-            {/* Virtual Phone Shell */}
-            <div className="bg-slate-950 border-2 border-slate-800 rounded-2xl p-4 space-y-3 shadow-inner">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono border-b border-slate-800/80 pb-1.5">
-                <span>MTN-RW / AIRTEL-RW</span>
-                <span>4G · FULL BARS</span>
+            <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-4">
+              <div className="flex items-center justify-between text-sm text-[#425466] dark:text-slate-400 font-mono border-b border-slate-200 dark:border-slate-800 pb-2">
+                <span>MTN / AIRTEL</span>
+                <span>READY</span>
               </div>
 
-              {/* USSD Dialog Screen */}
-              <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-xl p-3 text-xs font-mono text-emerald-300 min-h-[90px] flex flex-col justify-center whitespace-pre-line leading-relaxed">
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-4 text-sm font-mono text-emerald-900 dark:text-emerald-200 min-h-[100px] flex flex-col justify-center whitespace-pre-line leading-relaxed">
                 {ussdResponse ? (
                   ussdResponse
                 ) : (
                   <div>
-                    <div className="text-slate-400 text-[10px] uppercase font-bold">USSD Hook Ready</div>
-                    <div className="text-white mt-1">Dial *134# to confirm pickup or arrival for Booking #{currentBooking?.id.slice(-4)}.</div>
+                    <div className="font-bold">Phone Screen Ready</div>
+                    <div className="mt-1">Dial *134# to confirm trip #{currentBooking?.id.slice(-4)}.</div>
                   </div>
                 )}
               </div>
 
-              {/* Dial Pad & Trigger */}
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={ussdInput}
                   onChange={(e) => setUssdInput(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs text-center font-bold tracking-widest outline-none"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-mono text-sm text-center font-bold tracking-widest outline-none"
                 />
                 <button
-                  onClick={() => handleSimulateUSSD(ussdInput)}
-                  className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 shrink-0"
+                  onClick={handleSimulateUSSD}
+                  className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center gap-1.5 shrink-0"
                 >
-                  <Phone className="w-3.5 h-3.5" />
+                  <Phone className="w-4 h-4" />
                   <span>Dial</span>
                 </button>
               </div>
 
-              {/* Stage Progression Buttons */}
-              <div className="pt-2 border-t border-slate-800 space-y-2">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                  Quick Chauffeur Check-In Stages:
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                <span className="text-sm text-[#425466] dark:text-slate-400 font-bold block">
+                  Test Driver Updates:
                 </span>
-                <div className="grid grid-cols-1 gap-1.5 text-xs">
-                  <button
-                    onClick={() => currentBooking && onAdvanceCheckin(currentBooking.id, 'Acknowledged by Driver')}
-                    className={`p-2 rounded-lg text-left border flex items-center justify-between transition-colors ${
-                      currentBooking?.dispatch_status === 'Acknowledged by Driver'
-                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
-                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-850'
-                    }`}
-                  >
-                    <span>1. Acknowledge Trip (*134#)</span>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => currentBooking && onAdvanceCheckin(currentBooking.id, 'Driver at Terminal')}
-                    className={`p-2 rounded-lg text-left border flex items-center justify-between transition-colors ${
-                      currentBooking?.dispatch_status === 'Driver at Terminal'
-                        ? 'bg-sky-500/20 border-sky-500 text-sky-300 font-bold'
-                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-850'
-                    }`}
-                  >
-                    <span>2. Chauffeur Arrived at KIA Terminal</span>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => currentBooking && onAdvanceCheckin(currentBooking.id, 'Client Onboard')}
-                    className={`p-2 rounded-lg text-left border flex items-center justify-between transition-colors ${
-                      currentBooking?.dispatch_status === 'Client Onboard'
-                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
-                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-850'
-                    }`}
-                  >
-                    <span>3. Client Met & Onboard (Trip Active)</span>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </button>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  {[
+                    {
+                      stage: 'Acknowledged by Driver' as const,
+                      label: '1. Driver Got Text (*134#)',
+                    },
+                    {
+                      stage: 'Driver at Terminal' as const,
+                      label: '2. Driver Waiting at Airport',
+                    },
+                    {
+                      stage: 'Client Onboard' as const,
+                      label: '3. Guest In Car (Trip Started)',
+                    },
+                  ].map((item) => {
+                    const active = currentBooking?.dispatch_status === item.stage;
+                    return (
+                      <button
+                        key={item.stage}
+                        onClick={() => currentBooking && onAdvanceCheckin(currentBooking.id, item.stage)}
+                        className={`p-3 rounded-xl text-left border flex items-center justify-between transition-colors ${
+                          active
+                            ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500 text-emerald-800 dark:text-emerald-200 font-bold'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
