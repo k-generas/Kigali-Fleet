@@ -148,6 +148,7 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
   });
   const [weekIndex, setWeekIndex] = useState<number>(0);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [selectedCarId, setSelectedCarId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -270,7 +271,13 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     };
   }, [vehicles, bookings, vehicleStats, daysInMonth]);
 
+  const selectedCar = useMemo(() => {
+    if (selectedCarId === 'all') return null;
+    return vehicles.find((v) => v.id === selectedCarId) || null;
+  }, [vehicles, selectedCarId]);
+
   const filteredVehicles = useMemo(() => {
+    if (selectedCar) return [selectedCar];
     return vehicles.filter((v) => {
       if (categoryFilter !== 'All' && v.category !== categoryFilter) return false;
       if (viewMode === 'Booked') {
@@ -296,7 +303,7 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
       }
       return true;
     });
-  }, [vehicles, bookings, categoryFilter, viewMode, searchQuery, monthStartStr, monthEndStr]);
+  }, [vehicles, selectedCar, bookings, categoryFilter, viewMode, searchQuery, monthStartStr, monthEndStr]);
 
   const statusCounts = useMemo(() => {
     const monthBookings = bookings.filter((b) =>
@@ -446,6 +453,27 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
             >
               Today
             </button>
+
+            {/* Quick Car Selector */}
+            <div className="flex items-center gap-1.5">
+              <select
+                value={selectedCarId}
+                onChange={(e) => setSelectedCarId(e.target.value)}
+                aria-label="Select car"
+                className="text-xs sm:text-sm font-semibold text-[#0a2540] dark:text-white bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-3 py-1.5 outline-none focus:border-blue-500 max-w-[170px] sm:max-w-[230px]"
+              >
+                <option value="all">All Cars ({vehicles.length})</option>
+                {vehicles.map((v) => {
+                  const { nickname } = getVehicleNickname(v);
+                  const st = vehicleStats.get(v.id);
+                  return (
+                    <option key={v.id} value={v.id}>
+                      {nickname} · {v.plate_number} ({st?.ratePct ?? 0}%)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           </div>
 
           {/* Right Compact View & Filter Actions */}
@@ -626,16 +654,94 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
         )}
       </div>
 
+      {/* Selected Car Details Header Card (When a specific car is chosen, full width below goes to yellow/blue/green bars!) */}
+      {selectedCar && (() => {
+        const { nickname, subtitle } = getVehicleNickname(selectedCar);
+        const st = vehicleStats.get(selectedCar.id) || { daysBooked: 0, ratePct: 0 };
+        const currentIdx = vehicles.findIndex((v) => v.id === selectedCar.id);
+        const prevCar = vehicles[(currentIdx - 1 + vehicles.length) % vehicles.length];
+        const nextCar = vehicles[(currentIdx + 1) % vehicles.length];
+        return (
+          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base sm:text-lg font-extrabold text-[#0a2540] dark:text-white truncate">
+                  {nickname}
+                </h3>
+                <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/30">
+                  {selectedCar.plate_number}
+                </span>
+                <span
+                  className={`text-xs font-bold font-mono tabular-nums px-2 py-0.5 rounded-full ${
+                    st.ratePct >= 60
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                      : st.ratePct >= 30
+                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                      : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300'
+                  }`}
+                >
+                  {st.ratePct}% · {st.daysBooked}/{daysInMonth}d
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs sm:text-sm text-[#425466] dark:text-slate-400">
+                <span className="truncate">{subtitle}</span>
+                <span className="font-mono font-bold text-[#0a2540] dark:text-slate-200 tabular-nums">
+                  {formatCompactMoney(selectedCar.daily_rate_rwf)} ({formatRwf(selectedCar.daily_rate_rwf)}/d)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {vehicles.length > 1 && (
+                <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-0.5">
+                  <button
+                    onClick={() => prevCar && setSelectedCarId(prevCar.id)}
+                    className="p-1.5 rounded-full text-[#425466] dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"
+                    title="Previous car"
+                    aria-label="Previous car"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => nextCar && setSelectedCarId(nextCar.id)}
+                    className="p-1.5 rounded-full text-[#425466] dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"
+                    title="Next car"
+                    aria-label="Next car"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={() => onOpenBookingForVehicle(selectedCar.id, windowStartStr)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-xs ${activeBtnText}`}
+                style={{ backgroundColor: activeThemeColor }}
+              >
+                + Book
+              </button>
+              <button
+                onClick={() => setSelectedCarId('all')}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 border border-slate-200 dark:border-slate-700"
+              >
+                All Cars
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Unified Fit-Screen Car & Day Timeline Grid (Identical Clear Experience on Phone, Tablet, and PC) */}
       <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
         {/* Header Row */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 bg-[#f6f9fc] dark:bg-slate-800/90 sticky top-0 z-20">
-          <div className="w-[116px] sm:w-[165px] md:w-[195px] lg:w-[225px] shrink-0 px-2.5 sm:px-3.5 py-2.5 border-r border-slate-200 dark:border-slate-800 font-bold text-[#0a2540] dark:text-white text-xs sm:text-sm flex items-center justify-between gap-1">
-            <span className="truncate">{filteredVehicles.length} Cars</span>
-            <span className="hidden sm:inline text-xs text-[#425466] dark:text-slate-400 font-mono">
-              Booked
-            </span>
-          </div>
+          {!selectedCar && (
+            <div className="w-[94px] sm:w-[140px] md:w-[175px] lg:w-[200px] shrink-0 px-2 sm:px-3 py-2 border-r border-slate-200 dark:border-slate-800 font-bold text-[#0a2540] dark:text-white text-xs sm:text-sm flex items-center justify-between gap-1">
+              <span className="truncate">{filteredVehicles.length} Cars</span>
+              <span className="hidden sm:inline text-xs text-[#425466] dark:text-slate-400 font-mono">
+                Tap car
+              </span>
+            </div>
+          )}
 
           <div
             className="flex-1 min-w-0 grid"
@@ -689,7 +795,7 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredVehicles.map((vehicle) => {
-              const { nickname, subtitle } = getVehicleNickname(vehicle);
+              const { nickname } = getVehicleNickname(vehicle);
               const stats = vehicleStats.get(vehicle.id) || { daysBooked: 0, ratePct: 0 };
 
               const vehBookings = bookings
@@ -731,21 +837,20 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
                   key={vehicle.id}
                   className="flex hover:bg-[#f6f9fc]/70 dark:hover:bg-slate-800/30 transition-colors group relative"
                 >
-                  {/* Left Car Column */}
-                  <div className="w-[116px] sm:w-[165px] md:w-[195px] lg:w-[225px] shrink-0 px-2.5 py-2 sm:p-3 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-center min-w-0">
-                    <div className="flex items-start justify-between gap-1 sm:gap-2 min-w-0">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs sm:text-sm font-bold text-[#0a2540] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                  {/* Lean Left Car Selector Column in All Cars mode (hidden when a single car is selected so timeline gets 100% width!) */}
+                  {!selectedCar && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCarId(vehicle.id)}
+                      className="w-[94px] sm:w-[140px] md:w-[175px] lg:w-[200px] shrink-0 px-2 py-2 sm:px-3 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 flex flex-col justify-center min-w-0 text-left transition-colors cursor-pointer"
+                      title={`View full details for ${nickname}`}
+                    >
+                      <div className="flex items-center justify-between gap-1 min-w-0">
+                        <span className="text-xs sm:text-sm font-bold text-[#0a2540] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
                           {nickname}
-                        </div>
-                        <div className="hidden sm:block text-xs text-[#425466] dark:text-slate-400 truncate mt-0.5">
-                          {subtitle}
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
+                        </span>
                         <span
-                          className={`text-[11px] sm:text-xs font-bold font-mono tabular-nums ${
+                          className={`hidden sm:inline text-[11px] font-bold font-mono tabular-nums shrink-0 ${
                             stats.ratePct >= 60
                               ? 'text-emerald-600 dark:text-emerald-400'
                               : stats.ratePct >= 30
@@ -755,28 +860,21 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
                         >
                           {stats.ratePct}%
                         </span>
-                        <div className="hidden sm:block text-[11px] text-[#425466] dark:text-slate-500 font-mono tabular-nums">
-                          {stats.daysBooked}/{daysInMonth}d
-                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] sm:text-xs text-[#425466] dark:text-slate-400 mt-1 pt-1 border-t border-slate-100 dark:border-slate-800 gap-1">
-                      <span className="font-mono text-[#0a2540] dark:text-amber-300 font-bold truncate">
-                        {vehicle.plate_number}
-                      </span>
-                      <span className="hidden md:inline font-mono whitespace-nowrap tabular-nums">
-                        {formatRwf(vehicle.daily_rate_rwf)}/d
-                      </span>
-                      <span className="md:hidden font-mono whitespace-nowrap tabular-nums">
-                        {formatCompactMoney(vehicle.daily_rate_rwf)}
-                      </span>
-                    </div>
-                  </div>
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs text-[#425466] dark:text-slate-400 mt-0.5 gap-1">
+                        <span className="font-mono text-[#0a2540] dark:text-amber-300 font-semibold truncate">
+                          {vehicle.plate_number}
+                        </span>
+                        <span className="hidden md:inline font-mono whitespace-nowrap tabular-nums">
+                          {formatCompactMoney(vehicle.daily_rate_rwf)}
+                        </span>
+                      </div>
+                    </button>
+                  )}
 
                   {/* Fluid Fit-Screen Day Timeline Grid */}
                   <div
-                    className="flex-1 min-w-0 grid relative h-[58px] sm:h-[68px]"
+                    className={`flex-1 min-w-0 grid relative ${selectedCar ? 'h-[72px] sm:h-[82px]' : 'h-[58px] sm:h-[68px]'}`}
                     style={{ gridTemplateColumns: `repeat(${visibleDaysList.length}, minmax(0, 1fr))` }}
                   >
                     {visibleDaysList.map((d) => (
@@ -935,6 +1033,115 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Focused Car Schedule List (Shows full trip & garage details cleanly inside the selected car view) */}
+      {selectedCar && (() => {
+        const carMonthBookings = bookings
+          .filter(
+            (b) =>
+              b.vehicle_id === selectedCar.id &&
+              datesOverlap(monthStartStr, monthEndStr, b.start_date, b.end_date) &&
+              (statusFilter === 'All'
+                ? b.status !== 'Cancelled'
+                : statusFilter === 'Completed'
+                ? b.status === 'Completed'
+                : statusFilter === 'Booked'
+                ? b.status === 'Confirmed' || b.status === 'Pending Dispatch'
+                : statusFilter === 'In Progress'
+                ? b.status === 'In Progress'
+                : b.status === 'Cancelled')
+          )
+          .sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+        const carMaint = maintenance.filter(
+          (m) =>
+            m.vehicle_id === selectedCar.id &&
+            m.status !== 'Completed' &&
+            datesOverlap(monthStartStr, monthEndStr, m.start_date, m.expected_completion_date || m.start_date)
+        );
+
+        return (
+          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm font-bold text-[#0a2540] dark:text-white">
+                {shortMonthName} {currentYear} Trips &amp; Garage ({carMonthBookings.length + carMaint.length})
+              </span>
+              <span className="text-xs text-[#425466] dark:text-slate-400">
+                Tap any trip bar or row
+              </span>
+            </div>
+
+            {carMonthBookings.length === 0 && carMaint.length === 0 ? (
+              <div className="text-xs sm:text-sm text-[#425466] dark:text-slate-400 py-2">
+                Free all {shortMonthName} {currentYear}. Tap any day above to book this car.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {carMaint.map((m) => (
+                  <div
+                    key={m.id}
+                    className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 flex items-center justify-between gap-2 text-xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0">
+                        <Wrench className="w-3.5 h-3.5" />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-bold text-rose-800 dark:text-rose-200 truncate">
+                          In Garage: {m.service_type}
+                        </div>
+                        <div className="text-rose-700/80 dark:text-rose-300/80 font-mono">
+                          {m.start_date}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {carMonthBookings.map((bk) => {
+                  const isDone = bk.status === 'Completed';
+                  const isOnTrip = bk.status === 'In Progress';
+                  const isCancelled = bk.status === 'Cancelled';
+                  const dotColor = isDone
+                    ? 'bg-emerald-600 text-white'
+                    : isOnTrip
+                    ? 'bg-amber-400 text-slate-950'
+                    : isCancelled
+                    ? 'bg-slate-500 text-white'
+                    : 'bg-blue-600 text-white';
+                  const statusWord = isDone ? 'Done' : isOnTrip ? 'On Trip' : isCancelled ? 'Cancelled' : 'Booked';
+
+                  return (
+                    <button
+                      key={bk.id}
+                      onClick={() => setSelectedBooking(bk)}
+                      className="p-2.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:border-blue-400 flex items-center justify-between gap-2 text-left text-xs transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className={`px-2 py-1 rounded-lg font-bold text-[11px] shrink-0 ${dotColor}`}>
+                          {statusWord}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-bold text-[#0a2540] dark:text-white truncate flex items-center gap-1">
+                            <span className="truncate">{bk.client_name}</span>
+                            {bk.flight_number && <Plane className="w-3 h-3 text-sky-500 shrink-0" />}
+                          </div>
+                          <div className="text-[#425466] dark:text-slate-400 font-mono">
+                            {bk.start_date} → {bk.end_date}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-mono font-bold text-[#0a2540] dark:text-amber-400 whitespace-nowrap shrink-0">
+                        {formatRwf(bk.total_rwf)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Compact Footer Legend */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#425466] dark:text-slate-400 px-1">
