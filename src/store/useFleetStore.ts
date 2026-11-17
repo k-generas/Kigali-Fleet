@@ -78,17 +78,20 @@ import { getThemeById, applyThemeCssVariables } from '../theme';
 import {
   collection,
   doc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
   onSnapshot,
-  getDocFromServer,
-  getDoc,
-  getDocs,
   query,
   where,
   limit,
 } from 'firebase/firestore';
+import {
+  collection as liteCollection,
+  doc as liteDoc,
+  getDoc as liteGetDoc,
+  getDocs as liteGetDocs,
+  query as liteQuery,
+  where as liteWhere,
+  limit as liteLimit,
+} from 'firebase/firestore/lite';
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -99,7 +102,19 @@ import {
   onAuthStateChanged,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { db, auth, googleProvider, handleFirestoreError, OperationType } from '../firebase';
+import {
+  db,
+  liteDb,
+  auth,
+  googleProvider,
+  handleFirestoreError,
+  OperationType,
+  ensureFirestoreStreaming,
+  smartGetDoc,
+  smartSetDoc as setDoc,
+  smartUpdateDoc as updateDoc,
+  smartDeleteDoc as deleteDoc,
+} from '../firebase';
 import {
   canModifyPlatformAdmin,
   getDefaultRolePermissions,
@@ -330,7 +345,6 @@ export function useFleetStore() {
 
   // Bounded Tenant-Scoped Firestore Listeners & Shared Public Storefront Resolution
   useEffect(() => {
-    let unsubscribePlans: () => void = () => {};
     let unsubscribeAuth: () => void = () => {};
     const activeListeners: Array<() => void> = [];
 
@@ -360,10 +374,9 @@ export function useFleetStore() {
         };
       });
 
-    // Public pricing plans listener (bounded)
-    unsubscribePlans = onSnapshot(
-      query(collection(db, 'platform_plans'), where('is_active', '==', true), limit(10)),
-      (snapshot) => {
+    // Non-streaming REST pricing plans fetch on boot (never opens a Watch stream before auth)
+    liteGetDocs(liteQuery(liteCollection(liteDb, 'platform_plans'), liteWhere('is_active', '==', true), liteLimit(10)))
+      .then((snapshot) => {
         if (!snapshot.empty) {
           setState((prev) => ({
             ...prev,
@@ -371,19 +384,18 @@ export function useFleetStore() {
             isFirebaseConnected: true,
           }));
         }
-      },
-      (err) => console.warn('platform_plans listener notice:', err.message)
-    );
+      })
+      .catch((err) => console.warn('platform_plans initial fetch notice:', err?.message || err));
 
     const attachSharedPublicStorefront = async (companyParam: string) => {
       try {
         let targetCompany: Company | null = null;
-        const byId = await getDoc(doc(db, 'companies', companyParam));
+        const byId = await liteGetDoc(liteDoc(liteDb, 'companies', companyParam));
         if (byId.exists()) {
           targetCompany = byId.data() as Company;
         } else {
-          const bySlug = await getDocs(
-            query(collection(db, 'companies'), where('slug', '==', companyParam), limit(1))
+          const bySlug = await liteGetDocs(
+            liteQuery(liteCollection(liteDb, 'companies'), liteWhere('slug', '==', companyParam), liteLimit(1))
           );
           if (!bySlug.empty) {
             targetCompany = bySlug.docs[0].data() as Company;
@@ -400,6 +412,23 @@ export function useFleetStore() {
           bookings: [],
           isFirebaseConnected: true,
         }));
+
+        // Immediately hydrate storefront via unary REST so vehicles appear even if WebChannel is blocked
+        const [vehRest, drvRest] = await Promise.allSettled([
+          liteGetDocs(liteQuery(liteCollection(liteDb, 'vehicles'), liteWhere('company_id', '==', targetCompany.id), liteLimit(60))),
+          liteGetDocs(liteQuery(liteCollection(liteDb, 'drivers'), liteWhere('company_id', '==', targetCompany.id), liteLimit(60))),
+        ]);
+        if (vehRest.status === 'fulfilled' || drvRest.status === 'fulfilled') {
+          setState((prev) => ({
+            ...prev,
+            vehicles: vehRest.status === 'fulfilled' ? hydrateVehicles(vehRest.value.docs) : prev.vehicles,
+            drivers: drvRest.status === 'fulfilled' ? drvRest.value.docs.map((d) => d.data() as Driver) : prev.drivers,
+            isFirebaseConnected: true,
+          }));
+        }
+
+        const mode = await ensureFirestoreStreaming();
+        if (mode !== 'streaming') return;
 
         activeListeners.push(
           onSnapshot(
@@ -432,6 +461,19 @@ export function useFleetStore() {
 
     const attachSuperAdminListeners = () => {
       activeListeners.push(
+        onSnapshot(
+          query(collection(db, 'platform_plans'), where('is_active', '==', true), limit(10)),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              setState((prev) => ({
+                ...prev,
+                platformPlans: snapshot.docs.map((d) => d.data() as PlatformPlan),
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (err) => console.warn('superadmin platform_plans listener notice:', err.message)
+        ),
         onSnapshot(
           query(collection(db, 'companies'), limit(200)),
           (s) =>
@@ -531,6 +573,19 @@ export function useFleetStore() {
 
     const attachTenantListeners = (fbUid: string, userEmail: string, activeCompanyId: string) => {
       activeListeners.push(
+        onSnapshot(
+          query(collection(db, 'platform_plans'), where('is_active', '==', true), limit(10)),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              setState((prev) => ({
+                ...prev,
+                platformPlans: snapshot.docs.map((d) => d.data() as PlatformPlan),
+                isFirebaseConnected: true,
+              }));
+            }
+          },
+          (err) => console.warn('tenant platform_plans listener notice:', err.message)
+        ),
         onSnapshot(
           doc(db, 'users', fbUid),
           (snap) => {
@@ -675,6 +730,99 @@ export function useFleetStore() {
       );
     };
 
+    const hydrateSuperAdminViaRest = async () => {
+      const results = await Promise.allSettled([
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'platform_plans'), liteWhere('is_active', '==', true), liteLimit(10))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'companies'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'vehicles'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'drivers'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'bookings'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'users'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'customers'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'payments'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'maintenance'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'expenses'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'handovers'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'tasks'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'activity_logs'), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'support_tickets'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'platform_audit_logs'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'saas_payments'), liteLimit(200))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'company_subscriptions'), liteLimit(200))),
+      ]);
+
+      setState((prev) => ({
+        ...prev,
+        isFirebaseConnected: true,
+        platformPlans:
+          results[0].status === 'fulfilled' && !results[0].value.empty
+            ? results[0].value.docs.map((d) => d.data() as PlatformPlan)
+            : prev.platformPlans,
+        companies: results[1].status === 'fulfilled' ? results[1].value.docs.map((d) => d.data() as Company) : prev.companies,
+        vehicles: results[2].status === 'fulfilled' ? hydrateVehicles(results[2].value.docs) : prev.vehicles,
+        drivers: results[3].status === 'fulfilled' ? results[3].value.docs.map((d) => d.data() as Driver) : prev.drivers,
+        bookings: results[4].status === 'fulfilled' ? results[4].value.docs.map((d) => d.data() as Booking) : prev.bookings,
+        users: results[5].status === 'fulfilled' ? results[5].value.docs.map((d) => d.data() as User) : prev.users,
+        customers: results[6].status === 'fulfilled' ? results[6].value.docs.map((d) => d.data() as Customer) : prev.customers,
+        payments: results[7].status === 'fulfilled' ? results[7].value.docs.map((d) => d.data() as PaymentRecord) : prev.payments,
+        maintenance: results[8].status === 'fulfilled' ? results[8].value.docs.map((d) => d.data() as MaintenanceRecord) : prev.maintenance,
+        expenses: results[9].status === 'fulfilled' ? results[9].value.docs.map((d) => d.data() as ExpenseRecord) : prev.expenses,
+        handovers: results[10].status === 'fulfilled' ? results[10].value.docs.map((d) => d.data() as VehicleHandoverInspection) : prev.handovers,
+        tasks: results[11].status === 'fulfilled' ? results[11].value.docs.map((d) => d.data() as OperationalTask) : prev.tasks,
+        logs: results[12].status === 'fulfilled' ? results[12].value.docs.map((d) => d.data() as ActivityLog) : prev.logs,
+        supportTickets: results[13].status === 'fulfilled' ? results[13].value.docs.map((d) => d.data() as SupportTicket) : prev.supportTickets,
+        platformAuditLogs:
+          results[14].status === 'fulfilled'
+            ? results[14].value.docs
+                .map((d) => d.data() as PlatformAuditLog)
+                .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+            : prev.platformAuditLogs,
+        saasPayments: results[15].status === 'fulfilled' ? results[15].value.docs.map((d) => d.data() as SaasPaymentRecord) : prev.saasPayments,
+        companySubscriptions:
+          results[16].status === 'fulfilled' ? results[16].value.docs.map((d) => d.data() as CompanySubscription) : prev.companySubscriptions,
+      }));
+    };
+
+    const hydrateTenantViaRest = async (userEmail: string, activeCompanyId: string) => {
+      const results = await Promise.allSettled([
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'platform_plans'), liteWhere('is_active', '==', true), liteLimit(10))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'vehicles'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'drivers'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'bookings'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'customers'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'payments'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'maintenance'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'expenses'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'handovers'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'tasks'), liteWhere('company_id', '==', activeCompanyId), liteLimit(150))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'activity_logs'), liteWhere('company_id', '==', activeCompanyId), liteLimit(100))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'company_subscriptions'), liteWhere('company_id', '==', activeCompanyId), liteLimit(20))),
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'support_tickets'), liteWhere('customer_email', '==', userEmail), liteLimit(50))),
+      ]);
+
+      setState((prev) => ({
+        ...prev,
+        isFirebaseConnected: true,
+        platformPlans:
+          results[0].status === 'fulfilled' && !results[0].value.empty
+            ? results[0].value.docs.map((d) => d.data() as PlatformPlan)
+            : prev.platformPlans,
+        vehicles: results[1].status === 'fulfilled' ? hydrateVehicles(results[1].value.docs) : prev.vehicles,
+        drivers: results[2].status === 'fulfilled' ? results[2].value.docs.map((d) => d.data() as Driver) : prev.drivers,
+        bookings: results[3].status === 'fulfilled' ? results[3].value.docs.map((d) => d.data() as Booking) : prev.bookings,
+        customers: results[4].status === 'fulfilled' ? results[4].value.docs.map((d) => d.data() as Customer) : prev.customers,
+        payments: results[5].status === 'fulfilled' ? results[5].value.docs.map((d) => d.data() as PaymentRecord) : prev.payments,
+        maintenance: results[6].status === 'fulfilled' ? results[6].value.docs.map((d) => d.data() as MaintenanceRecord) : prev.maintenance,
+        expenses: results[7].status === 'fulfilled' ? results[7].value.docs.map((d) => d.data() as ExpenseRecord) : prev.expenses,
+        handovers: results[8].status === 'fulfilled' ? results[8].value.docs.map((d) => d.data() as VehicleHandoverInspection) : prev.handovers,
+        tasks: results[9].status === 'fulfilled' ? results[9].value.docs.map((d) => d.data() as OperationalTask) : prev.tasks,
+        logs: results[10].status === 'fulfilled' ? results[10].value.docs.map((d) => d.data() as ActivityLog) : prev.logs,
+        companySubscriptions:
+          results[11].status === 'fulfilled' ? results[11].value.docs.map((d) => d.data() as CompanySubscription) : prev.companySubscriptions,
+        supportTickets: results[12].status === 'fulfilled' ? results[12].value.docs.map((d) => d.data() as SupportTicket) : prev.supportTickets,
+      }));
+    };
+
     unsubscribeAuth = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
       clearActiveListeners();
 
@@ -707,6 +855,7 @@ export function useFleetStore() {
         return;
       }
 
+      const mode = await ensureFirestoreStreaming();
       const email = (fbUser.email || '').trim().toLowerCase();
       const isSuper = isSuperAdminEmail(email);
 
@@ -718,8 +867,8 @@ export function useFleetStore() {
           companyDocData = pendingRegistrationRef.current.company;
           userDocData = pendingRegistrationRef.current.owner;
           pendingRegistrationRef.current = null;
-        } else {
-          const userSnap = await getDoc(doc(db, 'users', fbUser.uid));
+        } else if (mode !== 'offline') {
+          const userSnap = await smartGetDoc(doc(db, 'users', fbUser.uid));
           if (userSnap.exists()) {
             userDocData = userSnap.data() as User;
           }
@@ -738,7 +887,9 @@ export function useFleetStore() {
               status: 'Active',
               created_at: new Date().toISOString().slice(0, 10),
             };
-            await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(userDocData)).catch(() => {});
+            if (mode !== 'offline') {
+              await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(userDocData)).catch(() => {});
+            }
           } else {
             const isolatedCompanyId = `comp-${fbUser.uid.slice(0, 8)}`;
             const baseName = fbUser.displayName || email.split('@')[0] || 'My Fleet';
@@ -769,16 +920,20 @@ export function useFleetStore() {
               status: 'Active',
               created_at: new Date().toISOString().slice(0, 10),
             };
-            await setDoc(doc(db, 'companies', isolatedCompanyId), cleanForFirestore(companyDocData)).catch(() => {});
-            await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(userDocData)).catch(() => {});
+            if (mode !== 'offline') {
+              await setDoc(doc(db, 'companies', isolatedCompanyId), cleanForFirestore(companyDocData)).catch(() => {});
+              await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(userDocData)).catch(() => {});
+            }
           }
         } else if (isSuper && userDocData.role !== 'superadmin') {
           userDocData = { ...userDocData, role: 'superadmin', company_id: 'platform-root' };
-          await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(userDocData), { merge: true }).catch(() => {});
+          if (mode !== 'offline') {
+            await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(userDocData), { merge: true }).catch(() => {});
+          }
         }
 
-        if (!isSuper && !companyDocData && userDocData.company_id) {
-          const compSnap = await getDoc(doc(db, 'companies', userDocData.company_id));
+        if (!isSuper && !companyDocData && userDocData.company_id && mode !== 'offline') {
+          const compSnap = await smartGetDoc(doc(db, 'companies', userDocData.company_id));
           if (compSnap.exists()) {
             companyDocData = compSnap.data() as Company;
           }
@@ -789,10 +944,14 @@ export function useFleetStore() {
             ...prev,
             isDemoMode: false,
             isAuthenticated: true,
-            isFirebaseConnected: true,
+            isFirebaseConnected: mode !== 'offline',
             currentUser: userDocData!,
           }));
-          attachSuperAdminListeners();
+          if (mode === 'streaming') {
+            attachSuperAdminListeners();
+          } else if (mode === 'rest-only') {
+            await hydrateSuperAdminViaRest();
+          }
         } else {
           const activeCompanyId = userDocData.company_id;
           const resolvedCompany: Company = companyDocData || {
@@ -816,7 +975,7 @@ export function useFleetStore() {
             ...prev,
             isDemoMode: false,
             isAuthenticated: true,
-            isFirebaseConnected: true,
+            isFirebaseConnected: mode !== 'offline',
             currentUser: userDocData!,
             currentCompany: resolvedCompany,
             activeTierId: resolvedCompany.tier_id || 'starter',
@@ -835,7 +994,11 @@ export function useFleetStore() {
             supportTickets: [],
             companySubscriptions: [],
           }));
-          attachTenantListeners(fbUser.uid, fbUser.email || email, activeCompanyId);
+          if (mode === 'streaming') {
+            attachTenantListeners(fbUser.uid, fbUser.email || email, activeCompanyId);
+          } else if (mode === 'rest-only') {
+            await hydrateTenantViaRest(fbUser.email || email, activeCompanyId);
+          }
         }
       } catch (err) {
         console.warn('Auth profile hydration notice:', err);
@@ -843,7 +1006,6 @@ export function useFleetStore() {
     });
 
     return () => {
-      unsubscribePlans();
       unsubscribeAuth();
       clearActiveListeners();
     };
@@ -3324,7 +3486,7 @@ export function useFleetStore() {
     if (integrationId === 'int-firebase') {
       try {
         await Promise.race([
-          getDocFromServer(doc(db, 'test', 'connection')),
+          liteGetDoc(liteDoc(liteDb, 'test', 'connection')),
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500)),
         ]);
         latencyMs = Math.max(25, Date.now() - start);
