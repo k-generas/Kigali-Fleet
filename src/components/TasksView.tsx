@@ -9,14 +9,9 @@ import {
   Booking,
 } from '../types';
 import { ColorTheme } from '../theme';
-import {
-  CheckSquare,
-  Plus,
-  Calendar,
-  User as UserIcon,
-  Search,
-  X,
-} from 'lucide-react';
+import { formatDueStatus } from '../utils/dates';
+import { useI18n } from '../utils/i18n';
+import { Plus, Search, X, Check, ListTodo, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface TasksViewProps {
   tasks: OperationalTask[];
@@ -34,13 +29,13 @@ export const TasksView: React.FC<TasksViewProps> = ({
   tasks,
   users,
   vehicles,
-  currentTheme,
+  currentUser,
   onAddTask,
   onUpdateStatus,
   onDeleteTask,
 }) => {
-  const activeColor = currentTheme?.hex || '#635bff';
-  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const { tr } = useI18n();
+  const [activeTab, setActiveTab] = useState<'all' | 'urgent' | 'mine' | 'done'>('all');
   const [filterPriority, setFilterPriority] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
@@ -81,7 +76,9 @@ export const TasksView: React.FC<TasksViewProps> = ({
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
-      if (filterStatus !== 'All' && t.status !== filterStatus) return false;
+      if (activeTab === 'urgent' && (t.priority !== 'Urgent' || t.status === 'Completed')) return false;
+      if (activeTab === 'mine' && currentUser && t.assigned_to_name !== currentUser.name) return false;
+      if (activeTab === 'done' && t.status !== 'Completed') return false;
       if (filterPriority !== 'All' && t.priority !== filterPriority) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
@@ -93,249 +90,308 @@ export const TasksView: React.FC<TasksViewProps> = ({
       }
       return true;
     });
-  }, [tasks, filterStatus, filterPriority, searchTerm]);
+  }, [tasks, activeTab, currentUser, filterPriority, searchTerm]);
+
+  const doingNow = useMemo(
+    () => filteredTasks.filter((t) => t.status === 'In Progress'),
+    [filteredTasks]
+  );
+  const waiting = useMemo(
+    () => filteredTasks.filter((t) => t.status === 'Open'),
+    [filteredTasks]
+  );
+  const doneList = useMemo(
+    () => filteredTasks.filter((t) => t.status === 'Completed'),
+    [filteredTasks]
+  );
 
   const openCount = tasks.filter((t) => t.status === 'Open').length;
   const inProgressCount = tasks.filter((t) => t.status === 'In Progress').length;
   const completedCount = tasks.filter((t) => t.status === 'Completed').length;
   const urgentCount = tasks.filter((t) => t.priority === 'Urgent' && t.status !== 'Completed').length;
 
+  const renderTaskRow = (t: OperationalTask) => {
+    const isDone = t.status === 'Completed';
+    const relatedVeh = vehicles.find((v) => v.id === t.related_vehicle_id);
+    const dueInfo = formatDueStatus(t.due_date);
+
+    return (
+      <div
+        key={t.id}
+        className={`grid grid-cols-[24px_1fr_auto] gap-3.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-800/70 items-start transition-colors ${
+          isDone ? 'opacity-65 bg-slate-50/40 dark:bg-slate-900/20' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/30'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => onUpdateStatus(t.id, isDone ? 'Open' : 'Completed')}
+          aria-label={isDone ? `Mark "${t.title}" not done` : `Mark "${t.title}" done`}
+          className={`w-5 h-5 mt-0.5 border rounded-md flex items-center justify-center transition-colors ${
+            isDone
+              ? 'accent-bg border-transparent'
+              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-[#0f172a] hover:border-slate-400'
+          }`}
+        >
+          {isDone && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+        </button>
+
+        <div className="min-w-0">
+          <div
+            className={`text-sm font-medium text-slate-900 dark:text-white flex flex-wrap items-center gap-2 ${
+              isDone ? 'line-through text-slate-500 dark:text-slate-400' : ''
+            }`}
+          >
+            <span>{t.title}</span>
+            {relatedVeh && (
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] font-medium text-slate-600 dark:text-slate-300 no-underline">
+                {relatedVeh.plate_number}
+              </span>
+            )}
+          </div>
+          {t.description && (
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {t.description}
+            </div>
+          )}
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="font-medium text-slate-700 dark:text-slate-300">
+              {tr('For')} {t.assigned_to_name}
+            </span>
+            {t.status === 'Open' && (
+              <button
+                type="button"
+                onClick={() => onUpdateStatus(t.id, 'In Progress')}
+                className="accent-text font-medium hover:underline"
+              >
+                {tr('Start')}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onDeleteTask(t.id)}
+              className="text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"
+            >
+              {tr('Remove')}
+            </button>
+          </div>
+        </div>
+
+        <div className="text-right text-xs whitespace-nowrap">
+          {!isDone && dueInfo.isLate ? (
+            <div className="text-rose-600 dark:text-rose-400 font-medium tabular-nums">
+              {dueInfo.text}
+            </div>
+          ) : (
+            <div className="text-slate-500 dark:text-slate-400 tabular-nums">{dueInfo.text}</div>
+          )}
+
+          {t.priority === 'Urgent' && !isDone && (
+            <div className="text-rose-600 dark:text-rose-400 font-semibold mt-1">{tr('Urgent')}</div>
+          )}
+          {t.priority === 'High' && !isDone && (
+            <div className="text-amber-600 dark:text-amber-400 font-semibold mt-1">{tr('Important')}</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="stripe-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl">
-        <div className="flex items-start gap-3.5">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0"
-            style={{ backgroundColor: activeColor }}
-          >
-            <CheckSquare className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0a2540] dark:text-white">
-              Team To-Do List
-            </h1>
-            <p className="text-base text-[#425466] dark:text-slate-300 mt-1">
-              Give daily jobs to drivers, mechanics, and office staff so nothing gets forgotten.
-            </p>
-          </div>
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {tr('Team to-do list')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Give daily jobs to drivers, mechanics, and office staff so nothing gets forgotten.')}
+          </p>
         </div>
 
         <button
+          type="button"
           onClick={() => setIsNewTaskOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-white text-sm font-bold shadow-sm hover:opacity-95 transition-opacity shrink-0"
-          style={{ backgroundColor: activeColor }}
+          className="accent-bg inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:opacity-95 transition-opacity shrink-0 shadow-xs"
         >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Add Job</span>
+          <Plus className="w-4 h-4" />
+          <span>{tr('Add job')}</span>
         </button>
       </div>
 
-      {/* 4 Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Waiting</span>
-          <div className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">{openCount}</div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Not started yet</span>
+      {/* 4-Card KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Waiting')}</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {openCount}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Jobs queued to start
+          </p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Doing Now</span>
-          <div className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 font-mono">{inProgressCount}</div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Team working on it</span>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Doing now')}</span>
+            <span className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <ListTodo className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-blue-600 dark:text-blue-400 mt-2 tabular-nums">
+            {inProgressCount}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Currently in progress
+          </p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Urgent</span>
-          <div className="text-3xl font-extrabold text-rose-600 dark:text-rose-400 font-mono">{urgentCount}</div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Needs quick action</span>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Urgent')}</span>
+            <span className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-rose-600 dark:text-rose-400 mt-2 tabular-nums">
+            {urgentCount}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            High-priority tasks open
+          </p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Done</span>
-          <div className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">{completedCount}</div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Finished jobs</span>
-        </div>
-      </div>
-
-      {/* Filters & Search */}
-      <div className="stripe-card flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-[#0a2540] dark:text-slate-200 rounded-xl p-2.5 font-medium"
-          >
-            <option value="All">All Jobs ({tasks.length})</option>
-            <option value="Open">Waiting</option>
-            <option value="In Progress">Doing Now</option>
-            <option value="Completed">Done</option>
-          </select>
-
-          <select
-            value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value)}
-            className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-[#0a2540] dark:text-slate-200 rounded-xl p-2.5 font-medium"
-          >
-            <option value="All">All Speeds</option>
-            <option value="Urgent">Urgent</option>
-            <option value="High">Important</option>
-            <option value="Normal">Normal</option>
-            <option value="Low">Low</option>
-          </select>
-        </div>
-
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search job or person..."
-            className="w-full pl-10 pr-3 py-2.5 bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-[#0a2540] dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500"
-          />
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Done')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 mt-2 tabular-nums">
+            {completedCount}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Completed team tasks
+          </p>
         </div>
       </div>
 
-      {/* Task List */}
-      <div className="space-y-3">
-        {filteredTasks.map((t) => {
-          const isUrgent = t.priority === 'Urgent';
-          const isHigh = t.priority === 'High';
-          const isDone = t.status === 'Completed';
-          const relatedVeh = vehicles.find((v) => v.id === t.related_vehicle_id);
-
-          return (
-            <div
-              key={t.id}
-              className={`stripe-card p-5 rounded-2xl border bg-white dark:bg-slate-900 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-                isDone
-                  ? 'border-slate-200 dark:border-slate-800 opacity-65'
-                  : isUrgent
-                  ? 'border-rose-300 dark:border-rose-500/40 bg-rose-50/40 dark:bg-rose-500/5'
-                  : 'border-slate-200 dark:border-slate-800'
-              }`}
-            >
-              <div className="space-y-1.5 flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-sm font-bold ${
-                      isUrgent
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30'
-                        : isHigh
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
-                        : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300'
-                    }`}
-                  >
-                    {t.priority === 'High' ? 'Important' : t.priority}
-                  </span>
-
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-sm font-semibold ${
-                      t.status === 'Completed'
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                        : t.status === 'In Progress'
-                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
-                        : 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
-                    }`}
-                  >
-                    {t.status === 'Open' ? 'Waiting' : t.status === 'In Progress' ? 'Doing Now' : 'Done'}
-                  </span>
-
-                  {relatedVeh && (
-                    <span className="font-mono text-sm font-bold text-amber-700 dark:text-amber-400">
-                      [{relatedVeh.plate_number}]
-                    </span>
-                  )}
-                </div>
-
-                <h3
-                  className={`text-base font-bold text-[#0a2540] dark:text-white ${
-                    isDone ? 'line-through text-slate-400' : ''
+      {/* Checklist Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg overflow-x-auto">
+            {[
+              { id: 'all', label: `${tr('All jobs')} (${tasks.length})` },
+              { id: 'urgent', label: `${tr('Urgent')} (${urgentCount})` },
+              ...(currentUser ? [{ id: 'mine', label: tr('Mine') }] : []),
+              { id: 'done', label: `${tr('Done')} (${completedCount})` },
+            ].map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  {t.title}
-                </h3>
-
-                {t.description && (
-                  <p className="text-sm text-[#425466] dark:text-slate-400">{t.description}</p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-[#425466] dark:text-slate-400 pt-1">
-                  <span className="flex items-center gap-1.5">
-                    <UserIcon className="w-4 h-4 text-slate-400" />
-                    <span>
-                      For: <strong className="text-[#0a2540] dark:text-slate-200">{t.assigned_to_name}</strong>
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    <span>
-                      By: <strong className="text-[#0a2540] dark:text-slate-200 font-mono">{t.due_date}</strong>
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                {t.status === 'Open' && (
-                  <button
-                    onClick={() => onUpdateStatus(t.id, 'In Progress')}
-                    className="px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-500/15 hover:bg-blue-100 text-blue-700 dark:text-blue-300 text-sm font-bold transition-colors"
-                  >
-                    Start
-                  </button>
-                )}
-
-                {t.status !== 'Completed' && (
-                  <button
-                    onClick={() => onUpdateStatus(t.id, 'Completed')}
-                    className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-colors shadow-xs"
-                  >
-                    Mark Done ✓
-                  </button>
-                )}
-
-                <button
-                  onClick={() => onDeleteTask(t.id)}
-                  className="p-2 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                  title="Remove"
-                >
-                  <X className="w-4 h-4" />
+                  {tab.label}
                 </button>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
 
-        {filteredTasks.length === 0 && (
-          <div className="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
-            <CheckSquare className="w-10 h-10 text-slate-400 mx-auto" />
-            <h3 className="text-base font-bold text-[#0a2540] dark:text-white">All Jobs Done</h3>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
-              No open jobs match your filter right now.
+          <div className="flex flex-wrap items-center gap-2.5">
+            <select
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value)}
+              className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white rounded-lg px-3 py-1.5 outline-none cursor-pointer"
+            >
+              <option value="All">{tr('All speeds')}</option>
+              <option value="Urgent">{tr('Urgent')}</option>
+              <option value="High">{tr('Important')}</option>
+              <option value="Normal">{tr('Normal')}</option>
+              <option value="Low">{tr('Low')}</option>
+            </select>
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={tr('Search job or person')}
+                className="w-full sm:w-56 pl-9 pr-3 py-1.5 bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Grouped Checklist */}
+        {filteredTasks.length === 0 ? (
+          <div className="py-14 px-4 text-center space-y-1">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">{tr('All jobs done')}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {tr('No open jobs match your filter right now.')}
             </p>
+          </div>
+        ) : (
+          <div>
+            {doingNow.length > 0 && (
+              <div>
+                <div className="px-5 py-2.5 bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 font-medium text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  {tr('Doing now')}
+                </div>
+                {doingNow.map(renderTaskRow)}
+              </div>
+            )}
+
+            {waiting.length > 0 && (
+              <div>
+                <div className="px-5 py-2.5 bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 font-medium text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  {tr('Waiting')}
+                </div>
+                {waiting.map(renderTaskRow)}
+              </div>
+            )}
+
+            {doneList.length > 0 && (
+              <div>
+                <div className="px-5 py-2.5 bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 font-medium text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  {tr('Done')}
+                </div>
+                {doneList.map(renderTaskRow)}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Modal: New Job */}
       {isNewTaskOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8">
-            <div className="flex items-center justify-between p-5 bg-[#f6f9fc] dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2.5">
-                <CheckSquare className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <div>
-                  <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">Add Team Job</h2>
-                  <span className="text-sm text-[#425466] dark:text-slate-400">
-                    Pick a person and set a due date
-                  </span>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px] overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden my-8 kf-modal">
+            <div className="flex items-center justify-between px-6 py-4 bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{tr('Add team job')}</h2>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {tr('Pick a person and set a due date')}
+                </span>
               </div>
               <button
+                type="button"
                 onClick={() => setIsNewTaskOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -343,35 +399,41 @@ export const TasksView: React.FC<TasksViewProps> = ({
 
             <form onSubmit={handleSubmitTask} className="p-6 space-y-4 text-sm">
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Job Title *</label>
+                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                  {tr('Job title')} *
+                </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Check headlights on RAC 812 K before inspection"
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                  placeholder={tr('e.g. Check headlights on RAC 812 K before inspection')}
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
                 />
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Details</label>
+                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                  {tr('Details')}
+                </label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Write what needs to be done or where to go..."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                  placeholder={tr('Write what needs to be done or where to go...')}
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Who Does It</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    {tr('Who does it')}
+                  </label>
                   <select
                     value={assignedName}
                     onChange={(e) => handleSelectStaff(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-medium"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   >
                     {users.map((u) => (
                       <option key={u.id} value={u.name}>
@@ -382,40 +444,46 @@ export const TasksView: React.FC<TasksViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Due Date</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    {tr('Due date')}
+                  </label>
                   <input
                     type="date"
                     required
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">How Urgent</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    {tr('How urgent')}
+                  </label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-medium"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   >
-                    <option value="Low">Low</option>
-                    <option value="Normal">Normal</option>
-                    <option value="High">Important</option>
-                    <option value="Urgent">Urgent</option>
+                    <option value="Low">{tr('Low')}</option>
+                    <option value="Normal">{tr('Normal')}</option>
+                    <option value="High">{tr('Important')}</option>
+                    <option value="Urgent">{tr('Urgent')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Car (Optional)</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    {tr('Car (optional)')}
+                  </label>
                   <select
                     value={vehicleId}
                     onChange={(e) => setVehicleId(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-medium"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   >
-                    <option value="">No specific car</option>
+                    <option value="">{tr('No specific car')}</option>
                     {vehicles.map((v) => (
                       <option key={v.id} value={v.id}>
                         {v.plate_number} — {v.model_name}
@@ -425,20 +493,19 @@ export const TasksView: React.FC<TasksViewProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsNewTaskOpen(false)}
-                  className="px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-300 font-semibold"
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Cancel
+                  {tr('Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-full text-white font-bold shadow-sm"
-                  style={{ backgroundColor: activeColor }}
+                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
                 >
-                  Save Job
+                  {tr('Save job')}
                 </button>
               </div>
             </form>

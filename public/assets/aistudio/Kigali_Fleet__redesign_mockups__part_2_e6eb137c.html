@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kigali Fleet: redesign mockups, part 2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+<style>
+:root{--bg:#eceff3;--ink:#14181f;--mute:#5a6472;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#10141b;--ink:#e8ecf3;--mute:#9aa6b8;color-scheme:dark}}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Inter,system-ui,sans-serif}
+.pg{max-width:1040px;margin:0 auto;padding:28px 18px 70px}
+h1{font:600 26px/1.2 Inter;margin:0 0 6px}
+h2{font:600 18px/1.3 Inter;margin:46px 0 4px}
+.cap{color:var(--mute);margin:0 0 12px;max-width:72ch;font-size:14px}
+.ov{overflow-x:auto}
+.app{background:#fff;color:#14181f;border:1px solid #cfd5dd;border-radius:2px;min-width:780px}
+.app *{margin:0}
+.m{font-variant-numeric:tabular-nums}
+.mu{color:#5a6472}.sm{font-size:13px}.b{font-weight:600}
+.hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #cfd5dd}
+.hd .t{font-size:20px;font-weight:600}
+.btn{font:600 14px Inter,sans-serif;padding:8px 14px;border-radius:4px;border:1px solid #14181f;background:#fff;color:#14181f;display:inline-block}
+.btn.p{background:#1f4fd8;border-color:#1f4fd8;color:#fff}
+.lnk{color:#1f4fd8;font-weight:600;font-size:14px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.ok{color:#1a7f4b}.at{color:#8a4b00}.pr{color:#b3261e}
+.dok{background:#1a7f4b}.dat{background:#c07a00}.dpr{background:#b3261e}.dgr{background:#8b94a1}
+.strip{display:flex;gap:34px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid #cfd5dd}
+.strip b{font-size:22px;font-weight:600;display:block}.strip small{color:#5a6472;font-size:13px}
+.tabs{display:flex;gap:20px;padding:0 18px;border-bottom:1px solid #cfd5dd;font-size:14px}
+.tabs span{padding:10px 0}.tabs .on{font-weight:600;border-bottom:2px solid #14181f;margin-bottom:-1px}
+.tb{width:100%;border-collapse:collapse;font-size:14px}
+.tb th{text-align:left;font-weight:600;color:#5a6472;font-size:13px;padding:8px 14px;border-bottom:2px solid #14181f}
+.tb td{padding:10px 14px;border-bottom:1px solid #e6e9ee;vertical-align:top}
+.tb .r{text-align:right}
+.foot{padding:12px 18px;font-size:14px;display:flex;justify-content:space-between}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-width:780px}
+.sheet{background:#fff;color:#14181f;border:1px solid #cfd5dd;border-radius:2px}
+.sheet *{margin:0}
+.sheet .t{padding:12px 16px;border-bottom:2px solid #14181f;display:flex;justify-content:space-between;align-items:baseline}
+.sheet .t b{font-weight:600;font-size:16px}
+.kv{display:grid;grid-template-columns:130px 1fr}
+.kv dt,.kv dd{margin:0;padding:8px 16px;border-bottom:1px solid #e6e9ee;font-size:14px}
+.kv dt{color:#5a6472}
+.fu{display:inline-flex;gap:2px;vertical-align:middle;margin-right:8px}.fu i{width:10px;height:14px;background:#14181f}
+.sig{border-bottom:1px solid #14181f;height:30px;font:italic 18px Georgia,serif;padding-top:4px}
+.td{display:grid;grid-template-columns:22px 1fr auto;gap:12px;padding:12px 18px;border-bottom:1px solid #e6e9ee}
+.cb{width:18px;height:18px;border:2px solid #14181f;border-radius:2px;margin-top:3px}
+.sec{padding:10px 18px 6px;font-weight:600;font-size:14px;border-bottom:2px solid #14181f}
+.pl{display:grid;grid-template-columns:repeat(3,1fr)}
+.pl>div{padding:18px;border-left:1px solid #cfd5dd;border-top:3px solid transparent}
+.pl>div:first-child{border-left:0}
+.pl .cur{border-top-color:#1f4fd8;background:#f7f9fe}
+.pl h4{font-size:17px;font-weight:600}.pl .pr2{font-size:26px;font-weight:600;margin:4px 0}.pl .pr2 span{font:400 14px Inter;color:#5a6472}
+.pl p{font-size:14px;color:#5a6472;margin:0 0 10px}
+.pl ul{padding-left:18px;font-size:14px;margin:10px 0 14px}.pl li{margin:4px 0}
+.st{display:grid;grid-template-columns:200px 1fr}
+.st nav{border-right:1px solid #cfd5dd;padding:8px 0}
+.st nav div{padding:9px 18px;font-size:14px}.st nav .on{font-weight:600;box-shadow:inset 3px 0 #1f4fd8;background:#f4f6f9}
+.fm{padding:6px 20px 14px;display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+.fm label{display:block;font-size:13px;color:#5a6472;margin:14px 0 3px}
+.fm .f{border:1px solid #8b94a1;border-radius:3px;padding:7px 10px;font-size:14px;min-height:36px}
+.fm h5{grid-column:1/3;font-size:15px;font-weight:600;padding:14px 0 6px;border-bottom:1px solid #cfd5dd;margin-bottom:0}
+.sf{display:grid;grid-template-columns:190px 1fr}
+.top{display:flex;justify-content:space-between;padding:6px 18px;background:#14181f;color:#e8ecf3;font-size:13px;gap:12px}
+.nv{display:flex;gap:22px;align-items:center;padding:12px 18px;border-bottom:1px solid #cfd5dd;font-size:14px}
+.nv .l{font-weight:600;font-size:16px;margin-right:auto}
+.fl{padding:14px 18px;border-right:1px solid #cfd5dd;font-size:14px}
+.fl b{display:block;margin:12px 0 4px;font-weight:600}.fl div{display:flex;justify-content:space-between;padding:3px 0}
+.cr{display:grid;grid-template-columns:150px 1fr auto;gap:16px;padding:14px 18px;border-bottom:1px solid #e6e9ee}
+.ph{background:#d9dee5;color:#5a6472;font-size:12px;display:flex;align-items:center;justify-content:center;height:92px}
+.qs{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:18px}
+.qs div{border-left:3px solid #cfd5dd;padding-left:12px;font-size:14px}
+.stp{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #cfd5dd}
+.stp div{padding:14px 18px;border-left:1px solid #e6e9ee;font-size:14px}.stp div:first-child{border-left:0}.stp b{font-size:22px;display:block;font-weight:600}
+.chk{display:flex;gap:12px;align-items:end;padding:14px 18px 18px}
+.chk div{flex:1}.chk label{display:block;font-size:13px;color:#5a6472;margin-bottom:3px}.chk .f{border:1px solid #8b94a1;border-radius:3px;padding:7px 10px;font-size:14px}
+.nt{margin-top:34px;color:var(--mute);font-size:14px;max-width:70ch}
+</style>
+</head>
+<body>
+<div class="pg">
+<h1>Kigali Fleet, redesigned: part 2</h1>
+<p class="cap">Seven more screens. Each one is built around what that screen is really for: a repair ledger, a handover form, a phone roster, a checklist, a price table, a settings form, and the public site your guests see. Same rules as before: flat, hairlines, no cut-off words. Scroll sideways on a phone.</p>
+
+<h2>1. Repairs: a garage ledger</h2>
+<p class="cap">A repair is a job card with a garage, dates and a bill. So it is a table, with costs right-aligned and totalled. “Release car” is the only filled button, and only on the car still in the garage.</p>
+<div class="ov"><div class="app" style="min-width:900px">
+<div class="hd"><span class="t">Repairs</span><span class="btn p">New repair</span></div>
+<div class="strip"><div><b class="pr">1</b><small>In garage, blocked from bookings</small></div><div><b>1</b><small>Planned</small></div><div><b>2</b><small>Done</small></div><div><b class="m">1,195,000 <span class="sm mu">RWF</span></b><small>Total garage bills</small></div></div>
+<div class="tabs"><span class="on">All (4)</span><span>In garage (1)</span><span>Planned (1)</span><span>Done (2)</span><span style="margin-left:auto" class="mu">Search plate, model or garage</span></div>
+<table class="tb"><tr><th>Car</th><th>Work</th><th>Garage</th><th>Dates</th><th class="r">Cost (RWF)</th><th>Status</th><th></th></tr>
+<tr><td><span class="m b">RAE 550 L</span><br>Mercedes-Benz E-Class E250</td><td>AC and lights<br><span class="sm mu">Radiator coolant pipe repair</span></td><td>CFAO Motors Rwanda<br><span class="sm mu">Gikondo Industrial Park, Kigali</span></td><td>4 to 12 Nov<br><span class="m sm mu">47,900 km</span></td><td class="r m">450,000</td><td class="pr b"><span class="dot dpr"></span>In garage</td><td class="r"><span class="btn p">Release car</span></td></tr>
+<tr><td><span class="m b">RAD 450 B</span><br>Toyota Land Cruiser Prado TXL</td><td>Suspension repair<br><span class="sm mu">After the Akagera National Park trip</span></td><td>Kigali Toyota Center<br><span class="sm mu">Remera, Boulevard de l’Aéroport</span></td><td>18 to 20 Oct<br><span class="m sm mu">68,450 km</span></td><td class="r m">285,000</td><td class="ok b"><span class="dot dok"></span>Done</td><td class="r lnk">Details</td></tr>
+<tr><td><span class="m b">RAG 334 C</span><br>Toyota Coaster Bus</td><td>Brakes and pads<br><span class="sm mu">Air brake drum resurfacing</span></td><td>Akagera Motors<br><span class="sm mu">Gatsata, RN3 Highway, Kigali</span></td><td>12 to 15 Oct<br><span class="m sm mu">112,500 km</span></td><td class="r m">340,000</td><td class="ok b"><span class="dot dok"></span>Done</td><td class="r lnk">Details</td></tr>
+<tr><td><span class="m b">RAC 812 K</span><br>Toyota RAV4 AWD</td><td>Safety inspection prep<br><span class="sm mu">For the Rwanda National Police check</span></td><td>Nyarutarama Auto<br><span class="sm mu">Nyarutarama, Golf View Road</span></td><td>15 to 16 Nov<br><span class="m sm mu">52,180 km</span></td><td class="r m">120,000</td><td class="at b"><span class="dot dat"></span>Planned</td><td class="r lnk">Details</td></tr></table>
+<div class="foot"><span class="mu">Customers cannot book a car in the garage until you release it.</span><span class="b">Total <span class="m">1,195,000 RWF</span></span></div>
+</div></div>
+
+<h2>2. Car checks: a handover form, like the paper one</h2>
+<p class="cap">This is a signed record, so it should look like a form: fixed rows, a signature line, and the two moments (going out, coming back) side by side so staff can compare. A “Print car paper” button fits here, because offices still hand over paper.</p>
+<div class="ov"><div class="two">
+<div class="sheet"><div class="t"><b>Going out</b><span class="sm mu">10 Nov, 10:30</span></div>
+<dl class="kv" style="margin:0"><dt>Car</dt><dd>Toyota Land Cruiser Prado TXL <span class="m sm mu">RAD 450 B</span></dd><dt>Km reading</dt><dd class="m">68,450 km</dd><dt>Fuel</dt><dd><span class="fu"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>8 of 8</dd><dt>Checks passed</dt><dd>9 of 9</dd><dt>Condition</dt><dd class="ok b">Clean</dd><dt>Notes</dt><dd>Minor paint chip on front bumper, left side (already there). Windshield clean, spare tire present.</dd><dt>Guest</dt><dd><div class="sig">Dr. Sarah Jenkins</div></dd><dt>Checked by</dt><dd>Eric Nshimiyimana, dispatcher</dd></dl>
+<div style="padding:10px 16px;display:flex;justify-content:space-between"><span class="m sm mu">insp-pickup-001</span><span class="lnk">Print car paper</span></div></div>
+<div class="sheet"><div class="t"><b>Coming back</b><span class="sm mu">9 Nov, 19:15</span></div>
+<dl class="kv" style="margin:0"><dt>Car</dt><dd>Toyota RAV4 AWD (2022 Hybrid) <span class="m sm mu">RAC 812 K</span></dd><dt>Km reading</dt><dd class="m">52,180 km</dd><dt>Fuel</dt><dd><span class="fu"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>8 of 8</dd><dt>Checks passed</dt><dd>9 of 9</dd><dt>Condition</dt><dd class="ok b">Clean</dd><dt>Notes</dt><dd>Returned in perfect condition, no new scratches. Police safety triangle and fire extinguisher checked.</dd><dt>Guest</dt><dd><div class="sig">Marc van der Meer</div></dd><dt>Checked by</dt><dd>Grace Umutoni, receptionist</dd></dl>
+<div style="padding:10px 16px;display:flex;justify-content:space-between"><span class="m sm mu">insp-return-002</span><span class="lnk">Print car paper</span></div></div>
+</div></div>
+
+<h2>3. Drivers: a phone roster</h2>
+<p class="cap">The owner opens this to call someone. So the phone number is the biggest thing in each row, with Call and Send SMS beside it. Status is a dot and a word. Only facts from your screens appear; per-driver rating and trips are left out because the page showed only totals.</p>
+<div class="ov"><div class="app" style="min-width:860px">
+<div class="hd"><span class="t">Drivers</span><span class="btn p">Add driver</span></div>
+<div class="strip"><div><b>5</b><small>Drivers</small></div><div><b class="ok">3</b><small>Free</small></div><div><b class="at">2</b><small>On a trip</small></div><div><b>0</b><small>Off duty</small></div><div><b>4.93 <span class="sm mu">out of 5</span></b><small>Average rating</small></div><div><b>755</b><small>Trips done</small></div></div>
+<div class="tabs"><span class="on">All</span><span>Available</span><span>On trip</span><span>Off duty</span><span style="margin-left:auto" class="mu">Language: All | Kinyarwanda | English | French</span></div>
+<table class="tb"><tr><th>Driver</th><th>Phone</th><th>Status</th><th>Usual car</th><th></th></tr>
+<tr><td class="b">Jean-Paul Mugisha<br><span class="sm mu b" style="font-weight:400">EN, RW</span></td><td class="m">+250 788 555 123</td><td class="ok b"><span class="dot dok"></span>Available</td><td>Toyota Land Cruiser V8 Executive VIP <span class="m sm mu">RAE 109 M</span></td><td class="r"><span class="lnk">Call</span> &nbsp; <span class="lnk">Send SMS</span></td></tr>
+<tr><td class="b">Emmanuel Nshimiyimana</td><td class="m">+250 783 222 890</td><td class="at b"><span class="dot dat"></span>On trip</td><td>Toyota Land Cruiser Prado TXL <span class="m sm mu">RAD 450 B</span></td><td class="r"><span class="lnk">Call</span> &nbsp; <span class="lnk">Send SMS</span></td></tr>
+<tr><td class="b">Claudine Uwase</td><td class="m">+250 785 444 333</td><td class="ok b"><span class="dot dok"></span>Available</td><td>Toyota RAV4 AWD <span class="m sm mu">RAC 812 K</span></td><td class="r"><span class="lnk">Call</span> &nbsp; <span class="lnk">Send SMS</span></td></tr>
+<tr><td class="b">Patrick Habimana<br><span class="sm mu" style="font-weight:400">EN, RW</span></td><td class="m">+250 788 777 901</td><td class="at b"><span class="dot dat"></span>On trip</td><td class="mu">Not set</td><td class="r"><span class="lnk">Call</span> &nbsp; <span class="lnk">Send SMS</span></td></tr>
+<tr><td class="b">Diane Mutoni<br><span class="sm mu" style="font-weight:400">EN, RW</span></td><td class="m">+250 782 111 445</td><td class="ok b"><span class="dot dok"></span>Available</td><td class="mu">Not set</td><td class="r"><span class="lnk">Call</span> &nbsp; <span class="lnk">Send SMS</span></td></tr></table>
+</div></div>
+
+<h2>4. To-do list: a real checklist with overdue marked</h2>
+<p class="cap">A to-do list should feel like a checklist: a box to tick, one line of what, one line of who and by when. The task from your screenshot was due 14 Nov, so today it shows as 2 days late. The other two tasks are examples.</p>
+<div class="ov"><div class="app">
+<div class="hd"><span class="t">Team to-do list</span><span class="btn p">Add job</span></div>
+<div class="strip"><div><b>3</b><small>Waiting</small></div><div><b>1</b><small>Doing now</small></div><div><b class="pr">1</b><small>Urgent</small></div><div><b>0</b><small>Done</small></div></div>
+<div class="tabs"><span class="on">All jobs (4)</span><span>Urgent</span><span>Mine</span><span style="margin-left:auto" class="mu">Search job or person</span></div>
+<div class="sec">Doing now</div>
+<div class="td"><div class="cb"></div><div><div class="b">Complete the Contrôle Technique prep for RAC 812 K</div><div class="sm mu">Test emergency braking and calibrate headlights before the 15 Nov booking.</div><div class="sm" style="margin-top:4px">For Faustin Nkurunziza</div></div><div style="text-align:right"><div class="pr b sm"><span class="dot dpr"></span>Due 14 Nov, 2 days late</div><div class="at sm b">Important</div></div></div>
+<div class="sec" style="margin-top:0">Waiting</div>
+<div class="td"><div class="cb"></div><div><div class="b">Wash RAE 109 M before airport pickup</div><div class="sm" style="margin-top:4px">For Jean-Paul Mugisha</div></div><div style="text-align:right" class="sm mu">Due today</div></div>
+<div class="td"><div class="cb"></div><div><div class="b">Collect the Coaster bus from the garage</div><div class="sm" style="margin-top:4px">For Grace Umutoni</div></div><div style="text-align:right" class="sm mu">Due 18 Nov</div></div>
+</div></div>
+
+<h2>5. Plans: a price table, and a mistake to fix</h2>
+<p class="cap">Your plan page is a comparison, so it should read like one: price, limit, features, with the current plan marked by a blue top rule and the words “Your plan”. One mistake to fix: in your screenshot the Growth plan says “up to 25 cars” in the description but “up to 20 cars” in the limit.</p>
+<div class="ov"><div class="app">
+<div class="hd"><span class="t">Plans</span><span class="sm mu">Pick a monthly plan that fits the number of cars you own.</span></div>
+<div class="pl">
+<div><h4>Starter</h4><div class="pr2 m">35,000 <span>RWF per month</span></div><p>For small teams starting with 1 to 5 cars.</p><div class="b sm">Up to 5 cars</div><ul><li>Up to 5 vehicles and 6 staff accounts</li><li>Zero-overlap booking engine</li><li>Public booking link for businesses and tourists</li><li>RRA EBM-ready invoice exports</li></ul><span class="btn">Choose Starter</span></div>
+<div class="cur"><h4>Growth <span class="lnk">Your plan</span></h4><div class="pr2 m">75,000 <span>RWF per month</span></div><p>For busy car rental companies.</p><div class="b sm">Up to 20 cars <span class="pr">(says 25 in the text above: fix one)</span></div><ul><li>Up to 20 vehicles and 3 branch offices</li><li>SMS to drivers and *134# USSD driver portal</li><li>Kigali airport flight delay monitoring</li><li>Workshop alerts and Contrôle Technique alerts</li></ul><span class="btn" style="opacity:.5">Current plan</span></div>
+<div><h4>Enterprise</h4><div class="pr2 m">150,000 <span>RWF per month</span></div><p>For big fleets and tour companies with many cars.</p><div class="b sm">Unlimited cars</div><ul><li>Unlimited vehicles and separate branches</li><li>Dedicated RRA EBM v2.0 and Bank of Kigali sync</li><li>Custom SLA, corporate Net-30 portals, priority support</li><li>Daily compliance and ROI reports</li></ul><span class="btn">Choose Enterprise</span></div>
+</div></div></div>
+
+<h2>6. Settings: a plain form with a side list</h2>
+<p class="cap">Six pill-shaped tabs become a quiet list on the left. The page title says “Settings” once, and the company name sits in the form. Fields have labels above, one border, one radius. Save stays visible at the bottom.</p>
+<div class="ov"><div class="app" style="min-width:820px">
+<div class="hd"><span class="t">Settings</span><span class="sm mu">Kigali Executive Fleet &amp; Safaris Ltd</span></div>
+<div class="st"><nav><div class="on">Company info</div><div>Booking rules</div><div>Booking website</div><div>SMS alerts</div><div>Your team (14)</div><div>Your plan</div></nav>
+<div><div class="fm"><h5>Company details</h5>
+<div><label>Company name</label><div class="f">Kigali Executive Fleet &amp; Safaris Ltd</div></div><div><label>Tax number (TIN)</label><div class="f m">109845231</div></div>
+<div><label>Type of business</label><div class="f">Car rental</div></div><div><label>Main city</label><div class="f">Kigali (Remera)</div></div>
+<div><label>Phone number (MTN MoMo)</label><div class="f m">+250</div></div><div><label>Business email</label><div class="f"> </div></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid #cfd5dd;background:#f7f8fa"><span class="sm mu">Shown on guest receipts, contracts and your booking website.</span><span class="btn p">Save changes</span></div></div></div>
+</div></div>
+
+<h2>7. Public booking site: what guests see</h2>
+<p class="cap">This is the one screen visitors use, often on a phone, often just landed at the airport. So it should lead with trust and price: a phone and WhatsApp number at the very top, real photos, and the total for their days in large type. Rows scan faster than cards. Photos are gray boxes here because I can’t add your pictures.</p>
+<div class="ov"><div class="app" style="min-width:860px">
+<div class="top"><span>Call 24/7: <span class="m">+250 788 100 200</span> &nbsp; WhatsApp: <span class="m">+250 788 312 000</span></span><span>Kigali Airport and Remera office &nbsp; RWF | USD &nbsp; EN | RW | FR</span></div>
+<div class="nv"><span class="l">Kigali Executive Fleet &amp; Safaris</span><span>Cars and prices</span><span>Airport pickup</span><span>Safari trips</span><span>Check booking</span><span>Help</span><span class="btn p">Book a car</span></div>
+<div class="sf"><div class="fl"><b style="margin-top:0">Filter cars</b><div><span>Automatic only</span><span class="mu">off</span></div><b>Car type</b><div class="b"><span>All cars</span><span>7</span></div><div><span>Land Cruiser 4x4</span><span>2</span></div><div><span>Toyota RAV4</span><span>2</span></div><div><span>Safari van</span><span>1</span></div><div><span>Coaster bus</span><span>1</span></div><div><span>VIP sedan</span><span>1</span></div><b>Seats needed</b><div class="m sm"><span class="b">Any</span><span>2+</span><span>4+</span><span>5+</span><span>7+</span></div></div>
+<div><div style="padding:10px 18px;border-bottom:1px solid #cfd5dd;display:flex;justify-content:space-between" class="sm"><span>Showing 7 of 7 cars. Prices for <b>4 days</b></span><span class="mu">Lowest price first</span></div>
+<div class="cr"><div class="ph">Photo</div><div><div class="b" style="font-size:17px">Toyota RAV4 4x4 Expedition Spec</div><div class="m sm mu">RAF 672 P, 2023</div><div class="sm" style="margin-top:6px">5 seats, 3 bags, manual, diesel</div></div><div style="text-align:right"><div class="m b" style="font-size:22px">240,000 RWF</div><div class="sm mu">60,000 per day</div><span class="btn p" style="margin-top:8px">Pick and book</span></div></div>
+<div class="cr"><div class="ph">Photo</div><div><div class="b" style="font-size:17px">Toyota RAV4 AWD (2022 Hybrid)</div><div class="m sm mu">RAC 812 K, 2022</div><div class="sm" style="margin-top:6px">5 seats, 3 bags, automatic, petrol</div></div><div style="text-align:right"><div class="m b" style="font-size:22px">260,000 RWF</div><div class="sm mu">65,000 per day</div><span class="btn p" style="margin-top:8px">Pick and book</span></div></div>
+<div class="cr"><div class="ph">Photo</div><div><div class="b" style="font-size:17px">Toyota HiAce Safari Pop-Top (Photographic)</div><div class="m sm mu">RAD 920 T, 2022</div><div class="sm" style="margin-top:6px">8 seats, 4 bags, manual, diesel</div></div><div style="text-align:right"><div class="m b" style="font-size:22px">560,000 RWF</div><div class="sm mu">140,000 per day</div><span class="btn p" style="margin-top:8px">Pick and book</span></div></div>
+</div></div>
+<div class="qs"><div>“Rented a Land Cruiser for a 4-day work trip in Musanze. The car was clean, driver Emmanuel was on time, and we got our tax receipt right away.”<div class="sm mu" style="margin-top:6px">Dr. Arthur Mugabo, UNDP Rwanda</div></div><div>“Our flight from Amsterdam landed 2 hours late, and the driver still waited at Gate 1 with water and our name sign.”<div class="sm mu" style="margin-top:6px">Sarah Jenkins, visitor from the Netherlands</div></div><div>“Booked two safari vans for event guests. Confirmed in minutes and paying with MTN MoMo was fast.”<div class="sm mu" style="margin-top:6px">Patrick Habimana, Kigali Event Team</div></div></div>
+<div class="stp"><div><b>1</b>Pick trip type</div><div><b>2</b>Pick a car</div><div><b>3</b>Pay and confirm</div><div><b>4</b>Get your pass</div></div>
+<div class="chk"><div><label>Booking code</label><div class="f m mu">bk-2026-089</div></div><div><label>Phone number</label><div class="f m mu">+250 788 123 456</div></div><span class="btn p" style="padding:9px 20px">Find my booking</span></div>
+</div></div>
+
+<p class="nt">What is real and what is added: names, plates, prices, routes and phone numbers come from your screenshots. The to-do examples, the per-driver “Not set” cells and the printed signature names are illustrative. I did not mock the side menu, since it was the same drawer as before; its main fix is to stay open on wide screens.</p>
+</div>
+</body>
+</html>

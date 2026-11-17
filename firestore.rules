@@ -45,6 +45,18 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function userDocExists() {
+      return isVerifiedUser() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function currentUserCompanyId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.company_id;
+    }
+
+    function isSameCompany(companyId) {
+      return userDocExists() && companyId is string && companyId.size() > 0 && currentUserCompanyId() == companyId;
+    }
+
     function isValidId(id) {
       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -72,9 +84,10 @@ service cloud.firestore {
     function isValidVehicle(data) {
       return data.keys().hasAll(['category', 'model_name', 'plate_number', 'daily_rate_rwf', 'status']) &&
         data.keys().hasOnly([
-          'id', 'category', 'model_name', 'plate_number', 'daily_rate_rwf', 'status',
+          'id', 'company_id', 'category', 'model_name', 'plate_number', 'daily_rate_rwf', 'status',
           'transmission', 'fuel_type', 'seating_capacity', 'current_odometer_km',
-          'location', 'image_url', 'year', 'assigned_driver_id', 'assigned_driver_name',
+          'location', 'image_url', 'gallery_urls', 'description', 'features',
+          'year', 'assigned_driver_id', 'assigned_driver_name',
           'insurance_expiry', 'controle_technique_expiry', 'last_service_date',
           'last_service_notes', 'next_service_km'
         ]) &&
@@ -84,12 +97,24 @@ service cloud.firestore {
         data.daily_rate_rwf is number && data.daily_rate_rwf >= 0 &&
         data.status in ['Available', 'Booked', 'Maintenance'] &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'transmission', 30) &&
         isOptionalBoundedString(data, 'fuel_type', 30) &&
         isOptionalNumber(data, 'seating_capacity') &&
         isOptionalNumber(data, 'current_odometer_km') &&
         isOptionalBoundedString(data, 'location', 200) &&
-        isOptionalBoundedString(data, 'image_url', 1000) &&
+        isOptionalBoundedString(data, 'image_url', 250000) &&
+        (!('gallery_urls' in data) || (
+          data.gallery_urls is list &&
+          data.gallery_urls.size() <= 6 &&
+          (data.gallery_urls.size() == 0 || (data.gallery_urls[0] is string && data.gallery_urls[0].size() <= 250000))
+        )) &&
+        isOptionalBoundedString(data, 'description', 1000) &&
+        (!('features' in data) || (
+          data.features is list &&
+          data.features.size() <= 12 &&
+          (data.features.size() == 0 || (data.features[0] is string && data.features[0].size() <= 80))
+        )) &&
         isOptionalNumber(data, 'year') &&
         isOptionalBoundedString(data, 'assigned_driver_id', 128) &&
         isOptionalBoundedString(data, 'assigned_driver_name', 200) &&
@@ -103,7 +128,7 @@ service cloud.firestore {
     function isValidDriver(data) {
       return data.keys().hasAll(['name', 'phone', 'language', 'status', 'license_number']) &&
         data.keys().hasOnly([
-          'id', 'name', 'phone', 'email', 'national_id', 'license_expiry',
+          'id', 'company_id', 'name', 'phone', 'email', 'national_id', 'license_expiry',
           'experience_years', 'emergency_phone', 'language', 'status',
           'license_number', 'trips_completed', 'rating', 'assigned_vehicle_id', 'notes'
         ]) &&
@@ -113,6 +138,7 @@ service cloud.firestore {
         data.status in ['Available', 'On Trip', 'Off Duty', 'On Leave', 'Rest Day'] &&
         isBoundedString(data.license_number, 100) &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'email', 200) &&
         isOptionalBoundedString(data, 'national_id', 32) &&
         isOptionalBoundedString(data, 'license_expiry', 20) &&
@@ -127,7 +153,7 @@ service cloud.firestore {
     function isValidBooking(data) {
       return data.keys().hasAll(['client_name', 'vehicle_id', 'driver_id', 'start_date', 'end_date', 'total_rwf', 'status']) &&
         data.keys().hasOnly([
-          'id', 'client_name', 'client_email', 'client_phone', 'vehicle_id', 'driver_id',
+          'id', 'company_id', 'client_name', 'client_email', 'client_phone', 'vehicle_id', 'driver_id',
           'start_date', 'end_date', 'total_rwf', 'flight_number', 'flight_status',
           'flight_delay_minutes', 'flight_origin', 'destination', 'status',
           'dispatch_status', 'payment_status', 'payment_method', 'notes',
@@ -141,6 +167,7 @@ service cloud.firestore {
         data.total_rwf is number && data.total_rwf >= 0 &&
         data.status in ['Confirmed', 'Pending Dispatch', 'In Progress', 'Completed', 'Cancelled'] &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'client_email', 200) &&
         isOptionalBoundedString(data, 'client_phone', 50) &&
         isOptionalBoundedString(data, 'flight_number', 30) &&
@@ -217,7 +244,7 @@ service cloud.firestore {
     function isValidCustomer(data) {
       return data.keys().hasAll(['name', 'phone', 'email', 'category']) &&
         data.keys().hasOnly([
-          'id', 'name', 'phone', 'email', 'category', 'organization', 'tin_number',
+          'id', 'company_id', 'name', 'phone', 'email', 'category', 'organization', 'tin_number',
           'address', 'credit_terms', 'discount_rate_pct', 'total_spent_rwf',
           'total_bookings_count', 'outstanding_balance_rwf', 'notes', 'created_at'
         ]) &&
@@ -226,6 +253,7 @@ service cloud.firestore {
         isBoundedString(data.email, 200) &&
         data.category in ['Individual', 'Tourist / Expat', 'Corporate', 'NGO / Diplomatic', 'Travel Agency'] &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'organization', 200) &&
         isOptionalBoundedString(data, 'tin_number', 50) &&
         isOptionalBoundedString(data, 'address', 300) &&
@@ -241,7 +269,7 @@ service cloud.firestore {
     function isValidPaymentRecord(data) {
       return data.keys().hasAll(['booking_id', 'customer_name', 'amount_rwf', 'expected_amount_rwf', 'payment_method', 'date', 'status']) &&
         data.keys().hasOnly([
-          'id', 'booking_id', 'customer_name', 'customer_phone', 'organization',
+          'id', 'company_id', 'booking_id', 'customer_name', 'customer_phone', 'organization',
           'amount_rwf', 'expected_amount_rwf', 'payment_method', 'momo_tx_id',
           'ebm_receipt_number', 'date', 'status', 'notes', 'created_at'
         ]) &&
@@ -253,6 +281,7 @@ service cloud.firestore {
         isBoundedString(data.date, 30) &&
         data.status in ['Paid', 'Partially Paid', 'Pending', 'Overdue', 'Refunded'] &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'customer_phone', 50) &&
         isOptionalBoundedString(data, 'organization', 200) &&
         isOptionalBoundedString(data, 'momo_tx_id', 128) &&
@@ -264,7 +293,7 @@ service cloud.firestore {
     function isValidMaintenanceRecord(data) {
       return data.keys().hasAll(['vehicle_id', 'service_type', 'garage_name', 'start_date', 'cost_rwf', 'status']) &&
         data.keys().hasOnly([
-          'id', 'vehicle_id', 'vehicle_plate', 'vehicle_model', 'service_type',
+          'id', 'company_id', 'vehicle_id', 'vehicle_plate', 'vehicle_model', 'service_type',
           'garage_name', 'garage_phone', 'garage_location', 'description',
           'start_date', 'expected_completion_date', 'actual_completion_date',
           'odometer_at_service_km', 'next_service_due_km', 'cost_rwf', 'status',
@@ -277,6 +306,7 @@ service cloud.firestore {
         data.cost_rwf is number && data.cost_rwf >= 0 &&
         data.status in ['In Garage', 'Scheduled', 'Completed', 'Awaiting Parts'] &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'vehicle_plate', 30) &&
         isOptionalBoundedString(data, 'vehicle_model', 200) &&
         isOptionalBoundedString(data, 'garage_phone', 50) &&
@@ -299,7 +329,7 @@ service cloud.firestore {
     function isValidExpense(data) {
       return data.keys().hasAll(['title', 'category', 'amount_rwf', 'date', 'status']) &&
         data.keys().hasOnly([
-          'id', 'title', 'category', 'amount_rwf', 'date', 'vehicle_id',
+          'id', 'company_id', 'title', 'category', 'amount_rwf', 'date', 'vehicle_id',
           'vehicle_plate', 'booking_id', 'supplier_name', 'description',
           'status', 'recorded_by', 'approved_by', 'receipt_ref', 'created_at'
         ]) &&
@@ -309,6 +339,7 @@ service cloud.firestore {
         isBoundedString(data.date, 20) &&
         data.status in ['Pending', 'Approved', 'Paid', 'Rejected'] &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'vehicle_id', 128) &&
         isOptionalBoundedString(data, 'vehicle_plate', 30) &&
         isOptionalBoundedString(data, 'booking_id', 128) &&
@@ -323,7 +354,7 @@ service cloud.firestore {
     function isValidHandover(data) {
       return data.keys().hasAll(['booking_id', 'vehicle_id', 'inspection_type', 'odometer_km', 'inspector_name']) &&
         data.keys().hasOnly([
-          'id', 'booking_id', 'vehicle_id', 'vehicle_plate', 'vehicle_model',
+          'id', 'company_id', 'booking_id', 'vehicle_id', 'vehicle_plate', 'vehicle_model',
           'client_name', 'client_phone', 'inspection_type', 'odometer_km',
           'fuel_level_eighths', 'cleanliness', 'condition_checklist',
           'damage_notes', 'inspector_name', 'client_signature_confirmed',
@@ -335,6 +366,7 @@ service cloud.firestore {
         data.odometer_km is number && data.odometer_km >= 0 &&
         isBoundedString(data.inspector_name, 200) &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'vehicle_plate', 30) &&
         isOptionalBoundedString(data, 'vehicle_model', 200) &&
         isOptionalBoundedString(data, 'client_name', 200) &&
@@ -352,7 +384,7 @@ service cloud.firestore {
     function isValidTask(data) {
       return data.keys().hasAll(['title', 'assigned_to_name', 'due_date', 'priority', 'status']) &&
         data.keys().hasOnly([
-          'id', 'title', 'description', 'assigned_to_name', 'assigned_to_role',
+          'id', 'company_id', 'title', 'description', 'assigned_to_name', 'assigned_to_role',
           'due_date', 'priority', 'status', 'related_vehicle_id',
           'related_booking_id', 'created_at'
         ]) &&
@@ -362,6 +394,7 @@ service cloud.firestore {
         data.priority in ['Low', 'Normal', 'High', 'Urgent'] &&
         data.status in ['Open', 'In Progress', 'Completed', 'Cancelled'] &&
         isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128) &&
         isOptionalBoundedString(data, 'description', 1000) &&
         isOptionalBoundedString(data, 'assigned_to_role', 50) &&
         isOptionalBoundedString(data, 'related_vehicle_id', 128) &&
@@ -371,12 +404,13 @@ service cloud.firestore {
 
     function isValidActivityLog(data) {
       return data.keys().hasAll(['timestamp', 'action', 'details', 'category']) &&
-        data.keys().hasOnly(['id', 'timestamp', 'action', 'details', 'category']) &&
+        data.keys().hasOnly(['id', 'company_id', 'timestamp', 'action', 'details', 'category']) &&
         isBoundedString(data.timestamp, 50) &&
         isBoundedString(data.action, 200) &&
         isBoundedString(data.details, 500) &&
         data.category in ['booking', 'dispatch', 'fleet', 'driver', 'handover', 'expense'] &&
-        isOptionalBoundedString(data, 'id', 128);
+        isOptionalBoundedString(data, 'id', 128) &&
+        isOptionalBoundedString(data, 'company_id', 128);
     }
 
     function isValidPlatformAdmin(data) {
@@ -563,83 +597,118 @@ service cloud.firestore {
     // Collection Security Rules (20 Active Paths)
     // =========================================================================
 
-    // 1. Vehicles (Public Storefront Catalog + Verified Fleet Management)
+    // 1. Vehicles (Public Storefront Catalog + Tenant-Isolated Fleet Management)
     match /vehicles/{vehicleId} {
       allow get: if isValidId(vehicleId);
-      allow list: if resource.data.status in ['Available', 'Booked', 'Maintenance'];
-      allow create: if isVerifiedUser() && isValidId(vehicleId) && isValidVehicle(incoming());
+      allow list: if isMasterOwner() || resource.data.company_id is string;
+      allow create: if isVerifiedUser() && isValidId(vehicleId) && isValidVehicle(incoming()) && (
+        isSuperAdmin() ||
+        ('company_id' in incoming() && isSameCompany(incoming().company_id))
+      );
       allow update: if isVerifiedUser() && isValidId(vehicleId) && isValidVehicle(incoming()) && (
         isSuperAdmin() ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['daily_rate_rwf']) ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['current_odometer_km', 'status', 'last_service_date', 'last_service_notes', 'next_service_km']) ||
-        incoming().diff(existing()).affectedKeys().hasOnly([
-          'category', 'model_name', 'plate_number', 'daily_rate_rwf', 'status',
-          'transmission', 'fuel_type', 'seating_capacity', 'current_odometer_km',
-          'location', 'image_url', 'year', 'assigned_driver_id', 'assigned_driver_name',
-          'insurance_expiry', 'controle_technique_expiry', 'last_service_date',
-          'last_service_notes', 'next_service_km'
-        ])
+        (('company_id' in existing()) && isSameCompany(existing().company_id) &&
+          (!('company_id' in incoming()) || incoming().company_id == existing().company_id) && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['daily_rate_rwf']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['current_odometer_km', 'status', 'last_service_date', 'last_service_notes', 'next_service_km']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'category', 'model_name', 'plate_number', 'daily_rate_rwf', 'status',
+              'transmission', 'fuel_type', 'seating_capacity', 'current_odometer_km',
+              'location', 'image_url', 'gallery_urls', 'description', 'features',
+              'year', 'assigned_driver_id', 'assigned_driver_name',
+              'insurance_expiry', 'controle_technique_expiry', 'last_service_date',
+              'last_service_notes', 'next_service_km'
+            ])
+          )
+        )
       );
-      allow delete: if isSuperAdmin() && isValidId(vehicleId);
+      allow delete: if isVerifiedUser() && isValidId(vehicleId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
     }
 
-    // 2. Drivers (Verified Chauffeur Roster)
+    // 2. Drivers (Tenant-Isolated Chauffeur Roster)
     match /drivers/{driverId} {
-      allow get: if isValidId(driverId) && (isVerifiedUser() || existing().status == 'Available');
-      allow list: if resource.data.status in ['Available', 'On Trip', 'Off Duty', 'On Leave', 'Rest Day'];
-      allow create: if isVerifiedUser() && isValidId(driverId) && isValidDriver(incoming());
+      allow get: if isValidId(driverId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id)) ||
+        existing().status == 'Available'
+      );
+      allow list: if isMasterOwner() || resource.data.company_id is string;
+      allow create: if isVerifiedUser() && isValidId(driverId) && isValidDriver(incoming()) && (
+        isSuperAdmin() ||
+        ('company_id' in incoming() && isSameCompany(incoming().company_id))
+      );
       allow update: if isVerifiedUser() && isValidId(driverId) && isValidDriver(incoming()) && (
         isSuperAdmin() ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['trips_completed']) ||
-        incoming().diff(existing()).affectedKeys().hasOnly([
-          'name', 'phone', 'email', 'national_id', 'license_expiry',
-          'experience_years', 'emergency_phone', 'language', 'status',
-          'license_number', 'assigned_vehicle_id', 'notes'
-        ])
+        (('company_id' in existing()) && isSameCompany(existing().company_id) &&
+          (!('company_id' in incoming()) || incoming().company_id == existing().company_id) && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['trips_completed']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'phone', 'email', 'national_id', 'license_expiry',
+              'experience_years', 'emergency_phone', 'language', 'status',
+              'license_number', 'assigned_vehicle_id', 'notes'
+            ])
+          )
+        )
       );
-      allow delete: if isSuperAdmin() && isValidId(driverId);
+      allow delete: if isVerifiedUser() && isValidId(driverId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
     }
 
-    // 3. Bookings (Storefront Reservations + Dispatch Lifecycle)
+    // 3. Bookings (Public Storefront Reservations + Tenant-Isolated Dispatch Lifecycle)
     match /bookings/{bookingId} {
-      allow get: if isValidId(bookingId) && (isSuperAdmin() || isVerifiedUser() || (isSignedIn() && existing().client_email == request.auth.token.email));
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Confirmed', 'Pending Dispatch', 'In Progress', 'Completed', 'Cancelled']);
+      allow get: if isValidId(bookingId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id)) ||
+        (isSignedIn() && existing().client_email == request.auth.token.email)
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
       allow create: if isValidId(bookingId) && isValidBooking(incoming());
       allow update: if isVerifiedUser() && isValidId(bookingId) && isValidBooking(incoming()) && (
         isSuperAdmin() ||
-        (existing().status != 'Completed' && existing().status != 'Cancelled' && (
-          incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['dispatch_status']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['dispatch_status', 'status']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['driver_id']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['flight_status', 'flight_delay_minutes']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['handover_pickup_id']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['handover_return_id', 'status']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly([
-            'client_name', 'client_email', 'client_phone', 'vehicle_id', 'driver_id',
-            'start_date', 'end_date', 'total_rwf', 'destination', 'status',
-            'dispatch_status', 'payment_status', 'payment_method', 'notes'
-          ])
-        ))
+        (('company_id' in existing()) && isSameCompany(existing().company_id) &&
+          (!('company_id' in incoming()) || incoming().company_id == existing().company_id) &&
+          existing().status != 'Completed' && existing().status != 'Cancelled' && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['dispatch_status']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['dispatch_status', 'status']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['driver_id']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['flight_status', 'flight_delay_minutes']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['handover_pickup_id']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['handover_return_id', 'status']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'client_name', 'client_email', 'client_phone', 'vehicle_id', 'driver_id',
+              'start_date', 'end_date', 'total_rwf', 'destination', 'status',
+              'dispatch_status', 'payment_status', 'payment_method', 'notes'
+            ])
+          )
+        )
       );
-      allow delete: if isSuperAdmin() && isValidId(bookingId);
+      allow delete: if isVerifiedUser() && isValidId(bookingId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
     }
 
-    // 4. Companies (Public Tenant Branding + Superadmin Lifecycle Control)
+    // 4. Companies (Public Tenant Branding + Tenant Owner / Superadmin Control)
     match /companies/{companyId} {
       allow get: if isValidId(companyId);
-      allow list: if resource.data.tier_id in ['starter', 'growth', 'enterprise'];
+      allow list: if isMasterOwner() || resource.data.tier_id in ['starter', 'growth', 'enterprise'] || resource.data.slug is string;
       allow create: if isValidId(companyId) && isValidCompany(incoming()) && (
         isSuperAdmin() ||
         (isVerifiedUser() && (!('status' in incoming()) || incoming().status in ['Pending', 'Pending Verification', 'Trial']))
       );
       allow update: if isVerifiedUser() && isValidId(companyId) && isValidCompany(incoming()) && (
         isSuperAdmin() ||
-        incoming().diff(existing()).affectedKeys().hasOnly([
+        (isSameCompany(companyId) && incoming().diff(existing()).affectedKeys().hasOnly([
           'name', 'phone', 'email', 'city', 'business_type', 'tin_number', 'owner_name'
-        ])
+        ]))
       );
       allow delete: if isSuperAdmin() && isValidId(companyId);
     }
@@ -659,103 +728,195 @@ service cloud.firestore {
       );
       allow create: if isValidId(userId) && isValidUser(incoming()) && (
         isSuperAdmin() ||
-        (isVerifiedUser() && incoming().role != 'superadmin' && incoming().email == request.auth.token.email)
+        (isVerifiedUser() && incoming().role != 'superadmin' && (
+          (isOwner(userId) && incoming().email == request.auth.token.email) ||
+          (isSameCompany(incoming().company_id) &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner')
+        ))
       );
       allow update: if isVerifiedUser() && isValidId(userId) && isValidUser(incoming()) && (
         isSuperAdmin() ||
         ((isOwner(userId) || existing().email == request.auth.token.email) &&
           incoming().role == existing().role &&
+          incoming().company_id == existing().company_id &&
           incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'avatar_url', 'last_login'])
+        ) ||
+        (isSameCompany(existing().company_id) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner' &&
+          existing().role != 'superadmin' &&
+          incoming().role != 'superadmin' &&
+          incoming().company_id == existing().company_id &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['role', 'status', 'name', 'phone'])
         )
       );
-      allow delete: if isSuperAdmin() && isValidId(userId);
+      allow delete: if isVerifiedUser() && isValidId(userId) && (
+        isSuperAdmin() ||
+        (userId != request.auth.uid &&
+          'company_id' in existing() &&
+          isSameCompany(existing().company_id) &&
+          existing().role != 'superadmin' &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner')
+      );
     }
 
-    // 6. Customers (PII-Protected Fleet Client Ledger)
+    // 6. Customers (Tenant-Isolated Fleet Client Ledger)
     match /customers/{customerId} {
-      allow get: if isValidId(customerId) && (isSuperAdmin() || isVerifiedUser());
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.category in ['Individual', 'Tourist / Expat', 'Corporate', 'NGO / Diplomatic', 'Travel Agency']);
-      allow create: if isVerifiedUser() && isValidId(customerId) && isValidCustomer(incoming());
+      allow get: if isValidId(customerId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
+      allow create: if isVerifiedUser() && isValidId(customerId) && isValidCustomer(incoming()) && (
+        isSuperAdmin() ||
+        ('company_id' in incoming() && isSameCompany(incoming().company_id))
+      );
       allow update: if isVerifiedUser() && isValidId(customerId) && isValidCustomer(incoming()) && (
         isSuperAdmin() ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['total_spent_rwf', 'total_bookings_count', 'outstanding_balance_rwf']) ||
-        incoming().diff(existing()).affectedKeys().hasOnly([
-          'name', 'phone', 'email', 'category', 'organization', 'tin_number',
-          'address', 'credit_terms', 'discount_rate_pct', 'notes'
-        ])
+        (('company_id' in existing()) && isSameCompany(existing().company_id) &&
+          (!('company_id' in incoming()) || incoming().company_id == existing().company_id) && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['total_spent_rwf', 'total_bookings_count', 'outstanding_balance_rwf']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'phone', 'email', 'category', 'organization', 'tin_number',
+              'address', 'credit_terms', 'discount_rate_pct', 'notes'
+            ])
+          )
+        )
       );
-      allow delete: if isSuperAdmin() && isValidId(customerId);
+      allow delete: if isVerifiedUser() && isValidId(customerId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
     }
 
-    // 7. Payments (Booking Payments & EBM Receipts)
+    // 7. Payments (Tenant-Isolated Booking Payments & EBM Receipts)
     match /payments/{paymentId} {
-      allow get: if isValidId(paymentId) && (isSuperAdmin() || isVerifiedUser());
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Paid', 'Partially Paid', 'Pending', 'Overdue', 'Refunded']);
-      allow create: if isVerifiedUser() && isValidId(paymentId) && isValidPaymentRecord(incoming()) && exists(/databases/$(database)/documents/bookings/$(incoming().booking_id));
+      allow get: if isValidId(paymentId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
+      allow create: if isVerifiedUser() && isValidId(paymentId) && isValidPaymentRecord(incoming()) &&
+        exists(/databases/$(database)/documents/bookings/$(incoming().booking_id)) && (
+          isSuperAdmin() ||
+          ('company_id' in incoming() && isSameCompany(incoming().company_id))
+        );
       allow update: if isVerifiedUser() && isValidId(paymentId) && isValidPaymentRecord(incoming()) && (
         isSuperAdmin() ||
-        (existing().status != 'Refunded' && (
-          incoming().diff(existing()).affectedKeys().hasOnly(['ebm_receipt_number']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'amount_rwf', 'momo_tx_id', 'ebm_receipt_number', 'notes'])
-        ))
+        (('company_id' in existing()) && isSameCompany(existing().company_id) &&
+          (!('company_id' in incoming()) || incoming().company_id == existing().company_id) &&
+          existing().status != 'Refunded' && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['ebm_receipt_number']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'amount_rwf', 'momo_tx_id', 'ebm_receipt_number', 'notes'])
+          )
+        )
       );
       allow delete: if isSuperAdmin() && isValidId(paymentId);
     }
 
-    // 8. Maintenance (Workshop & Repair Orders)
+    // 8. Maintenance (Tenant-Isolated Workshop & Repair Orders)
     match /maintenance/{maintenanceId} {
-      allow get: if isValidId(maintenanceId) && (isSuperAdmin() || isVerifiedUser());
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['In Garage', 'Scheduled', 'Completed', 'Awaiting Parts']);
-      allow create: if isVerifiedUser() && isValidId(maintenanceId) && isValidMaintenanceRecord(incoming()) && exists(/databases/$(database)/documents/vehicles/$(incoming().vehicle_id));
+      allow get: if isValidId(maintenanceId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
+      allow create: if isVerifiedUser() && isValidId(maintenanceId) && isValidMaintenanceRecord(incoming()) &&
+        exists(/databases/$(database)/documents/vehicles/$(incoming().vehicle_id)) && (
+          isSuperAdmin() ||
+          ('company_id' in incoming() && isSameCompany(incoming().company_id))
+        );
       allow update: if isVerifiedUser() && isValidId(maintenanceId) && isValidMaintenanceRecord(incoming()) && (
         isSuperAdmin() ||
-        (existing().status != 'Completed' && incoming().diff(existing()).affectedKeys().hasOnly([
-          'status', 'actual_completion_date', 'cost_rwf', 'invoice_ref', 'description', 'parts_replaced', 'technician_name'
-        ]))
+        (('company_id' in existing()) && isSameCompany(existing().company_id) &&
+          (!('company_id' in incoming()) || incoming().company_id == existing().company_id) &&
+          existing().status != 'Completed' && incoming().diff(existing()).affectedKeys().hasOnly([
+            'status', 'actual_completion_date', 'cost_rwf', 'invoice_ref', 'description', 'parts_replaced', 'technician_name'
+          ])
+        )
       );
-      allow delete: if isSuperAdmin() && isValidId(maintenanceId);
+      allow delete: if isVerifiedUser() && isValidId(maintenanceId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
     }
 
-    // 9. Expenses (Direct Operating Expenses)
+    // 9. Expenses (Tenant-Isolated Direct Operating Expenses)
     match /expenses/{expenseId} {
-      allow get: if isValidId(expenseId) && (isSuperAdmin() || isVerifiedUser());
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Pending', 'Approved', 'Paid', 'Rejected']);
-      allow create: if isVerifiedUser() && isValidId(expenseId) && isValidExpense(incoming());
+      allow get: if isValidId(expenseId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
+      allow create: if isVerifiedUser() && isValidId(expenseId) && isValidExpense(incoming()) && (
+        isSuperAdmin() ||
+        ('company_id' in incoming() && isSameCompany(incoming().company_id))
+      );
       allow update: if isVerifiedUser() && isValidId(expenseId) && isValidExpense(incoming()) && (
         isSuperAdmin() ||
-        (existing().status != 'Paid' && existing().status != 'Rejected' && incoming().diff(existing()).affectedKeys().hasOnly([
-          'status', 'approved_by', 'receipt_ref', 'description', 'amount_rwf'
-        ]))
+        (('company_id' in existing()) && isSameCompany(existing().company_id) &&
+          (!('company_id' in incoming()) || incoming().company_id == existing().company_id) &&
+          existing().status != 'Paid' && existing().status != 'Rejected' && incoming().diff(existing()).affectedKeys().hasOnly([
+            'status', 'approved_by', 'receipt_ref', 'description', 'amount_rwf'
+          ])
+        )
       );
-      allow delete: if isSuperAdmin() && isValidId(expenseId);
+      allow delete: if isVerifiedUser() && isValidId(expenseId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
     }
 
-    // 10. Handovers (Check-out & Check-in Inspections)
+    // 10. Handovers (Tenant-Isolated Check-out & Check-in Inspections)
     match /handovers/{handoverId} {
-      allow get: if isValidId(handoverId) && (isSuperAdmin() || isVerifiedUser());
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.inspection_type in ['pickup', 'return']);
-      allow create: if isVerifiedUser() && isValidId(handoverId) && isValidHandover(incoming()) && exists(/databases/$(database)/documents/bookings/$(incoming().booking_id));
+      allow get: if isValidId(handoverId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
+      allow create: if isVerifiedUser() && isValidId(handoverId) && isValidHandover(incoming()) &&
+        exists(/databases/$(database)/documents/bookings/$(incoming().booking_id)) && (
+          isSuperAdmin() ||
+          ('company_id' in incoming() && isSameCompany(incoming().company_id))
+        );
       allow update: if isSuperAdmin() && isValidId(handoverId) && isValidHandover(incoming());
       allow delete: if isSuperAdmin() && isValidId(handoverId);
     }
 
-    // 11. Tasks (Operational Duty Queue)
+    // 11. Tasks (Tenant-Isolated Operational Duty Queue)
     match /tasks/{taskId} {
-      allow get: if isValidId(taskId) && (isSuperAdmin() || isVerifiedUser());
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Open', 'In Progress', 'Completed', 'Cancelled']);
-      allow create: if isVerifiedUser() && isValidId(taskId) && isValidTask(incoming());
+      allow get: if isValidId(taskId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
+      allow create: if isVerifiedUser() && isValidId(taskId) && isValidTask(incoming()) && (
+        isSuperAdmin() ||
+        ('company_id' in incoming() && isSameCompany(incoming().company_id))
+      );
       allow update: if isVerifiedUser() && isValidId(taskId) && isValidTask(incoming()) && (
         isSuperAdmin() ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+        (('company_id' in existing()) && isSameCompany(existing().company_id) &&
+          (!('company_id' in incoming()) || incoming().company_id == existing().company_id) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+        )
       );
-      allow delete: if isVerifiedUser() && isValidId(taskId);
+      allow delete: if isVerifiedUser() && isValidId(taskId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
     }
 
-    // 12. Activity Logs (Operational Audit Feed - Append Only for Staff)
+    // 12. Activity Logs (Tenant-Isolated Operational Audit Feed - Append Only)
     match /activity_logs/{logId} {
-      allow get: if isValidId(logId) && (isSuperAdmin() || isVerifiedUser());
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.category in ['booking', 'dispatch', 'fleet', 'driver', 'handover', 'expense']);
-      allow create: if isVerifiedUser() && isValidId(logId) && isValidActivityLog(incoming());
+      allow get: if isValidId(logId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
+      allow create: if isVerifiedUser() && isValidId(logId) && isValidActivityLog(incoming()) && (
+        isSuperAdmin() ||
+        ('company_id' in incoming() && isSameCompany(incoming().company_id))
+      );
       allow update, delete: if false;
     }
 
@@ -780,8 +941,11 @@ service cloud.firestore {
 
     // 15. Company Subscriptions (Tenant Contract Billing)
     match /company_subscriptions/{subscriptionId} {
-      allow get: if isValidId(subscriptionId) && (isSuperAdmin() || isVerifiedUser());
-      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.status in ['Trial', 'Active', 'Past Due', 'Suspended', 'Cancelled', 'Expired']);
+      allow get: if isValidId(subscriptionId) && (
+        isSuperAdmin() ||
+        ('company_id' in existing() && isSameCompany(existing().company_id))
+      );
+      allow list: if isMasterOwner() || (isVerifiedUser() && resource.data.company_id is string);
       allow create, update: if isSuperAdmin() && isValidId(subscriptionId) && isValidCompanySubscription(incoming());
       allow delete: if isMasterOwner() && isValidId(subscriptionId);
     }

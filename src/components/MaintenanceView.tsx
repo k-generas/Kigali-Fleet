@@ -1,20 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Wrench,
-  CheckCircle2,
-  Clock,
-  DollarSign,
-  Plus,
-  Search,
-  ShieldAlert,
-  Building2,
-  MapPin,
-  FileText,
-  X,
-  Check,
-} from 'lucide-react';
+import { Plus, Search, X, Wrench, CalendarClock, CheckCircle2, DollarSign } from 'lucide-react';
 import { Vehicle, MaintenanceRecord, MaintenanceStatus, ServiceType } from '../types';
 import { ColorTheme } from '../theme';
+import { useI18n } from '../utils/i18n';
+import { formatHumanDateRange } from '../utils/dates';
 
 interface MaintenanceViewProps {
   maintenance: MaintenanceRecord[];
@@ -34,13 +23,13 @@ interface MaintenanceViewProps {
 
 const SERVICE_TYPES: { value: ServiceType; label: string }[] = [
   { value: 'Oil & Filter Change', label: 'Oil & Filter Change' },
-  { value: 'Brake System & Pads', label: 'Brakes & Pads' },
-  { value: 'Tire Replacement (4x4)', label: 'New 4x4 Tires' },
-  { value: 'Safari Suspension Overhaul', label: 'Suspension Repair' },
-  { value: 'Contrôle Technique Prep', label: 'Car Safety Inspection Prep' },
-  { value: 'Transmission & Gearbox', label: 'Gearbox Repair' },
-  { value: 'AC & Electrical System', label: 'AC & Lights' },
-  { value: 'General Inspection', label: 'General Checkup' },
+  { value: 'Brake System & Pads', label: 'Brakes & pads' },
+  { value: 'Tire Replacement (4x4)', label: 'New 4x4 tires' },
+  { value: 'Safari Suspension Overhaul', label: 'Suspension repair' },
+  { value: 'Contrôle Technique Prep', label: 'Safety inspection prep' },
+  { value: 'Transmission & Gearbox', label: 'Gearbox repair' },
+  { value: 'AC & Electrical System', label: 'AC and lights' },
+  { value: 'General Inspection', label: 'General checkup' },
 ];
 
 const KIGALI_GARAGES = [
@@ -74,14 +63,17 @@ const KIGALI_GARAGES = [
 const getServiceLabel = (st: ServiceType) =>
   SERVICE_TYPES.find((item) => item.value === st)?.label || st;
 
+const inputCls =
+  'w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-400 dark:focus:border-slate-500 transition-colors';
+
 export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   maintenance,
   vehicles,
-  currentTheme,
   onAddMaintenance,
   onCompleteMaintenance,
   onNavigateToTab,
 }) => {
+  const { currency, formatMoney, tr } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | MaintenanceStatus>('all');
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>('all');
@@ -128,12 +120,14 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
   const filteredRecords = useMemo(() => {
     return maintenance.filter((m) => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        m.vehicle_plate.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.vehicle_model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.garage_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.description.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        m.vehicle_plate.toLowerCase().includes(q) ||
+        m.vehicle_model.toLowerCase().includes(q) ||
+        m.garage_name.toLowerCase().includes(q) ||
+        m.id.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q);
 
       const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
       const matchesType = serviceTypeFilter === 'all' || m.service_type === serviceTypeFilter;
@@ -144,6 +138,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
   const stats = useMemo(() => {
     const inRepairCount = vehicles.filter((v) => v.status === 'Maintenance').length;
+    const inGarageTickets = maintenance.filter((m) => m.status === 'In Garage').length;
     const scheduledRecords = maintenance.filter((m) => m.status === 'Scheduled').length;
     const completedRecords = maintenance.filter((m) => m.status === 'Completed').length;
     const totalSpent = maintenance.reduce((sum, m) => sum + (m.cost_rwf || 0), 0);
@@ -154,12 +149,18 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
     return {
       inRepairCount,
+      inGarageTickets,
       scheduledRecords,
       completedRecords,
       totalSpent,
       serviceDueSoonCount: serviceDueSoon.length,
     };
   }, [vehicles, maintenance]);
+
+  const filteredTotalCost = useMemo(
+    () => filteredRecords.reduce((sum, m) => sum + (m.cost_rwf || 0), 0),
+    [filteredRecords]
+  );
 
   const handleCreateWorkOrder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,307 +219,339 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
     setCompletingTicket(null);
   };
 
+  const statusTabs: { value: 'all' | MaintenanceStatus; label: string }[] = [
+    { value: 'all', label: `${tr('All')} (${maintenance.length})` },
+    {
+      value: 'In Garage',
+      label: `${tr('In garage')} (${maintenance.filter((m) => m.status === 'In Garage').length})`,
+    },
+    {
+      value: 'Scheduled',
+      label: `${tr('Planned')} (${maintenance.filter((m) => m.status === 'Scheduled').length})`,
+    },
+    {
+      value: 'Completed',
+      label: `${tr('Done')} (${maintenance.filter((m) => m.status === 'Completed').length})`,
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="stripe-card flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl">
-        <div className="flex items-start gap-3.5">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white shadow-sm shrink-0"
-            style={{ backgroundColor: currentTheme.hex }}
-          >
-            <Wrench className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white tracking-tight">
-              Car Repairs & Garages
-            </h1>
-            <p className="text-base text-[#425466] dark:text-slate-300 mt-1">
-              Track cars in the garage, repair bills, and block bookings while a car is being fixed.
-            </p>
-          </div>
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {tr('Repairs')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Track cars in the garage, repair bills, and block bookings while a car is being fixed.')}
+          </p>
         </div>
 
         <button
+          type="button"
           onClick={() => {
             if (vehicles.length > 0) {
               handleSelectVehicleChange(vehicles[0].id);
             }
             setIsNewModalOpen(true);
           }}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold text-white shadow-sm hover:opacity-95 transition-opacity shrink-0"
-          style={{ backgroundColor: currentTheme.hex }}
+          className="accent-bg inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:opacity-95 transition-opacity shrink-0 shadow-xs"
         >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>New Repair</span>
+          <Plus className="w-4 h-4" />
+          <span>{tr('New repair')}</span>
         </button>
       </div>
 
-      {/* 4 Simple Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">In Garage Now</span>
-            <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
+      {/* 4-Card KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">In garage now</span>
+            <span className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <Wrench className="w-4 h-4" />
+            </span>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400 font-mono">
-              {stats.inRepairCount} cars
-            </div>
-            <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">Blocked from bookings</p>
+          <div className="text-2xl font-semibold text-rose-600 dark:text-rose-400 mt-2 tabular-nums">
+            {stats.inRepairCount}
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {tr('In garage, blocked from bookings')}
+          </p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Planned Repairs</span>
-            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Clock className="w-5 h-5" />
-            </div>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Planned')}</span>
+            <span className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <CalendarClock className="w-4 h-4" />
+            </span>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
-              {stats.scheduledRecords} jobs
-            </div>
-            <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">
-              {stats.serviceDueSoonCount} cars due soon
-            </p>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {stats.scheduledRecords}
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {stats.serviceDueSoonCount > 0 ? `${stats.serviceDueSoonCount} ${tr('cars due soon')}` : 'Upcoming shop visits'}
+          </p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Fixed & Ready</span>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Done')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </span>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-              {stats.completedRecords} done
-            </div>
-            <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">Back on the road</p>
+          <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 mt-2 tabular-nums">
+            {stats.completedRecords}
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Completed & released</p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Total Repair Cost</span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400">
-              <DollarSign className="w-5 h-5" />
-            </div>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Total garage bills')}</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4" />
+            </span>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono truncate">
-              {stats.totalSpent.toLocaleString()} RWF
-            </div>
-            <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">All garage bills</p>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 font-mono tabular-nums">
+            {formatMoney(stats.totalSpent)}
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Recorded parts & labor</p>
         </div>
       </div>
 
-      {/* Cars In Garage Warning */}
+      {/* Blocked notice */}
       {stats.inRepairCount > 0 && (
-        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 shrink-0">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-            <div className="text-sm">
-              <div className="font-bold text-rose-900 dark:text-rose-200">
-                {stats.inRepairCount} {stats.inRepairCount === 1 ? 'car is' : 'cars are'} blocked for repairs
-              </div>
-              <div className="text-rose-700 dark:text-rose-300 mt-0.5">
+        <div className="px-5 py-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="text-rose-900 dark:text-rose-100 flex items-center gap-2.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+            <span>
+              <strong className="font-semibold">
+                {stats.inRepairCount} {stats.inRepairCount === 1 ? 'car is' : 'cars are'} blocked for repairs.
+              </strong>{' '}
+              <span className="text-rose-700 dark:text-rose-200/80">
                 Customers cannot book these cars until you mark the repair done and release the car.
-              </div>
-            </div>
+              </span>
+            </span>
           </div>
           {onNavigateToTab && (
             <button
+              type="button"
               onClick={() => onNavigateToTab('calendar')}
-              className="text-sm font-bold px-4 py-2 rounded-full bg-white dark:bg-rose-900/40 hover:bg-rose-100 text-rose-700 dark:text-rose-200 border border-rose-200 dark:border-rose-800 transition-colors whitespace-nowrap w-fit"
+              className="accent-text text-xs font-semibold hover:underline whitespace-nowrap"
             >
-              See Calendar →
+              {tr('See calendar')} →
             </button>
           )}
         </div>
       )}
 
-      {/* Search & Filters */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search car plate, model, or garage..."
-            className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white text-sm rounded-xl pl-10 pr-3 py-2.5 outline-none focus:border-blue-500"
-          />
-        </div>
+      {/* Repairs Table Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        {/* Segmented Tabs & Search */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg overflow-x-auto">
+            {statusTabs.map((tab) => {
+              const active = statusFilter === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.value)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {[
-            { value: 'all', label: `All (${maintenance.length})` },
-            { value: 'In Garage', label: `In Garage (${maintenance.filter((m) => m.status === 'In Garage').length})` },
-            { value: 'Scheduled', label: `Planned (${maintenance.filter((m) => m.status === 'Scheduled').length})` },
-            { value: 'Completed', label: `Done (${maintenance.filter((m) => m.status === 'Completed').length})` },
-          ].map((btn) => (
-            <button
-              key={btn.value}
-              onClick={() => setStatusFilter(btn.value as 'all' | MaintenanceStatus)}
-              className={`px-3.5 py-2 rounded-full text-sm font-semibold border transition-colors ${
-                statusFilter === btn.value
-                  ? 'text-white border-transparent'
-                  : 'bg-[#f6f9fc] dark:bg-slate-950 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-              style={statusFilter === btn.value ? { backgroundColor: currentTheme.hex } : undefined}
-            >
-              {btn.label}
-            </button>
-          ))}
-
-          <select
-            value={serviceTypeFilter}
-            onChange={(e) => setServiceTypeFilter(e.target.value)}
-            className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-200 text-sm rounded-xl px-3 py-2 outline-none cursor-pointer font-medium"
-          >
-            <option value="all">All Repair Types</option>
-            {SERVICE_TYPES.map((st) => (
-              <option key={st.value} value={st.value}>
-                {st.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Repairs Grid */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 bg-[#f6f9fc] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-400 text-xs font-bold uppercase">
-          <div className="lg:col-span-3">Car</div>
-          <div className="lg:col-span-2">What Is Fixed</div>
-          <div className="lg:col-span-2">Garage</div>
-          <div className="lg:col-span-2 text-center">Dates & Cost</div>
-          <div className="lg:col-span-1 text-center">Status</div>
-          <div className="lg:col-span-2 text-right">Action</div>
-        </div>
-
-        <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
-          {filteredRecords.length === 0 ? (
-            <div className="px-5 py-10 text-center text-[#425466] dark:text-slate-400 text-base">
-              No repair jobs match your search.
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={tr('Search plate, model or garage')}
+                className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg pl-9 pr-3 py-1.5 w-60 outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+              />
             </div>
-          ) : (
-            filteredRecords.map((m) => (
-              <div
-                key={m.id}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-5 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors"
-              >
-                <div className="lg:col-span-3 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 px-2 py-0.5 rounded-lg font-bold border border-amber-200 dark:border-amber-500/20 whitespace-nowrap">
-                      {m.vehicle_plate}
-                    </span>
-                    <span className="font-bold text-[#0a2540] dark:text-white truncate" title={m.vehicle_model}>
-                      {m.vehicle_model}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 font-mono mt-1 whitespace-nowrap">
-                    #{m.id}
-                  </div>
-                </div>
 
-                <div className="lg:col-span-2 min-w-0">
-                  <div className="font-semibold text-[#0a2540] dark:text-white truncate">
-                    {getServiceLabel(m.service_type)}
-                  </div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 truncate" title={m.description}>
-                    {m.description}
-                  </div>
-                </div>
+            <select
+              value={serviceTypeFilter}
+              onChange={(e) => setServiceTypeFilter(e.target.value)}
+              className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              <option value="all">{tr('All repair types')}</option>
+              {SERVICE_TYPES.map((st) => (
+                <option key={st.value} value={st.value}>
+                  {tr(st.label)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-                <div className="lg:col-span-2 min-w-0">
-                  <div className="font-semibold text-[#0a2540] dark:text-white flex items-center gap-1.5 min-w-0">
-                    <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="truncate" title={m.garage_name}>
-                      {m.garage_name}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 flex items-center gap-1 mt-0.5 min-w-0">
-                    <MapPin className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate" title={m.garage_location}>
-                      {m.garage_location}
-                    </span>
-                  </div>
-                </div>
+        {/* Repairs Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm min-w-[820px]">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-4">{tr('Car')}</th>
+                <th className="py-3 px-4">{tr('Work')}</th>
+                <th className="py-3 px-4">{tr('Garage')}</th>
+                <th className="py-3 px-4">{tr('Dates')}</th>
+                <th className="py-3 px-4 text-right">{tr('Cost')}</th>
+                <th className="py-3 px-4">{tr('Status')}</th>
+                <th className="py-3 px-4 text-right" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-10 px-4 text-center text-slate-500 dark:text-slate-400">
+                    {tr('No repair jobs match your search.')}
+                  </td>
+                </tr>
+              ) : (
+                filteredRecords.map((m) => {
+                  const isInGarage = m.status === 'In Garage';
+                  const isPlanned = m.status === 'Scheduled';
+                  const isDone = m.status === 'Completed';
+                  const dotClass = isInGarage
+                    ? 'bg-rose-500'
+                    : isDone
+                    ? 'bg-emerald-500'
+                    : 'bg-amber-500';
+                  const pillClass = isInGarage
+                    ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400'
+                    : isDone
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400';
+                  const statusLabel = isInGarage
+                    ? 'In garage'
+                    : isPlanned
+                    ? 'Planned'
+                    : isDone
+                    ? 'Done'
+                    : m.status;
 
-                <div className="lg:col-span-2 lg:text-center min-w-0">
-                  <div className="font-mono font-bold text-[#0a2540] dark:text-white whitespace-nowrap">
-                    {m.cost_rwf.toLocaleString()} RWF
-                  </div>
-                  <div className="font-mono text-xs text-[#425466] dark:text-slate-400 mt-0.5 whitespace-nowrap">
-                    {m.start_date} → {m.expected_completion_date}
-                  </div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 font-mono whitespace-nowrap">
-                    {m.odometer_at_service_km.toLocaleString()} km
-                  </div>
-                </div>
-
-                <div className="lg:col-span-1 flex lg:justify-center">
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${
-                      m.status === 'In Garage'
-                        ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/20'
-                        : m.status === 'Scheduled'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/20'
-                        : m.status === 'Completed'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/20'
-                        : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                    }`}
-                  >
-                    <span>{m.status === 'Scheduled' ? 'Planned' : m.status === 'Completed' ? 'Done' : m.status}</span>
-                  </span>
-                </div>
-
-                <div className="lg:col-span-2 flex items-center lg:justify-end gap-2 flex-wrap">
-                  {m.status === 'In Garage' && (
-                    <button
-                      onClick={() => handleOpenCompleteModal(m)}
-                      className="px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center gap-1 whitespace-nowrap"
+                  return (
+                    <tr
+                      key={m.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 align-top transition-colors"
                     >
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>Release Car</span>
-                    </button>
-                  )}
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono text-xs font-semibold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200">
+                          {m.vehicle_plate}
+                        </span>
+                        <div className="text-slate-900 dark:text-white font-medium mt-1">{m.vehicle_model}</div>
+                      </td>
 
-                  <button
-                    onClick={() => setSelectedTicketForDetail(m)}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors whitespace-nowrap"
-                  >
-                    See Info
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+                      <td className="py-3.5 px-4 max-w-[240px]">
+                        <div className="text-slate-900 dark:text-white font-medium">
+                          {tr(getServiceLabel(m.service_type))}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {m.description}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 max-w-[220px]">
+                        <div className="text-slate-900 dark:text-white">{m.garage_name}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {m.garage_location}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="text-slate-900 dark:text-white">
+                          {formatHumanDateRange(m.start_date, m.expected_completion_date)}
+                        </div>
+                        <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {m.odometer_at_service_km.toLocaleString()} km
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 dark:text-white whitespace-nowrap tabular-nums">
+                        {formatMoney(m.cost_rwf)}
+                      </td>
+
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${pillClass}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+                          <span>{tr(statusLabel)}</span>
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        {isInGarage ? (
+                          <div className="inline-flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTicketForDetail(m)}
+                              className="accent-text text-xs font-medium hover:underline"
+                            >
+                              {tr('Details')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCompleteModal(m)}
+                              className="accent-bg px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-95"
+                            >
+                              {tr('Release car')}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTicketForDetail(m)}
+                            className="accent-text text-xs font-medium hover:underline"
+                          >
+                            {tr('Details')}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer summary */}
+        <div className="px-5 py-3.5 flex flex-wrap justify-between items-center gap-2 text-xs bg-slate-50/80 dark:bg-slate-900/60 border-t border-slate-200/80 dark:border-slate-800">
+          <span className="text-slate-500 dark:text-slate-400">
+            {tr('Customers cannot book a car in the garage until you release it.')}
+          </span>
+          <span className="font-semibold text-slate-900 dark:text-white">
+            {tr('Total')}{' '}
+            <span className="font-mono ml-1.5 tabular-nums">{formatMoney(filteredTotalCost)}</span>
+          </span>
         </div>
       </div>
 
       {/* Modal: New Repair */}
       {isNewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Send Car to Garage</h3>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px] overflow-y-auto">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3.5">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {tr('Send car to garage')}
+              </h3>
               <button
+                type="button"
                 onClick={() => setIsNewModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-md"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -526,11 +559,13 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
             <form onSubmit={handleCreateWorkOrder} className="space-y-4 text-sm">
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Pick a Car</label>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                  {tr('Pick a car')}
+                </label>
                 <select
                   value={selectedVehicleId}
                   onChange={(e) => handleSelectVehicleChange(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none cursor-pointer"
+                  className={inputCls}
                   required
                 >
                   {vehicles.map((v) => (
@@ -543,11 +578,13 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">What Needs Fixing</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('What needs fixing')}
+                  </label>
                   <select
                     value={serviceType}
                     onChange={(e) => setServiceType(e.target.value as ServiceType)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none cursor-pointer"
+                    className={inputCls}
                   >
                     {SERVICE_TYPES.map((st) => (
                       <option key={st.value} value={st.value}>
@@ -558,25 +595,29 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Status</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('Status')}
+                  </label>
                   <select
                     value={workStatus}
                     onChange={(e) => setWorkStatus(e.target.value as MaintenanceStatus)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none cursor-pointer"
+                    className={inputCls}
                   >
-                    <option value="In Garage">In Garage Now (Block car)</option>
-                    <option value="Scheduled">Planned for Later</option>
-                    <option value="Awaiting Parts">Waiting for Parts</option>
+                    <option value="In Garage">In garage now (Block car)</option>
+                    <option value="Scheduled">Planned for later</option>
+                    <option value="Awaiting Parts">Waiting for parts</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Garage Name</label>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                  {tr('Garage name')}
+                </label>
                 <select
                   value={garageName}
                   onChange={(e) => handleSelectGarageChange(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none cursor-pointer"
+                  className={inputCls}
                 >
                   {KIGALI_GARAGES.map((g) => (
                     <option key={g.name} value={g.name}>
@@ -588,129 +629,148 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#425466] dark:text-slate-400 font-semibold mb-1">Garage Phone</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('Garage phone')}
+                  </label>
                   <input
                     type="text"
                     value={garagePhone}
                     onChange={(e) => setGaragePhone(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none"
+                    className={`${inputCls} font-mono`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[#425466] dark:text-slate-400 font-semibold mb-1">Garage Area</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('Garage area')}
+                  </label>
                   <input
                     type="text"
                     value={garageLocation}
                     onChange={(e) => setGarageLocation(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none"
+                    className={inputCls}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Start Date</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('Start date')}
+                  </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none"
+                    className={inputCls}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Ready Date</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('Ready date')}
+                  </label>
                   <input
                     type="date"
                     value={expectedCompletionDate}
                     onChange={(e) => setExpectedCompletionDate(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none"
+                    className={inputCls}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Cost (RWF)</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('Cost (RWF)')}
+                  </label>
                   <input
                     type="number"
                     value={costRwf}
                     onChange={(e) => setCostRwf(Number(e.target.value))}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none font-mono"
+                    className={`${inputCls} font-mono`}
                     required
                   />
+                  {currency === 'USD' && (
+                    <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                      ≈ {formatMoney(costRwf)}
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Car Km Now</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('Car km now')}
+                  </label>
                   <input
                     type="number"
                     value={odometerKm}
                     onChange={(e) => setOdometerKm(Number(e.target.value))}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none font-mono"
+                    className={`${inputCls} font-mono`}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Mechanic Name</label>
+                  <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                    {tr('Mechanic name')}
+                  </label>
                   <input
                     type="text"
                     value={technicianName}
                     onChange={(e) => setTechnicianName(e.target.value)}
                     placeholder="e.g. Mugisha Christian"
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none"
+                    className={inputCls}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Work Notes</label>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                  {tr('Work notes')}
+                </label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Write what is wrong or what needs checking..."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none resize-none"
+                  className={`${inputCls} resize-none`}
                 />
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">New Parts (comma separated)</label>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                  {tr('New parts (comma separated)')}
+                </label>
                 <input
                   type="text"
                   value={partsReplacedInput}
                   onChange={(e) => setPartsReplacedInput(e.target.value)}
                   placeholder="e.g. Brake pads, Oil filter"
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none"
+                  className={inputCls}
                 />
               </div>
 
               {workStatus === 'In Garage' && (
-                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-800 dark:text-rose-200 flex items-center gap-2.5">
-                  <ShieldAlert className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400" />
-                  <span>
-                    This car will be blocked so nobody can book it while it is in the garage.
-                  </span>
+                <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
+                  This car will be blocked so nobody can book it while it is in the garage.
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsNewModalOpen(false)}
-                  className="px-4 py-2.5 rounded-full text-[#0a2540] dark:text-slate-300 bg-slate-100 dark:bg-slate-800 font-semibold"
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Cancel
+                  {tr('Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-full font-bold text-white"
-                  style={{ backgroundColor: currentTheme.hex }}
+                  className="accent-bg px-5 py-2 rounded-lg font-medium hover:opacity-95"
                 >
-                  Save Repair
+                  {tr('Save repair')}
                 </button>
               </div>
             </form>
@@ -720,82 +780,94 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
       {/* Modal: Release Car */}
       {completingTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Finish & Release Car</h3>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {tr('Finish & release car')}
+              </h3>
               <button
+                type="button"
                 onClick={() => setCompletingTicket(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-[#f6f9fc] dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 text-sm">
-              <div className="font-bold text-[#0a2540] dark:text-white flex items-center justify-between">
+            <div className="bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-lg text-sm">
+              <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between">
                 <span>{completingTicket.vehicle_model}</span>
-                <span className="font-mono text-amber-700 dark:text-amber-400">{completingTicket.vehicle_plate}</span>
+                <span className="font-mono text-xs">{completingTicket.vehicle_plate}</span>
               </div>
-              <div className="text-[#425466] dark:text-slate-400 mt-1">
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {completingTicket.garage_name} · {getServiceLabel(completingTicket.service_type)}
               </div>
             </div>
 
             <form onSubmit={handleSubmitComplete} className="space-y-3.5 text-sm">
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Car Km Reading (km)</label>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                  {tr('Car km reading (km)')}
+                </label>
                 <input
                   type="number"
                   value={completionOdometer}
                   onChange={(e) => setCompletionOdometer(Number(e.target.value))}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none font-mono"
+                  className={`${inputCls} font-mono`}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Final Bill (RWF)</label>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                  {tr('Final bill (RWF)')}
+                </label>
                 <input
                   type="number"
                   value={completionCost}
                   onChange={(e) => setCompletionCost(Number(e.target.value))}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none font-mono"
+                  className={`${inputCls} font-mono`}
                   required
                 />
+                {currency === 'USD' && (
+                  <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                    ≈ {formatMoney(completionCost)}
+                  </div>
+                )}
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1">Next Service At (km)</label>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
+                  {tr('Next service at (km)')}
+                </label>
                 <input
                   type="number"
                   value={nextServiceDue}
                   onChange={(e) => setNextServiceDue(Number(e.target.value))}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-white rounded-xl p-2.5 outline-none font-mono"
+                  className={`${inputCls} font-mono`}
                   required
                 />
               </div>
 
-              <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-sm">
-                This car will become <strong>Ready</strong> again so people can book it.
+              <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs">
+                This car will become <strong className="font-semibold">Ready</strong> again so people can book it.
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200/80 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setCompletingTicket(null)}
-                  className="px-4 py-2.5 rounded-full text-[#0a2540] dark:text-slate-300 bg-slate-100 dark:bg-slate-800 font-semibold"
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Cancel
+                  {tr('Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-full font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors"
+                  className="accent-bg px-4 py-2 rounded-lg font-medium hover:opacity-95"
                 >
-                  Release Car
+                  {tr('Release car')}
                 </button>
               </div>
             </form>
@@ -805,101 +877,116 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
       {/* Modal: Repair Details */}
       {selectedTicketForDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-                  Repair #{selectedTicketForDetail.id}
-                </h3>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {tr('Repair')} <span className="font-mono text-sm text-slate-500 dark:text-slate-400">#{selectedTicketForDetail.id}</span>
+              </h3>
               <button
+                type="button"
                 onClick={() => setSelectedTicketForDetail(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-sm">
-              <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-[#0a2540] dark:text-white text-base">
-                    {selectedTicketForDetail.vehicle_model}
-                  </div>
-                  <div className="font-mono text-amber-700 dark:text-amber-400 mt-0.5">
-                    {selectedTicketForDetail.vehicle_plate}
-                  </div>
-                </div>
+            <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl p-4 grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Car')}</span>
+                <span className="font-semibold text-slate-900 dark:text-white mt-0.5 block">
+                  {selectedTicketForDetail.vehicle_model}
+                </span>
+                <span className="font-mono text-slate-500 dark:text-slate-400">{selectedTicketForDetail.vehicle_plate}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Status')}</span>
                 <span
-                  className={`px-3 py-1 rounded-full font-bold text-sm ${
+                  className={`font-semibold mt-0.5 block ${
                     selectedTicketForDetail.status === 'In Garage'
-                      ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300'
-                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300'
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : selectedTicketForDetail.status === 'Completed'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-amber-600 dark:text-amber-400'
                   }`}
                 >
                   {selectedTicketForDetail.status}
                 </span>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Repair Type</span>
-                  <div className="font-bold text-[#0a2540] dark:text-white mt-0.5">
-                    {getServiceLabel(selectedTicketForDetail.service_type)}
-                  </div>
-                </div>
-                <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Total Cost</span>
-                  <div className="font-bold text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">
-                    {selectedTicketForDetail.cost_rwf.toLocaleString()} RWF
-                  </div>
-                </div>
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Repair type')}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium mt-0.5 block">
+                  {getServiceLabel(selectedTicketForDetail.service_type)}
+                </span>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Garage</span>
-                <div className="font-bold text-[#0a2540] dark:text-white">{selectedTicketForDetail.garage_name}</div>
-                <div className="text-[#425466] dark:text-slate-400">{selectedTicketForDetail.garage_location}</div>
-                {selectedTicketForDetail.garage_phone && (
-                  <div className="text-[#425466] dark:text-slate-400 font-mono">{selectedTicketForDetail.garage_phone}</div>
-                )}
-                {selectedTicketForDetail.technician_name && (
-                  <div className="text-amber-700 dark:text-amber-400 pt-1 font-medium">
-                    Mechanic: {selectedTicketForDetail.technician_name}
-                  </div>
-                )}
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Total cost')}</span>
+                <span className="font-mono font-semibold text-slate-900 dark:text-white mt-0.5 block tabular-nums">
+                  {formatMoney(selectedTicketForDetail.cost_rwf)}
+                </span>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Work Notes</span>
-                <div className="text-[#0a2540] dark:text-slate-200 mt-1">{selectedTicketForDetail.description}</div>
+              <div className="col-span-2">
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Dates')}</span>
+                <span className="text-slate-800 dark:text-slate-200 mt-0.5 block">
+                  {formatHumanDateRange(
+                    selectedTicketForDetail.start_date,
+                    selectedTicketForDetail.expected_completion_date,
+                    { includeYear: true }
+                  )}{' '}
+                  <span className="font-mono text-slate-500 dark:text-slate-400">
+                    · {selectedTicketForDetail.odometer_at_service_km.toLocaleString()} km
+                  </span>
+                </span>
               </div>
-
+              <div className="col-span-2">
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Garage')}</span>
+                <span className="font-semibold text-slate-900 dark:text-white mt-0.5 block">
+                  {selectedTicketForDetail.garage_name}
+                </span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  {selectedTicketForDetail.garage_location}
+                  {selectedTicketForDetail.garage_phone ? ` · ${selectedTicketForDetail.garage_phone}` : ''}
+                  {selectedTicketForDetail.technician_name ? ` · Mechanic: ${selectedTicketForDetail.technician_name}` : ''}
+                </span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Work notes')}</span>
+                <span className="text-slate-800 dark:text-slate-200 mt-0.5 block">
+                  {selectedTicketForDetail.description}
+                </span>
+              </div>
               {selectedTicketForDetail.parts_replaced && selectedTicketForDetail.parts_replaced.length > 0 && (
-                <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Parts Changed</span>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {selectedTicketForDetail.parts_replaced.map((part, i) => (
-                      <span
-                        key={i}
-                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 text-[#0a2540] dark:text-slate-200 border border-slate-200 dark:border-slate-800"
-                      >
-                        {part}
-                      </span>
-                    ))}
-                  </div>
+                <div className="col-span-2">
+                  <span className="text-slate-400 dark:text-slate-500 block">{tr('Parts changed')}</span>
+                  <span className="text-slate-800 dark:text-slate-200 mt-0.5 block">
+                    {selectedTicketForDetail.parts_replaced.join(', ')}
+                  </span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              {selectedTicketForDetail.status === 'In Garage' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ticket = selectedTicketForDetail;
+                    setSelectedTicketForDetail(null);
+                    handleOpenCompleteModal(ticket);
+                  }}
+                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium"
+                >
+                  {tr('Release car')}
+                </button>
+              )}
               <button
+                type="button"
                 onClick={() => setSelectedTicketForDetail(null)}
-                className="px-5 py-2.5 rounded-full text-[#0a2540] dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm font-semibold"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Close
+                {tr('Close')}
               </button>
             </div>
           </div>

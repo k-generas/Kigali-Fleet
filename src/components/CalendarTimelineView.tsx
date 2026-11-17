@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Vehicle, Driver, Booking, VehicleCategory, BookingStatus, MaintenanceRecord } from '../types';
-import { datesOverlap, formatRwf, checkDriverCollision, calculateDays } from '../utils/collision';
+import { datesOverlap, checkDriverCollision, calculateDays } from '../utils/collision';
+import { formatHumanDate, formatHumanDateRange } from '../utils/dates';
+import { useI18n, AppCurrency, USD_RATE } from '../utils/i18n';
 import {
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
   AlertTriangle,
   Plane,
   X,
@@ -17,7 +18,6 @@ import {
   Ban,
   Phone,
   CheckCircle,
-  Wrench,
   SlidersHorizontal,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
@@ -67,43 +67,43 @@ export function getCategoryBadge(category: VehicleCategory) {
       return {
         label: 'Land Cruiser 4x4',
         icon: Mountain,
-        badgeClass: 'bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
-        blockClass: 'bg-amber-600/90 text-white border-amber-400',
+        badgeClass: 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
+        blockClass: 'bg-blue-50 text-blue-700 border-blue-200',
       };
     case 'RAV4':
       return {
         label: 'RAV4 AWD',
         icon: Car,
-        badgeClass: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30',
-        blockClass: 'bg-emerald-600/90 text-white border-emerald-400',
+        badgeClass: 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
+        blockClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       };
     case 'Coaster':
       return {
         label: 'Coaster Bus (30-Seat)',
         icon: Bus,
-        badgeClass: 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30',
-        blockClass: 'bg-indigo-600/90 text-white border-indigo-400',
+        badgeClass: 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
+        blockClass: 'bg-blue-50 text-blue-700 border-blue-200',
       };
     case 'Safari Van':
       return {
         label: 'Safari Pop-Top',
         icon: Compass,
-        badgeClass: 'bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-500/30',
-        blockClass: 'bg-cyan-600/90 text-white border-cyan-400',
+        badgeClass: 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
+        blockClass: 'bg-blue-50 text-blue-700 border-blue-200',
       };
     case 'Luxury Sedan':
       return {
         label: 'VIP Luxury Car',
         icon: Sparkles,
-        badgeClass: 'bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/30',
-        blockClass: 'bg-purple-600/90 text-white border-purple-400',
+        badgeClass: 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
+        blockClass: 'bg-blue-50 text-blue-700 border-blue-200',
       };
     default:
       return {
         label: category,
         icon: Car,
-        badgeClass: 'bg-slate-100 dark:bg-slate-700/40 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600',
-        blockClass: 'bg-slate-600/90 text-white border-slate-400',
+        badgeClass: 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
+        blockClass: 'bg-slate-50 text-slate-700 border-slate-200',
       };
   }
 }
@@ -112,7 +112,16 @@ export function getCategoryIcon(category: VehicleCategory) {
   return getCategoryBadge(category).icon;
 }
 
-function formatCompactMoney(amountRwf: number): string {
+function formatCompactMoney(amountRwf: number, currency: AppCurrency = 'RWF'): string {
+  if (currency === 'USD') {
+    if (amountRwf === 0) return '$0';
+    const usd = Math.max(1, Math.round(amountRwf / USD_RATE));
+    if (usd >= 1000) {
+      const k = usd / 1000;
+      return `$${Number.isInteger(k) ? k : k.toFixed(1)}k`;
+    }
+    return `$${usd}`;
+  }
   if (amountRwf >= 1000000) {
     const m = amountRwf / 1000000;
     return `${Number.isInteger(m) ? m : m.toFixed(1)}M`;
@@ -128,23 +137,21 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
   drivers,
   bookings,
   maintenance = [],
-  currentTheme,
   onOpenBookingForVehicle,
   onAssignDriver,
   onToggleMaintenance,
   onUpdateBookingStatus,
   onSelectBookingForDispatch,
 }) => {
-  const activeThemeColor = currentTheme?.hex || '#635bff';
-  const activeBtnText = currentTheme?.btnText || 'text-white';
+  const { currency, language, formatMoney, tr } = useI18n();
 
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date('2026-11-01T00:00:00'));
   const [viewMode, setViewMode] = useState<'Fleet' | 'Vehicle' | 'Booked'>('Fleet');
   const [rangeMode, setRangeMode] = useState<'week' | 'first_half' | 'second_half' | 'month'>(() => {
-    if (typeof window === 'undefined') return 'month';
+    if (typeof window === 'undefined') return 'first_half';
     if (window.innerWidth < 640) return 'week';
     if (window.innerWidth < 1024) return 'first_half';
-    return 'month';
+    return 'first_half';
   });
   const [weekIndex, setWeekIndex] = useState<number>(0);
   const [showFilters, setShowFilters] = useState<boolean>(false);
@@ -162,8 +169,9 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
 
   const currentYear = currentMonthDate.getFullYear();
   const currentMonth = currentMonthDate.getMonth();
-  const monthName = currentMonthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  const shortMonthName = currentMonthDate.toLocaleDateString('en-US', { month: 'short' });
+  const dateLocale = language === 'FR' ? 'fr-FR' : 'en-US';
+  const monthName = currentMonthDate.toLocaleDateString(dateLocale, { month: 'short', year: 'numeric' });
+  const shortMonthName = currentMonthDate.toLocaleDateString(dateLocale, { month: 'short' });
 
   const daysInMonth = useMemo(() => {
     return new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -183,14 +191,14 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
       const padMonth = String(currentMonth + 1).padStart(2, '0');
       const padDay = String(day).padStart(2, '0');
       const dateStr = `${currentYear}-${padMonth}-${padDay}`;
-      const weekdayShort = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+      const weekdayShort = d.toLocaleDateString(dateLocale, { weekday: 'short' }).toUpperCase();
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
       const isToday = dateStr === '2026-11-01';
 
       list.push({ dayIndex: day, dateStr, weekdayShort, isToday, isWeekend });
     }
     return list;
-  }, [currentYear, currentMonth, daysInMonth]);
+  }, [currentYear, currentMonth, daysInMonth, dateLocale]);
 
   const shiftMonth = (delta: number) => {
     setCurrentMonthDate(new Date(currentYear, currentMonth + delta, 1));
@@ -252,8 +260,6 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
       )
     ).length;
 
-    const tripsTodayPct = vehicles.length > 0 ? Math.round((activeTodayCount / vehicles.length) * 100) : 0;
-
     let totalFleetDaysBooked = 0;
     vehicleStats.forEach((stat) => {
       totalFleetDaysBooked += stat.daysBooked;
@@ -264,9 +270,6 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     return {
       activeTodayCount,
       totalVehicles: vehicles.length,
-      tripsTodayPct,
-      totalFleetDaysBooked,
-      totalPossibleFleetDays,
       fleetUtilPct,
     };
   }, [vehicles, bookings, vehicleStats, daysInMonth]);
@@ -343,7 +346,7 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
     (viewMode !== 'Fleet' ? 1 : 0) +
     (categoryFilter !== 'All' ? 1 : 0) +
     (statusFilter !== 'All' ? 1 : 0) +
-    (searchQuery.trim() ? 1 : 0);
+    (selectedCarId !== 'all' ? 1 : 0);
 
   const handleReassignDriver = (bookingId: string, driverId: string) => {
     setAssignmentNotice(null);
@@ -370,53 +373,57 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
   const rangeEndDay = visibleDaysList[visibleDaysList.length - 1]?.dayIndex || daysInMonth;
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      {/* Compact Conflict / Safety Strip */}
-      {detectedConflicts.length > 0 ? (
-        <div className="bg-rose-50 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-700 rounded-xl p-3 text-rose-900 dark:text-rose-200 flex items-start gap-2.5 text-xs sm:text-sm">
-          <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <div className="font-bold">Same Car Booked Twice on Same Days!</div>
-            {detectedConflicts.map((c, idx) => (
-              <p key={idx}>
-                Check <strong>{c.vehicle.model_name} ({c.vehicle.plate_number})</strong>: &ldquo;{c.bookings[0].client_name}&rdquo; and &ldquo;{c.bookings[1].client_name}&rdquo;.
-              </p>
-            ))}
-          </div>
+    <div className="space-y-6">
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Trip calendar
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Visual fleet schedule for {monthName} · {fleetMetrics.activeTodayCount}/{fleetMetrics.totalVehicles} cars out today
+          </p>
         </div>
-      ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold min-w-0 truncate">
-            <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span className="truncate">Zero Double Bookings · {fleetMetrics.activeTodayCount}/{fleetMetrics.totalVehicles} out today</span>
-          </div>
-          <span className="text-[#425466] dark:text-slate-400 font-mono shrink-0 hidden sm:inline">
-            Booked {fleetMetrics.fleetUtilPct}% in {shortMonthName}
-          </span>
-        </div>
-      )}
 
-      {/* Compact Control Toolbar (Cars appear immediately below on phones, tablets, and PCs) */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {/* Month Switcher & Week Pager */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-0.5">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsBlockVehicleModalOpen(true)}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs"
+          >
+            {tr('Block a Car')}
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenBookingForVehicle(vehicles[0]?.id || '', windowStartStr)}
+            className="px-4 py-2 rounded-lg text-sm font-medium accent-bg hover:opacity-95 shadow-xs"
+          >
+            + {tr('New Booking')}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Calendar Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        {/* Control Bar */}
+        <div className="px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
               <button
+                type="button"
                 onClick={() => shiftMonth(-1)}
-                className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full text-[#425466] dark:text-slate-300 transition-colors"
-                title="Previous month"
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
                 aria-label="Previous month"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-xs sm:text-sm font-bold px-2 sm:px-3 text-[#0a2540] dark:text-white whitespace-nowrap text-center">
+              <span className="font-semibold text-base text-slate-900 dark:text-white px-2 whitespace-nowrap">
                 {monthName}
               </span>
               <button
+                type="button"
                 onClick={() => shiftMonth(1)}
-                className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-full text-[#425466] dark:text-slate-300 transition-colors"
-                title="Next month"
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
                 aria-label="Next month"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -424,22 +431,24 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
             </div>
 
             {rangeMode === 'week' && (
-              <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-0.5">
+              <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => setWeekIndex((w) => Math.max(0, w - 1))}
                   disabled={safeWeekIndex === 0}
-                  className="p-1 rounded-full text-[#425466] dark:text-slate-300 disabled:opacity-35"
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-35"
                   aria-label="Previous 7 days"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-xs font-bold font-mono px-2 text-[#0a2540] dark:text-white whitespace-nowrap">
+                <span className="font-mono text-xs px-1.5 text-slate-800 dark:text-slate-200">
                   {rangeStartDay}–{rangeEndDay}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setWeekIndex((w) => Math.min(maxWeekIndex, w + 1))}
                   disabled={safeWeekIndex >= maxWeekIndex}
-                  className="p-1 rounded-full text-[#425466] dark:text-slate-300 disabled:opacity-35"
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-35"
                   aria-label="Next 7 days"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -448,21 +457,87 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
             )}
 
             <button
+              type="button"
               onClick={jumpToToday}
-              className="hidden md:inline-block text-xs px-3 py-1.5 bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full border border-slate-200 dark:border-slate-700 font-semibold transition-colors"
+              className="text-xs font-medium accent-text hover:underline px-1"
             >
-              Today
+              {tr('Today')}
             </button>
 
-            {/* Quick Car Selector */}
-            <div className="flex items-center gap-1.5">
+            <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg gap-0.5">
+              {[
+                { id: 'week' as const, label: tr('7d') },
+                { id: 'first_half' as const, label: '1–15' },
+                { id: 'second_half' as const, label: `16–${daysInMonth}` },
+                { id: 'month' as const, label: tr('Month') },
+              ].map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setRangeMode(r.id)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                    rangeMode === r.id
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder={tr('Search car or plate...')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-44 sm:w-56 bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-7 py-1.5 text-sm text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowFilters((s) => !s)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                showFilters || activeFiltersCount > 0
+                  ? 'border-slate-400 dark:border-slate-500 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white'
+                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+              aria-expanded={showFilters}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>
+                {tr('Filters')}
+                {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Filters Drawer */}
+        {showFilters && (
+          <div className="px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 space-y-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <select
                 value={selectedCarId}
                 onChange={(e) => setSelectedCarId(e.target.value)}
-                aria-label="Select car"
-                className="text-xs sm:text-sm font-semibold text-[#0a2540] dark:text-white bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-3 py-1.5 outline-none focus:border-blue-500 max-w-[170px] sm:max-w-[230px]"
+                aria-label={tr('Select car')}
+                className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-xs font-medium"
               >
-                <option value="all">All Cars ({vehicles.length})</option>
+                <option value="all">{tr('All Cars')} ({vehicles.length})</option>
                 {vehicles.map((v) => {
                   const { nickname } = getVehicleNickname(v);
                   const st = vehicleStats.get(v.id);
@@ -473,720 +548,406 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
                   );
                 })}
               </select>
-            </div>
-          </div>
-
-          {/* Right Compact View & Filter Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            {/* Day Window Switcher (7d / 15d / Month) */}
-            <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-0.5 text-xs font-semibold">
-              {[
-                { id: 'week' as const, label: '7d' },
-                { id: 'first_half' as const, label: '1–15' },
-                { id: 'second_half' as const, label: `16–${daysInMonth}` },
-                { id: 'month' as const, label: 'Month' },
-              ].map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => setRangeMode(r.id)}
-                  className={`px-2 sm:px-2.5 py-1 rounded-full transition-all whitespace-nowrap ${
-                    rangeMode === r.id
-                      ? `${activeBtnText} shadow-xs`
-                      : 'text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white'
-                  }`}
-                  style={rangeMode === r.id ? { backgroundColor: activeThemeColor } : undefined}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Filters Toggle Button */}
-            <button
-              onClick={() => setShowFilters((s) => !s)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                showFilters || activeFiltersCount > 0
-                  ? 'bg-[#0a2540] text-white dark:bg-white dark:text-[#0a2540] border-transparent'
-                  : 'bg-[#f6f9fc] dark:bg-slate-800 text-[#0a2540] dark:text-slate-200 border-slate-200 dark:border-slate-700'
-              }`}
-              aria-expanded={showFilters}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Filters</span>
-              {activeFiltersCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-mono text-[10px] font-bold">
-                  {activeFiltersCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setIsBlockVehicleModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 dark:bg-rose-500/15 hover:bg-rose-100 dark:hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-full text-xs font-bold transition-colors"
-            >
-              <Ban className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Block Car</span>
-              <span className="sm:hidden">Block</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Collapsible Filter Controls (Hidden until Filters is clicked so cars show right away) */}
-        {showFilters && (
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search car or plate..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-8 py-1.5 text-sm text-[#0a2540] dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
 
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 rounded-xl px-3 py-1.5 text-sm outline-none focus:border-blue-500 font-semibold"
+                className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-xs font-medium"
               >
-                <option value="All">All Types ({vehicles.length})</option>
+                <option value="All">{tr('All Types')} ({vehicles.length})</option>
                 <option value="LandCruiser">Land Cruiser 4x4</option>
                 <option value="RAV4">RAV4</option>
                 <option value="Coaster">Coaster Bus</option>
                 <option value="Safari Van">Safari Van</option>
-                <option value="Luxury Sedan">VIP Car</option>
+                <option value="Luxury Sedan">{tr('VIP Car')}</option>
               </select>
 
-              <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-0.5 text-xs font-semibold">
-                {[
-                  { id: 'Fleet' as const, label: 'All Cars' },
-                  { id: 'Booked' as const, label: 'Booked Only' },
-                ].map((m) => (
+              <select
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value as 'Fleet' | 'Booked')}
+                className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-xs font-medium"
+              >
+                <option value="Fleet">{tr('All Cars')}</option>
+                <option value="Booked">{tr('Booked Only')}</option>
+              </select>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { key: 'Completed', label: `${tr('Done')} (${statusCounts.Completed})`, dot: 'bg-emerald-500' },
+                { key: 'Booked', label: `${tr('Booked')} (${statusCounts.Booked})`, dot: 'bg-blue-500' },
+                { key: 'In Progress', label: `${tr('On Trip')} (${statusCounts.InProgress})`, dot: 'bg-amber-500' },
+                { key: 'Cancelled', label: `${tr('Cancelled')} (${statusCounts.Cancelled})`, dot: 'bg-slate-400' },
+              ].map((item) => {
+                const active = statusFilter === item.key;
+                return (
                   <button
-                    key={m.id}
-                    onClick={() => setViewMode(m.id)}
-                    className={`flex-1 py-1.5 rounded-lg transition-all ${
-                      viewMode === m.id
-                        ? `${activeBtnText} shadow-xs`
-                        : 'text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white'
+                    key={item.key}
+                    type="button"
+                    onClick={() => setStatusFilter(active ? 'All' : item.key)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
+                      active
+                        ? 'border-slate-400 dark:border-slate-500 font-semibold bg-white dark:bg-slate-900 text-slate-900 dark:text-white'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-[#0f172a]'
                     }`}
-                    style={viewMode === m.id ? { backgroundColor: activeThemeColor } : undefined}
                   >
-                    {m.label}
+                    <span className={`w-2 h-2 rounded-full ${item.dot}`} />
+                    <span>{item.label}</span>
                   </button>
+                );
+              })}
+
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('All');
+                    setCategoryFilter('All');
+                    setViewMode('Fleet');
+                    setSearchQuery('');
+                    setSelectedCarId('all');
+                  }}
+                  className="text-xs font-medium accent-text hover:underline ml-auto"
+                >
+                  {tr('Clear All')}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Conflict / Status Strip */}
+        {detectedConflicts.length > 0 ? (
+          <div className="px-5 py-3 bg-rose-50 dark:bg-rose-500/15 border-b border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-200 flex items-start gap-2 text-xs">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              <strong className="font-semibold">{tr('Same Car Booked Twice on Same Days!')}</strong>{' '}
+              {detectedConflicts.map((c, idx) => (
+                <span key={idx} className="ml-1">
+                  {c.vehicle.model_name} ({c.vehicle.plate_number}): "{c.bookings[0].client_name}" & "{c.bookings[1].client_name}".
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2 bg-slate-50/40 dark:bg-slate-900/30">
+            <span>
+              Booked {fleetMetrics.fleetUtilPct}% in {shortMonthName}. Zero scheduling conflicts detected.
+            </span>
+            <span className="font-mono tabular-nums">
+              {fleetMetrics.activeTodayCount}/{fleetMetrics.totalVehicles} out today
+            </span>
+          </div>
+        )}
+
+        {/* Selected Car Focus Header */}
+        {selectedCar && (
+          <div className="px-5 py-2.5 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div>
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {getVehicleNickname(selectedCar).nickname}
+              </span>{' '}
+              <span className="font-mono text-slate-500 dark:text-slate-400">{selectedCar.plate_number}</span>{' '}
+              <span className="text-slate-500 dark:text-slate-400">
+                · {formatMoney(selectedCar.daily_rate_rwf)} per day
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedCarId('all')}
+              className="font-medium accent-text hover:underline"
+            >
+              Show all cars
+            </button>
+          </div>
+        )}
+
+        {/* Timeline Grid */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[740px]">
+            {/* Day Columns Header */}
+            <div className="flex border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30">
+              {!selectedCar && (
+                <div className="w-[180px] sm:w-[200px] shrink-0 px-4 py-2.5 border-r border-slate-200/80 dark:border-slate-800 font-medium text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                  <span>{filteredVehicles.length} Cars</span>
+                  <span className="text-slate-400 font-normal">Tap car</span>
+                </div>
+              )}
+
+              <div
+                className="flex-1 min-w-0 grid"
+                style={{ gridTemplateColumns: `repeat(${visibleDaysList.length}, minmax(0, 1fr))` }}
+              >
+                {visibleDaysList.map((d) => (
+                  <div
+                    key={d.dateStr}
+                    className={`py-2 text-center border-l border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center ${
+                      d.isWeekend ? 'bg-slate-100/60 dark:bg-slate-800/40' : ''
+                    }`}
+                  >
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500 leading-none">
+                      {rangeMode === 'week' ? d.weekdayShort.slice(0, 2) : d.weekdayShort.slice(0, 1)}
+                    </div>
+                    {d.isToday ? (
+                      <div className="w-6 h-6 mt-1 rounded-full accent-bg font-semibold text-xs flex items-center justify-center tabular-nums">
+                        {d.dayIndex}
+                      </div>
+                    ) : (
+                      <div className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-1 tabular-nums">
+                        {d.dayIndex}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
-              <button
-                onClick={() => setStatusFilter(statusFilter === 'Completed' ? 'All' : 'Completed')}
-                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
-                  statusFilter === 'Completed'
-                    ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                    : 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>Done ({statusCounts.Completed})</span>
-              </button>
-
-              <button
-                onClick={() => setStatusFilter(statusFilter === 'Booked' ? 'All' : 'Booked')}
-                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
-                  statusFilter === 'Booked'
-                    ? 'bg-blue-600 text-white font-bold shadow-xs'
-                    : 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span>Booked ({statusCounts.Booked})</span>
-              </button>
-
-              <button
-                onClick={() => setStatusFilter(statusFilter === 'In Progress' ? 'All' : 'In Progress')}
-                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
-                  statusFilter === 'In Progress'
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
-                    : 'bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span>On Trip ({statusCounts.InProgress})</span>
-              </button>
-
-              <button
-                onClick={() => setStatusFilter(statusFilter === 'Cancelled' ? 'All' : 'Cancelled')}
-                className={`px-3 py-1 rounded-full transition-all ${
-                  statusFilter === 'Cancelled'
-                    ? 'bg-slate-700 text-white font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <span>Cancelled ({statusCounts.Cancelled})</span>
-              </button>
-
-              {activeFiltersCount > 0 && (
+            {/* Vehicle Rows */}
+            {filteredVehicles.length === 0 ? (
+              <div className="p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                {tr('No cars match your filters.')}{' '}
                 <button
+                  type="button"
                   onClick={() => {
                     setStatusFilter('All');
                     setCategoryFilter('All');
                     setViewMode('Fleet');
                     setSearchQuery('');
                   }}
-                  className="text-xs text-[#425466] dark:text-slate-300 hover:underline ml-auto"
+                  className="font-medium accent-text hover:underline"
                 >
-                  Clear All
+                  {tr('Show all cars')}
                 </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Selected Car Details Header Card (When a specific car is chosen, full width below goes to yellow/blue/green bars!) */}
-      {selectedCar && (() => {
-        const { nickname, subtitle } = getVehicleNickname(selectedCar);
-        const st = vehicleStats.get(selectedCar.id) || { daysBooked: 0, ratePct: 0 };
-        const currentIdx = vehicles.findIndex((v) => v.id === selectedCar.id);
-        const prevCar = vehicles[(currentIdx - 1 + vehicles.length) % vehicles.length];
-        const nextCar = vehicles[(currentIdx + 1) % vehicles.length];
-        return (
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-extrabold text-[#0a2540] dark:text-white truncate">
-                  {nickname}
-                </h3>
-                <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/30">
-                  {selectedCar.plate_number}
-                </span>
-                <span
-                  className={`text-xs font-bold font-mono tabular-nums px-2 py-0.5 rounded-full ${
-                    st.ratePct >= 60
-                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-                      : st.ratePct >= 30
-                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                      : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300'
-                  }`}
-                >
-                  {st.ratePct}% · {st.daysBooked}/{daysInMonth}d
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs sm:text-sm text-[#425466] dark:text-slate-400">
-                <span className="truncate">{subtitle}</span>
-                <span className="font-mono font-bold text-[#0a2540] dark:text-slate-200 tabular-nums">
-                  {formatCompactMoney(selectedCar.daily_rate_rwf)} ({formatRwf(selectedCar.daily_rate_rwf)}/d)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {vehicles.length > 1 && (
-                <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-0.5">
-                  <button
-                    onClick={() => prevCar && setSelectedCarId(prevCar.id)}
-                    className="p-1.5 rounded-full text-[#425466] dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"
-                    title="Previous car"
-                    aria-label="Previous car"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => nextCar && setSelectedCarId(nextCar.id)}
-                    className="p-1.5 rounded-full text-[#425466] dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"
-                    title="Next car"
-                    aria-label="Next car"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-              <button
-                onClick={() => onOpenBookingForVehicle(selectedCar.id, windowStartStr)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-xs ${activeBtnText}`}
-                style={{ backgroundColor: activeThemeColor }}
-              >
-                + Book
-              </button>
-              <button
-                onClick={() => setSelectedCarId('all')}
-                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 border border-slate-200 dark:border-slate-700"
-              >
-                All Cars
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Unified Fit-Screen Car & Day Timeline Grid (Identical Clear Experience on Phone, Tablet, and PC) */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        {/* Header Row */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-[#f6f9fc] dark:bg-slate-800/90 sticky top-0 z-20">
-          {!selectedCar && (
-            <div className="w-[94px] sm:w-[140px] md:w-[175px] lg:w-[200px] shrink-0 px-2 sm:px-3 py-2 border-r border-slate-200 dark:border-slate-800 font-bold text-[#0a2540] dark:text-white text-xs sm:text-sm flex items-center justify-between gap-1">
-              <span className="truncate">{filteredVehicles.length} Cars</span>
-              <span className="hidden sm:inline text-xs text-[#425466] dark:text-slate-400 font-mono">
-                Tap car
-              </span>
-            </div>
-          )}
-
-          <div
-            className="flex-1 min-w-0 grid"
-            style={{ gridTemplateColumns: `repeat(${visibleDaysList.length}, minmax(0, 1fr))` }}
-          >
-            {visibleDaysList.map((d) => (
-              <div
-                key={d.dateStr}
-                className={`py-1.5 sm:py-2 text-center border-r border-slate-200/80 dark:border-slate-800 flex flex-col items-center justify-center min-w-0 ${
-                  d.isToday
-                    ? 'bg-blue-50 dark:bg-blue-600/15'
-                    : d.isWeekend
-                    ? 'bg-slate-100/70 dark:bg-slate-900/40'
-                    : ''
-                }`}
-              >
-                <div className="text-[10px] sm:text-xs font-bold uppercase text-[#425466] dark:text-slate-400 font-mono leading-none">
-                  {rangeMode === 'week' ? d.weekdayShort.slice(0, 2) : d.weekdayShort.slice(0, 1)}
-                </div>
-
-                {d.isToday ? (
-                  <div className="w-5 h-5 sm:w-6 sm:h-6 mt-1 rounded-full bg-blue-600 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center shadow-xs tabular-nums">
-                    {d.dayIndex}
-                  </div>
-                ) : (
-                  <div className="text-[11px] sm:text-xs font-bold text-[#0a2540] dark:text-slate-200 mt-1 tabular-nums">
-                    {d.dayIndex}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Vehicle Rows */}
-        {filteredVehicles.length === 0 ? (
-          <div className="p-8 text-center text-sm text-[#425466] dark:text-slate-400">
-            No cars match your filters.{' '}
-            <button
-              onClick={() => {
-                setStatusFilter('All');
-                setCategoryFilter('All');
-                setViewMode('Fleet');
-                setSearchQuery('');
-              }}
-              className="font-semibold underline text-[#0a2540] dark:text-white"
-            >
-              Show all cars
-            </button>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {filteredVehicles.map((vehicle) => {
-              const { nickname } = getVehicleNickname(vehicle);
-              const stats = vehicleStats.get(vehicle.id) || { daysBooked: 0, ratePct: 0 };
-
-              const vehBookings = bookings
-                .filter(
-                  (b) =>
-                    b.vehicle_id === vehicle.id &&
-                    (statusFilter === 'All'
-                      ? b.status !== 'Cancelled'
-                      : statusFilter === 'Completed'
-                      ? b.status === 'Completed'
-                      : statusFilter === 'Booked'
-                      ? b.status === 'Confirmed' || b.status === 'Pending Dispatch'
-                      : statusFilter === 'In Progress'
-                      ? b.status === 'In Progress'
-                      : b.status === 'Cancelled')
-                )
-                .sort((a, b) => a.start_date.localeCompare(b.start_date));
-
-              const turnaroundAlerts: { prevBooking: Booking; nextBooking: Booking; dateStr: string; gapHours: number }[] = [];
-              for (let i = 0; i < vehBookings.length - 1; i++) {
-                const curr = vehBookings[i];
-                const next = vehBookings[i + 1];
-                if (curr.end_date === next.start_date) {
-                  turnaroundAlerts.push({ prevBooking: curr, nextBooking: next, dateStr: curr.end_date, gapHours: 2 });
-                } else {
-                  const diffDays = Math.round(
-                    (new Date(next.start_date).getTime() - new Date(curr.end_date).getTime()) / (1000 * 3600 * 24)
-                  );
-                  if (diffDays === 1) {
-                    turnaroundAlerts.push({ prevBooking: curr, nextBooking: next, dateStr: curr.end_date, gapHours: 4 });
-                  }
-                }
-              }
-
-              const totalVisibleDays = Math.max(1, visibleDaysList.length);
-
-              return (
-                <div
-                  key={vehicle.id}
-                  className="flex hover:bg-[#f6f9fc]/70 dark:hover:bg-slate-800/30 transition-colors group relative"
-                >
-                  {/* Lean Left Car Selector Column in All Cars mode (hidden when a single car is selected so timeline gets 100% width!) */}
-                  {!selectedCar && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCarId(vehicle.id)}
-                      className="w-[94px] sm:w-[140px] md:w-[175px] lg:w-[200px] shrink-0 px-2 py-2 sm:px-3 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 flex flex-col justify-center min-w-0 text-left transition-colors cursor-pointer"
-                      title={`View full details for ${nickname}`}
-                    >
-                      <div className="flex items-center justify-between gap-1 min-w-0">
-                        <span className="text-xs sm:text-sm font-bold text-[#0a2540] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
-                          {nickname}
-                        </span>
-                        <span
-                          className={`hidden sm:inline text-[11px] font-bold font-mono tabular-nums shrink-0 ${
-                            stats.ratePct >= 60
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : stats.ratePct >= 30
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-[#425466] dark:text-slate-400'
-                          }`}
-                        >
-                          {stats.ratePct}%
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] sm:text-xs text-[#425466] dark:text-slate-400 mt-0.5 gap-1">
-                        <span className="font-mono text-[#0a2540] dark:text-amber-300 font-semibold truncate">
-                          {vehicle.plate_number}
-                        </span>
-                        <span className="hidden md:inline font-mono whitespace-nowrap tabular-nums">
-                          {formatCompactMoney(vehicle.daily_rate_rwf)}
-                        </span>
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Fluid Fit-Screen Day Timeline Grid */}
-                  <div
-                    className={`flex-1 min-w-0 grid relative ${selectedCar ? 'h-[72px] sm:h-[82px]' : 'h-[58px] sm:h-[68px]'}`}
-                    style={{ gridTemplateColumns: `repeat(${visibleDaysList.length}, minmax(0, 1fr))` }}
-                  >
-                    {visibleDaysList.map((d) => (
-                      <div
-                        key={d.dateStr}
-                        onClick={() => onOpenBookingForVehicle(vehicle.id, d.dateStr)}
-                        className={`h-full border-r border-slate-100 dark:border-slate-800/70 relative cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-600/10 group/cell transition-colors min-w-0 ${
-                          d.isWeekend ? 'bg-slate-50/70 dark:bg-slate-900/30' : ''
-                        }`}
-                        title={`Book ${vehicle.model_name} on ${d.dateStr}`}
-                      >
-                        <span className="opacity-0 group-hover/cell:opacity-100 absolute inset-0 flex items-center justify-center text-xs text-blue-600 dark:text-blue-400 font-bold pointer-events-none">
-                          +
-                        </span>
-                      </div>
-                    ))}
-
-                    {turnaroundAlerts.map((alert, idx) => {
-                      const alertPos = visibleDaysList.findIndex((d) => d.dateStr === alert.dateStr);
-                      if (alertPos < 0) return null;
-                      const leftPct = Math.min(88, ((alertPos + 0.5) / totalVisibleDays) * 100);
-
-                      return (
-                        <div
-                          key={`turnaround-${idx}`}
-                          style={{ left: `${leftPct}%`, top: '2px' }}
-                          className="absolute z-15 pointer-events-none"
-                        >
-                          <span className="bg-amber-400 text-slate-950 font-bold text-[10px] px-1.5 py-0.5 rounded-full shadow-sm whitespace-nowrap">
-                            {alert.gapHours}h wash
-                          </span>
-                        </div>
-                      );
-                    })}
-
-                    {vehBookings.map((bk) => {
-                      if (bk.end_date < windowStartStr || bk.start_date > windowEndStr) return null;
-
-                      const effectiveStartStr = bk.start_date < windowStartStr ? windowStartStr : bk.start_date;
-                      const effectiveEndStr = bk.end_date > windowEndStr ? windowEndStr : bk.end_date;
-
-                      const startIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveStartStr);
-                      const endIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveEndStr);
-                      if (startIndex < 0 || endIndex < 0) return null;
-
-                      const spanDays = Math.max(1, endIndex - startIndex + 1);
-                      const leftPct = (startIndex / totalVisibleDays) * 100;
-                      const widthPct = (spanDays / totalVisibleDays) * 100;
-
-                      const isCompleted = bk.status === 'Completed';
-                      const isInProgress = bk.status === 'In Progress';
-                      const isCancelled = bk.status === 'Cancelled';
-
-                      let barBg = 'bg-blue-600 hover:bg-blue-500 text-white';
-                      if (isCompleted) {
-                        barBg = 'bg-emerald-600 hover:bg-emerald-500 text-white';
-                      } else if (isInProgress) {
-                        barBg = 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold';
-                      } else if (isCancelled) {
-                        barBg = 'bg-slate-400 dark:bg-slate-700 text-white';
-                      }
-
-                      const hasTurnaround = turnaroundAlerts.some(
-                        (t) => t.prevBooking.id === bk.id || t.nextBooking.id === bk.id
-                      );
-                      const totalDays = calculateDays(bk.start_date, bk.end_date);
-                      const compactLabel =
-                        spanDays >= 3 || rangeMode === 'week'
-                          ? `${totalDays}d · ${formatCompactMoney(bk.total_rwf)}`
-                          : spanDays >= 2
-                          ? `${totalDays}d`
-                          : `${totalDays}d`;
-
-                      return (
-                        <div
-                          key={bk.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedBooking(bk);
-                          }}
-                          style={{
-                            left: `calc(${leftPct}% + 2px)`,
-                            width: `calc(${widthPct}% - 4px)`,
-                            top: '12px',
-                            height: '34px',
-                          }}
-                          className={`sm:!top-[15px] sm:!h-[38px] absolute z-10 rounded-lg sm:rounded-xl px-1.5 sm:px-2 flex items-center justify-between gap-1 text-[11px] sm:text-xs font-semibold cursor-pointer shadow-sm transition-transform hover:-translate-y-0.5 select-none overflow-hidden ${barBg} ${
-                            hasTurnaround ? 'ring-2 ring-amber-300' : ''
-                          }`}
-                          title={`#${bk.id} · ${bk.client_name} · ${bk.destination} (${bk.start_date} to ${bk.end_date})`}
-                        >
-                          <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
-                            <span className="font-bold whitespace-nowrap tabular-nums truncate">
-                              {compactLabel}
-                            </span>
-                            {(spanDays >= 5 || (rangeMode === 'week' && spanDays >= 3)) && (
-                              <span className="hidden sm:inline opacity-90 font-medium truncate">
-                                · {bk.client_name.split(' ')[0]}
-                              </span>
-                            )}
-                          </div>
-
-                          {(spanDays >= 4 || (rangeMode === 'week' && spanDays >= 2)) && (
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              {bk.flight_number && <Plane className="w-3 h-3 opacity-90" />}
-                              {hasTurnaround && <Sparkles className="w-3 h-3 text-amber-200" />}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {maintenance
-                      .filter(
-                        (m) =>
-                          m.vehicle_id === vehicle.id &&
-                          m.status !== 'Completed' &&
-                          datesOverlap(windowStartStr, windowEndStr, m.start_date, m.expected_completion_date || m.start_date)
-                      )
-                      .map((m) => {
-                        const mEnd = m.expected_completion_date || m.start_date;
-                        const effectiveStartStr = m.start_date < windowStartStr ? windowStartStr : m.start_date;
-                        const effectiveEndStr = mEnd > windowEndStr ? windowEndStr : mEnd;
-
-                        const startIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveStartStr);
-                        const endIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveEndStr);
-                        if (startIndex < 0 || endIndex < 0) return null;
-
-                        const spanDays = Math.max(1, endIndex - startIndex + 1);
-                        const leftPct = (startIndex / totalVisibleDays) * 100;
-                        const widthPct = (spanDays / totalVisibleDays) * 100;
-
-                        return (
-                          <div
-                            key={m.id}
-                            style={{
-                              left: `calc(${leftPct}% + 2px)`,
-                              width: `calc(${widthPct}% - 4px)`,
-                              top: '12px',
-                              height: '34px',
-                            }}
-                            className="sm:!top-[15px] sm:!h-[38px] absolute z-20 rounded-lg sm:rounded-xl px-1.5 sm:px-2 flex items-center justify-center sm:justify-start gap-1 text-[11px] sm:text-xs font-bold shadow-sm bg-rose-600 text-white border border-rose-400 select-none overflow-hidden"
-                            title={`In Garage: ${m.garage_name} (${m.service_type})`}
-                          >
-                            <Wrench className="w-3 h-3 shrink-0" />
-                            {spanDays >= 2 && (
-                              <span className="truncate hidden sm:inline">In Garage</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Focused Car Schedule List (Shows full trip & garage details cleanly inside the selected car view) */}
-      {selectedCar && (() => {
-        const carMonthBookings = bookings
-          .filter(
-            (b) =>
-              b.vehicle_id === selectedCar.id &&
-              datesOverlap(monthStartStr, monthEndStr, b.start_date, b.end_date) &&
-              (statusFilter === 'All'
-                ? b.status !== 'Cancelled'
-                : statusFilter === 'Completed'
-                ? b.status === 'Completed'
-                : statusFilter === 'Booked'
-                ? b.status === 'Confirmed' || b.status === 'Pending Dispatch'
-                : statusFilter === 'In Progress'
-                ? b.status === 'In Progress'
-                : b.status === 'Cancelled')
-          )
-          .sort((a, b) => a.start_date.localeCompare(b.start_date));
-
-        const carMaint = maintenance.filter(
-          (m) =>
-            m.vehicle_id === selectedCar.id &&
-            m.status !== 'Completed' &&
-            datesOverlap(monthStartStr, monthEndStr, m.start_date, m.expected_completion_date || m.start_date)
-        );
-
-        return (
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm font-bold text-[#0a2540] dark:text-white">
-                {shortMonthName} {currentYear} Trips &amp; Garage ({carMonthBookings.length + carMaint.length})
-              </span>
-              <span className="text-xs text-[#425466] dark:text-slate-400">
-                Tap any trip bar or row
-              </span>
-            </div>
-
-            {carMonthBookings.length === 0 && carMaint.length === 0 ? (
-              <div className="text-xs sm:text-sm text-[#425466] dark:text-slate-400 py-2">
-                Free all {shortMonthName} {currentYear}. Tap any day above to book this car.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {carMaint.map((m) => (
-                  <div
-                    key={m.id}
-                    className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 flex items-center justify-between gap-2 text-xs"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0">
-                        <Wrench className="w-3.5 h-3.5" />
-                      </span>
-                      <div className="min-w-0">
-                        <div className="font-bold text-rose-800 dark:text-rose-200 truncate">
-                          In Garage: {m.service_type}
-                        </div>
-                        <div className="text-rose-700/80 dark:text-rose-300/80 font-mono">
-                          {m.start_date}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredVehicles.map((vehicle) => {
+                  const { nickname } = getVehicleNickname(vehicle);
+                  const stats = vehicleStats.get(vehicle.id) || { daysBooked: 0, ratePct: 0 };
 
-                {carMonthBookings.map((bk) => {
-                  const isDone = bk.status === 'Completed';
-                  const isOnTrip = bk.status === 'In Progress';
-                  const isCancelled = bk.status === 'Cancelled';
-                  const dotColor = isDone
-                    ? 'bg-emerald-600 text-white'
-                    : isOnTrip
-                    ? 'bg-amber-400 text-slate-950'
-                    : isCancelled
-                    ? 'bg-slate-500 text-white'
-                    : 'bg-blue-600 text-white';
-                  const statusWord = isDone ? 'Done' : isOnTrip ? 'On Trip' : isCancelled ? 'Cancelled' : 'Booked';
+                  const vehBookings = bookings
+                    .filter(
+                      (b) =>
+                        b.vehicle_id === vehicle.id &&
+                        (statusFilter === 'All'
+                          ? b.status !== 'Cancelled'
+                          : statusFilter === 'Completed'
+                          ? b.status === 'Completed'
+                          : statusFilter === 'Booked'
+                          ? b.status === 'Confirmed' || b.status === 'Pending Dispatch'
+                          : statusFilter === 'In Progress'
+                          ? b.status === 'In Progress'
+                          : b.status === 'Cancelled')
+                    )
+                    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+                  const totalVisibleDays = Math.max(1, visibleDaysList.length);
 
                   return (
-                    <button
-                      key={bk.id}
-                      onClick={() => setSelectedBooking(bk)}
-                      className="p-2.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:border-blue-400 flex items-center justify-between gap-2 text-left text-xs transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className={`px-2 py-1 rounded-lg font-bold text-[11px] shrink-0 ${dotColor}`}>
-                          {statusWord}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="font-bold text-[#0a2540] dark:text-white truncate flex items-center gap-1">
-                            <span className="truncate">{bk.client_name}</span>
-                            {bk.flight_number && <Plane className="w-3 h-3 text-sky-500 shrink-0" />}
+                    <div key={vehicle.id} className="flex relative">
+                      {!selectedCar && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCarId(vehicle.id)}
+                          className="w-[180px] sm:w-[200px] shrink-0 px-4 py-2.5 border-r border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 text-left transition-colors"
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                              {nickname}
+                            </span>
+                            <span className="text-xs font-mono text-slate-400 dark:text-slate-500 shrink-0 tabular-nums">
+                              {stats.ratePct}%
+                            </span>
                           </div>
-                          <div className="text-[#425466] dark:text-slate-400 font-mono">
-                            {bk.start_date} → {bk.end_date}
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                            <span className="font-mono">{vehicle.plate_number}</span> ·{' '}
+                            <span>{formatCompactMoney(vehicle.daily_rate_rwf, currency)}/d</span>
                           </div>
-                        </div>
+                        </button>
+                      )}
+
+                      <div
+                        className={`flex-1 min-w-0 grid relative ${selectedCar ? 'h-[72px]' : 'h-[62px]'}`}
+                        style={{ gridTemplateColumns: `repeat(${visibleDaysList.length}, minmax(0, 1fr))` }}
+                      >
+                        {visibleDaysList.map((d) => (
+                          <div
+                            key={d.dateStr}
+                            onClick={() => onOpenBookingForVehicle(vehicle.id, d.dateStr)}
+                            className={`h-full border-l border-slate-100 dark:border-slate-800 relative cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-500/10 group/cell transition-colors ${
+                              d.isWeekend ? 'bg-slate-50/70 dark:bg-slate-800/20' : ''
+                            }`}
+                            title={`Book ${vehicle.model_name} on ${formatHumanDate(d.dateStr)}`}
+                          >
+                            <span className="opacity-0 group-hover/cell:opacity-100 absolute inset-0 flex items-center justify-center text-sm font-semibold accent-text pointer-events-none">
+                              +
+                            </span>
+                          </div>
+                        ))}
+
+                        {/* Booking Bars */}
+                        {vehBookings.map((bk) => {
+                          if (bk.end_date < windowStartStr || bk.start_date > windowEndStr) return null;
+
+                          const effectiveStartStr = bk.start_date < windowStartStr ? windowStartStr : bk.start_date;
+                          const effectiveEndStr = bk.end_date > windowEndStr ? windowEndStr : bk.end_date;
+
+                          const startIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveStartStr);
+                          const endIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveEndStr);
+                          if (startIndex < 0 || endIndex < 0) return null;
+
+                          const spanDays = Math.max(1, endIndex - startIndex + 1);
+                          const totalDays = calculateDays(bk.start_date, bk.end_date);
+                          const leftPct = (startIndex / totalVisibleDays) * 100;
+                          const widthPct = (spanDays / totalVisibleDays) * 100;
+
+                          const isDone = bk.status === 'Completed';
+                          const isOnTrip = bk.status === 'In Progress';
+                          const isCancelled = bk.status === 'Cancelled';
+
+                          const barClass = isDone
+                            ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-500/40'
+                            : isOnTrip
+                            ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-500/40'
+                            : isCancelled
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                            : 'bg-blue-50 dark:bg-blue-500/20 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-500/40';
+
+                          const statusWord = isDone
+                            ? 'Done'
+                            : isOnTrip
+                            ? 'On trip'
+                            : isCancelled
+                            ? 'Cancelled'
+                            : 'Booked';
+
+                          return (
+                            <div
+                              key={bk.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedBooking(bk);
+                              }}
+                              style={{
+                                left: `calc(${leftPct}% + 3px)`,
+                                width: `calc(${widthPct}% - 6px)`,
+                                top: '7px',
+                                bottom: '7px',
+                              }}
+                              className={`absolute z-10 rounded-lg border px-2.5 flex flex-col justify-center cursor-pointer select-none overflow-hidden text-xs leading-tight shadow-xs hover:opacity-90 transition-opacity ${barClass}`}
+                              title={`#${bk.id} · ${statusWord} · ${bk.client_name} (${formatHumanDateRange(
+                                bk.start_date,
+                                bk.end_date
+                              )})`}
+                            >
+                              <div className="font-semibold whitespace-nowrap truncate">
+                                {statusWord} · {totalDays}d
+                              </div>
+                              {spanDays >= 2 && (
+                                <div className="truncate opacity-85 text-[11px]">
+                                  {formatMoney(bk.total_rwf)} · {bk.client_name}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Maintenance / Repair Bars */}
+                        {maintenance
+                          .filter(
+                            (m) =>
+                              m.vehicle_id === vehicle.id &&
+                              m.status !== 'Completed' &&
+                              datesOverlap(windowStartStr, windowEndStr, m.start_date, m.expected_completion_date || m.start_date)
+                          )
+                          .map((m) => {
+                            const mEnd = m.expected_completion_date || m.start_date;
+                            const effectiveStartStr = m.start_date < windowStartStr ? windowStartStr : m.start_date;
+                            const effectiveEndStr = mEnd > windowEndStr ? windowEndStr : mEnd;
+
+                            const startIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveStartStr);
+                            const endIndex = visibleDaysList.findIndex((d) => d.dateStr === effectiveEndStr);
+                            if (startIndex < 0 || endIndex < 0) return null;
+
+                            const spanDays = Math.max(1, endIndex - startIndex + 1);
+                            const leftPct = (startIndex / totalVisibleDays) * 100;
+                            const widthPct = (spanDays / totalVisibleDays) * 100;
+
+                            return (
+                              <div
+                                key={m.id}
+                                style={{
+                                  left: `calc(${leftPct}% + 3px)`,
+                                  width: `calc(${widthPct}% - 6px)`,
+                                  top: '7px',
+                                  bottom: '7px',
+                                }}
+                                className="absolute z-20 rounded-lg border border-rose-200 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-500/20 text-rose-800 dark:text-rose-200 px-2.5 flex flex-col justify-center text-xs leading-tight select-none overflow-hidden shadow-xs"
+                                title={`In repair: ${m.garage_name} (${m.service_type})`}
+                              >
+                                <div className="font-semibold truncate">{tr('In repair')}</div>
+                                {spanDays >= 2 && (
+                                  <div className="truncate text-[11px]">until {formatHumanDate(mEnd)}</div>
+                                )}
+                              </div>
+                            );
+                          })}
                       </div>
-                      <span className="font-mono font-bold text-[#0a2540] dark:text-amber-400 whitespace-nowrap shrink-0">
-                        {formatRwf(bk.total_rwf)}
-                      </span>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             )}
           </div>
-        );
-      })()}
-
-      {/* Compact Footer Legend */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#425466] dark:text-slate-400 px-1">
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Done
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Booked
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span> On Trip
-          </span>
-          <span className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
-            <Wrench className="w-3.5 h-3.5" /> Garage
-          </span>
         </div>
 
-        <div className="hidden sm:block text-xs text-[#425466] dark:text-slate-400">
-          Tap any empty day to book · Tap any colored bar for details
+        {/* Bottom Legend */}
+        <div className="px-5 py-3 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center gap-5">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span>{tr('Booked')}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>{tr('Done')}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span>{tr('On Trip')}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span>{tr('In repair')}</span>
+            </span>
+          </div>
+          <span className="hidden sm:inline">Tap any empty day to book · Tap any bar for details</span>
         </div>
       </div>
 
       {/* Trip Details Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3.5">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm text-blue-600 dark:text-blue-400 font-bold">
+                  <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 accent-text">
                     #{selectedBooking.id}
                   </span>
-                  <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Trip Details</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{tr('Trip Details')}</h3>
                 </div>
-                <p className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">
-                  Going to: {selectedBooking.destination}
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {tr('Going to')}: {selectedBooking.destination}
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setSelectedBooking(null);
                   setAssignmentNotice(null);
                 }}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1194,70 +955,65 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
 
             {assignmentNotice && (
               <div
-                className={`p-3.5 rounded-xl text-sm font-medium ${
+                className={`p-3 rounded-lg text-xs font-medium ${
                   assignmentNotice.type === 'success'
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300'
-                    : 'bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-300'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300'
                 }`}
               >
                 {assignmentNotice.message}
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 bg-[#f6f9fc] dark:bg-slate-800/80 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
+            <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl p-4 grid grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-[#425466] dark:text-slate-400 block text-xs">Guest:</span>
-                <span className="font-bold text-[#0a2540] dark:text-white text-base">
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Guest')}</span>
+                <span className="text-slate-900 dark:text-white font-semibold mt-0.5 block">
                   {selectedBooking.client_name}
                 </span>
-                <div className="text-[#425466] dark:text-slate-400 text-xs font-mono mt-0.5">
+                <span className="font-mono text-slate-500 dark:text-slate-400">
                   {selectedBooking.client_phone}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-[#425466] dark:text-slate-400 block text-xs">Price & Status:</span>
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">
-                  {selectedBooking.status}
                 </span>
-                <div className="text-emerald-600 dark:text-emerald-400 font-extrabold font-mono mt-1">
-                  {formatRwf(selectedBooking.total_rwf)}
-                </div>
               </div>
-
               <div>
-                <span className="text-[#425466] dark:text-slate-400 block text-xs">Dates:</span>
-                <span className="text-[#0a2540] dark:text-slate-200 font-mono text-xs font-semibold">
-                  {selectedBooking.start_date} → {selectedBooking.end_date}
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Price')}</span>
+                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 block tabular-nums">
+                  {formatMoney(selectedBooking.total_rwf)}
                 </span>
-                <div className="text-xs text-[#425466] dark:text-slate-400 mt-0.5">
-                  {calculateDays(selectedBooking.start_date, selectedBooking.end_date)} days total
-                </div>
+                <span className="text-slate-500 dark:text-slate-400">{selectedBooking.status}</span>
               </div>
-
               <div>
-                <span className="text-[#425466] dark:text-slate-400 block text-xs">Airport Flight:</span>
-                {selectedBooking.flight_number ? (
-                  <span className="text-blue-600 dark:text-blue-400 font-mono font-bold flex items-center gap-1">
-                    <Plane className="w-3.5 h-3.5" />
-                    {selectedBooking.flight_number} ({selectedBooking.flight_status || 'On Time'})
-                  </span>
-                ) : (
-                  <span className="text-[#425466] dark:text-slate-400">City Pickup</span>
-                )}
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Dates')}</span>
+                <span className="text-slate-800 dark:text-slate-200 mt-0.5 block">
+                  {formatHumanDateRange(selectedBooking.start_date, selectedBooking.end_date, { includeYear: true })} (
+                  {calculateDays(selectedBooking.start_date, selectedBooking.end_date)} days)
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 block">{tr('Airport Flight')}</span>
+                <span className="text-slate-800 dark:text-slate-200 mt-0.5 block">
+                  {selectedBooking.flight_number ? (
+                    <span className="font-mono inline-flex items-center gap-1">
+                      <Plane className="w-3.5 h-3.5 accent-text" />
+                      {selectedBooking.flight_number} ({selectedBooking.flight_status || tr('On Time')})
+                    </span>
+                  ) : (
+                    tr('City Pickup')
+                  )}
+                </span>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">
-                Driver for This Trip
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">
+                {tr('Driver for This Trip')}
               </label>
               <select
                 value={selectedBooking.driver_id}
                 onChange={(e) => handleReassignDriver(selectedBooking.id, e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-3 text-sm outline-none focus:border-blue-500"
+                className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none"
               >
-                <option value="">-- No Driver (Guest Drives Self) --</option>
+                <option value="">-- {tr('No Driver')} ({tr('Self-Drive')}) --</option>
                 {drivers.map((drv) => {
                   const collision = checkDriverCollision(
                     drv.id,
@@ -1271,47 +1027,49 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
                     <option key={drv.id} value={drv.id} disabled={collision.hasCollision}>
                       {drv.name} ({drv.phone}) · {drv.language}
                       {collision.hasCollision
-                        ? ` [Busy: ${collision.conflictingBooking?.client_name || 'Booked'}]`
-                        : ' [Free]'}
+                        ? ` [${tr('Busy')}: ${collision.conflictingBooking?.client_name || tr('Booked')}]`
+                        : ` [${tr('Free')}]`}
                     </option>
                   );
                 })}
               </select>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200/80 dark:border-slate-800">
               {onSelectBookingForDispatch && (
                 <button
+                  type="button"
                   onClick={() => {
                     onSelectBookingForDispatch(selectedBooking);
                     setSelectedBooking(null);
                   }}
-                  className={`px-4 py-2.5 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-sm ${activeBtnText}`}
-                  style={{ backgroundColor: activeThemeColor }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 accent-bg hover:opacity-95"
                 >
                   <Phone className="w-4 h-4" />
-                  <span>Send Driver SMS</span>
+                  <span>{tr('Send Driver SMS')}</span>
                 </button>
               )}
 
               {onUpdateBookingStatus && selectedBooking.status !== 'Completed' && (
                 <button
+                  type="button"
                   onClick={() => {
                     onUpdateBookingStatus(selectedBooking.id, 'Completed');
                     setSelectedBooking(null);
                   }}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-sm font-bold flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium inline-flex items-center gap-1.5"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  <span>Mark Trip Done</span>
+                  <span>{tr('Mark Trip Done')}</span>
                 </button>
               )}
 
               <button
+                type="button"
                 onClick={() => setSelectedBooking(null)}
-                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-sm font-semibold ml-auto"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium ml-auto hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Close
+                {tr('Close')}
               </button>
             </div>
           </div>
@@ -1320,82 +1078,83 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
 
       {/* Block Car Modal */}
       {isBlockVehicleModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Ban className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Block a Car</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{tr('Block a Car')}</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsBlockVehicleModalOpen(false)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-sm text-[#425466] dark:text-slate-300">
-              Lock a car so nobody can book it while it is in the garage or being checked.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {tr('Lock a car so nobody can book it while it is in the garage or being checked.')}
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">Choose Car</label>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('Choose Car')}</label>
               <select
                 value={blockSelectedVehicleId}
                 onChange={(e) => setBlockSelectedVehicleId(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-3 text-sm outline-none focus:border-blue-500 font-medium"
+                className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none"
               >
                 {vehicles.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {v.model_name} ({v.plate_number}) · {v.status}
+                    {v.model_name} ({v.plate_number}) · {tr(v.status)}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">Why is it blocked?</label>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('Why is it blocked?')}</label>
               <select
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-3 text-sm outline-none focus:border-blue-500 font-medium"
+                className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none"
               >
-                <option value="Police Safety Check">Police Safety Check (Inspection)</option>
-                <option value="Oil & Filter Service">Oil & Filter Service</option>
-                <option value="Brakes & Wheel Repair">Brakes & Wheel Repair</option>
-                <option value="New Tires">New Tires</option>
-                <option value="Deep Wash & Inside Clean">Deep Wash & Inside Clean</option>
-                <option value="Body Paint & Dent Repair">Body Paint & Dent Repair</option>
+                <option value="Police Safety Check">{tr('Police Safety Check')}</option>
+                <option value="Oil & Filter Service">{tr('Oil & Filter Service')}</option>
+                <option value="Brakes & Wheel Repair">{tr('Brakes & Wheel Repair')}</option>
+                <option value="New Tires">{tr('New Tires')}</option>
+                <option value="Deep Wash & Inside Clean">{tr('Deep Wash & Inside Clean')}</option>
+                <option value="Body Paint & Dent Repair">{tr('Body Paint & Dent Repair')}</option>
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">Garage Name or Note</label>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('Garage Name or Note')}</label>
               <input
                 type="text"
                 placeholder="e.g. Remera Inspection / Toyota Garage"
                 value={blockNotes}
                 onChange={(e) => setBlockNotes(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-500"
+                className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsBlockVehicleModalOpen(false)}
-                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Cancel
+                {tr('Cancel')}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmBlockVehicle}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-full text-sm font-bold shadow-sm flex items-center gap-1.5"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium inline-flex items-center gap-1.5"
               >
                 <Ban className="w-4 h-4" />
-                <span>Block Car Now</span>
+                <span>{tr('Block Car Now')}</span>
               </button>
             </div>
           </div>

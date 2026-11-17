@@ -54,6 +54,7 @@ import { SuperAdminTenantsAndUsers } from './superadmin/SuperAdminTenantsAndUser
 import { SuperAdminBillingAndPlans } from './superadmin/SuperAdminBillingAndPlans';
 import { SuperAdminOperationsAndSupport } from './superadmin/SuperAdminOperationsAndSupport';
 import { SuperAdminPlatformGovernance } from './superadmin/SuperAdminPlatformGovernance';
+import { useI18n } from '../utils/i18n';
 
 interface SuperAdminViewProps {
   companies: Company[];
@@ -186,6 +187,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   requestedModule,
   onClearRequestedModule,
 }) => {
+  const { tr } = useI18n();
   const [activeModule, setActiveModule] = useState<SuperAdminModuleId>('overview');
 
   useEffect(() => {
@@ -212,47 +214,47 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   const navGroups: NavGroup[] = useMemo(() => {
     const raw: NavGroup[] = [
       {
-        groupLabel: 'Overview & Numbers',
+        groupLabel: 'Overview & numbers',
         items: [
-          { id: 'overview', label: 'Home Summary', icon: LayoutDashboard },
-          { id: 'analytics', label: 'Growth & Usage', icon: BarChart3 },
+          { id: 'overview', label: 'Home summary', icon: LayoutDashboard },
+          { id: 'analytics', label: 'Growth & usage', icon: BarChart3 },
         ],
       },
       {
-        groupLabel: 'Companies & People',
+        groupLabel: 'Companies & people',
         items: [
           { id: 'companies', label: 'Companies', icon: Building2, badge: pendingCompaniesCount || undefined },
-          { id: 'users', label: 'All People', icon: Users },
+          { id: 'users', label: 'All people', icon: Users },
         ],
       },
       {
-        groupLabel: 'Plans & Money',
+        groupLabel: 'Plans & money',
         items: [
-          { id: 'subscriptions', label: 'Active Plans', icon: Layers },
-          { id: 'plans', label: 'Price List', icon: FileText },
-          { id: 'saas_payments', label: 'Plan Payments', icon: CreditCard },
-          { id: 'revenue', label: 'Money Summary', icon: DollarSign },
+          { id: 'subscriptions', label: 'Active plans', icon: Layers },
+          { id: 'plans', label: 'Price list', icon: FileText },
+          { id: 'saas_payments', label: 'Plan payments', icon: CreditCard },
+          { id: 'revenue', label: 'Money summary', icon: DollarSign },
         ],
       },
       {
-        groupLabel: 'Trips & Help',
+        groupLabel: 'Trips & help',
         items: [
-          { id: 'bookings', label: 'All Bookings', icon: ClipboardList },
-          { id: 'fleet', label: 'All Cars', icon: Car },
-          { id: 'support', label: 'Help Desk', icon: LifeBuoy, badge: openTicketCount || undefined },
-          { id: 'notifications', label: 'SMS & Emails', icon: Mail },
+          { id: 'bookings', label: 'All bookings', icon: ClipboardList },
+          { id: 'fleet', label: 'All cars', icon: Car },
+          { id: 'support', label: 'Help desk', icon: LifeBuoy, badge: openTicketCount || undefined },
+          { id: 'notifications', label: 'SMS & emails', icon: Mail },
         ],
       },
       {
-        groupLabel: 'Safety & Rules',
+        groupLabel: 'Safety & rules',
         items: [
-          { id: 'integrations', label: 'Connected Tools', icon: Radio },
-          { id: 'health', label: 'System Status', icon: Activity },
-          { id: 'security', label: 'Safety Alerts', icon: ShieldAlert, badge: openSecCount || undefined },
-          { id: 'audit', label: 'Change History', icon: Lock },
-          { id: 'content', label: 'Notices & Rules', icon: FileText },
-          { id: 'settings', label: 'Main Settings', icon: Settings },
-          { id: 'admins', label: 'Admin Team', icon: ShieldCheck },
+          { id: 'integrations', label: 'Connected tools', icon: Radio },
+          { id: 'health', label: 'System status', icon: Activity },
+          { id: 'security', label: 'Safety alerts', icon: ShieldAlert, badge: openSecCount || undefined },
+          { id: 'audit', label: 'Change history', icon: Lock },
+          { id: 'content', label: 'Notices & rules', icon: FileText },
+          { id: 'settings', label: 'Main settings', icon: Settings },
+          { id: 'admins', label: 'Admin team', icon: ShieldCheck },
         ],
       },
     ];
@@ -297,19 +299,26 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
   const allNavItems = useMemo(() => navGroups.flatMap((g) => g.items), [navGroups]);
   const quickMobileModules: { id: SuperAdminModuleId; label: string }[] = [
-    { id: 'overview', label: 'Summary' },
-    { id: 'companies', label: 'Companies' },
-    { id: 'revenue', label: 'Money' },
-    { id: 'settings', label: 'Settings' },
+    { id: 'overview', label: tr('Summary') },
+    { id: 'companies', label: tr('Companies') },
+    { id: 'revenue', label: tr('Money') },
+    { id: 'settings', label: tr('Settings') },
   ];
 
+  const selectModule = (mod: SuperAdminModuleId) => {
+    setActiveModule(mod);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Compact Context Bar (Identity & role now live cleanly in the Profile Menu) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="text-xs font-semibold text-[#425466] dark:text-slate-400 shrink-0">
-            Company:
+    <div className="space-y-5">
+      {/* Compact Sticky Context & Section Bar */}
+      <div className="sticky top-[64px] z-20 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
+            {tr('Company')}:
           </span>
           <select
             value={currentCompany.id}
@@ -322,7 +331,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               );
             }}
             aria-label="Select company to view"
-            className="min-w-0 flex-1 sm:max-w-[280px] text-sm font-semibold text-[#0a2540] dark:text-white bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none"
+            className="min-w-0 flex-1 sm:max-w-[300px] text-sm font-semibold text-slate-900 dark:text-slate-100 bg-slate-50/80 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none"
           >
             {companies.map((c) => (
               <option key={c.id} value={c.id}>
@@ -336,30 +345,30 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               onClick={() =>
                 onSwitchCompanyContext(defaultTenantId, 'Switched back to main company view.')
               }
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset</span>
+              <span>{tr('Reset')}</span>
             </button>
           )}
         </div>
 
         {/* Mobile All-Section Dropdown Picker */}
         <div className="lg:hidden flex items-center gap-2 w-full sm:w-auto">
-          <label htmlFor="admin-mobile-section" className="text-xs font-semibold text-[#425466] dark:text-slate-400 shrink-0">
-            Section:
+          <label htmlFor="admin-mobile-section" className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0">
+            {tr('Section')}:
           </label>
           <select
             id="admin-mobile-section"
             value={activeModule}
-            onChange={(e) => setActiveModule(e.target.value as SuperAdminModuleId)}
-            className="flex-1 sm:w-56 text-sm font-semibold text-[#0a2540] dark:text-white bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none"
+            onChange={(e) => selectModule(e.target.value as SuperAdminModuleId)}
+            className="flex-1 sm:w-56 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-slate-50/80 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none"
           >
             {navGroups.map((group) => (
-              <optgroup key={group.groupLabel} label={group.groupLabel}>
+              <optgroup key={group.groupLabel} label={tr(group.groupLabel)}>
                 {group.items.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.label}
+                    {tr(item.label)}
                     {item.badge ? ` (${item.badge})` : ''}
                   </option>
                 ))}
@@ -371,24 +380,24 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
       {/* Maintenance Mode Banner */}
       {platformSettings.maintenance_mode && (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between gap-3">
+        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200/80 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-sm flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>
-              <strong>Site Pause Is On:</strong> {platformSettings.maintenance_message}
+              <strong className="font-semibold">{tr('Site pause is on:')}</strong> {platformSettings.maintenance_message}
             </span>
           </div>
           <button
             onClick={() => setActiveModule('settings')}
-            className="px-4 py-1.5 rounded-full bg-rose-600 text-white font-semibold whitespace-nowrap text-sm"
+            className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold whitespace-nowrap text-xs transition-colors"
           >
-            Change
+            {tr('Change')}
           </button>
         </div>
       )}
 
-      {/* Compact Mobile Quick Tabs (4 main actions, zero clutter) */}
-      <div className="lg:hidden grid grid-cols-4 gap-1.5">
+      {/* Compact Mobile Quick Tabs */}
+      <div className="lg:hidden inline-flex w-full items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg gap-1">
         {quickMobileModules
           .filter((qm) => allNavItems.some((item) => item.id === qm.id))
           .map((qm) => {
@@ -396,11 +405,11 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
             return (
               <button
                 key={qm.id}
-                onClick={() => setActiveModule(qm.id)}
-                className={`px-2 py-2 rounded-xl text-xs sm:text-sm font-semibold text-center truncate border transition-colors ${
+                onClick={() => selectModule(qm.id)}
+                className={`flex-1 px-2 py-2 text-xs rounded-md text-center truncate transition-colors ${
                   isActive
-                    ? `${currentTheme.primaryBg} ${currentTheme.btnText} border-transparent`
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-300'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-xs'
+                    : 'font-medium text-slate-500 dark:text-slate-400'
                 }`}
               >
                 {qm.label}
@@ -410,12 +419,12 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
       </div>
 
       {/* Desktop Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <aside className="hidden lg:block lg:col-span-3 stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-5 sticky top-20">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <aside className="hidden lg:block lg:col-span-3 bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-3 space-y-4 sticky top-[132px] max-h-[calc(100vh-9rem)] overflow-y-auto">
           {navGroups.map((group) => (
             <div key={group.groupLabel} className="space-y-1">
-              <div className="px-3 py-1 text-sm font-bold text-[#425466] dark:text-slate-400">
-                {group.groupLabel}
+              <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                {tr(group.groupLabel)}
               </div>
               {group.items.map((item) => {
                 const Icon = item.icon;
@@ -423,19 +432,19 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveModule(item.id)}
-                    className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                    onClick={() => selectModule(item.id)}
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
                       isActive
-                        ? 'font-bold text-[#0a2540] dark:text-white bg-[#f6f9fc] dark:bg-slate-800'
-                        : 'font-medium text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        ? 'font-semibold accent-tint accent-text'
+                        : 'font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
                     }`}
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? currentTheme.primaryText : ''}`} />
-                      <span className="truncate">{item.label}</span>
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'accent-text' : 'text-slate-400 dark:text-slate-500'}`} />
+                      <span className="truncate">{tr(item.label)}</span>
                     </span>
                     {item.badge ? (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-sm font-bold">
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 font-mono text-xs font-semibold tabular-nums">
                         {item.badge}
                       </span>
                     ) : null}

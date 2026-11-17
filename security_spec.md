@@ -6,8 +6,10 @@
 3. **Anti-Privilege-Escalation on `/users`**: Authenticated users creating or updating their own user record cannot set or escalate `role` to `'superadmin'` or modify protected admin status fields unless they pass `isSuperAdmin()`.
 4. **Immutable Audit Trail**: `/platform_audit_logs/{logId}` is strictly append-only (`allow update, delete: if false;` even for superadmins).
 5. **Strict Path & Schema Validation**: Every document ID on single-document operations passes `isValidId(id)` (`size() > 0 && size() <= 128 && matches('^[a-zA-Z0-9_\\-]+$')`). Every create/update begins with `isValid[Entity](incoming())` enforcing types, enum membership, positive monetary boundaries, and string `.size()` bounds matching `firebase-blueprint.json`.
-6. **PII Protection**: `/users`, `/customers`, `/payments`, `/platform_admins`, `/saas_payments`, `/company_subscriptions`, and `/platform_audit_logs` forbid unauthenticated reads and enforce strict ownership or staff/superadmin bounds.
+6. **PII Protection**: `/users`, `/customers`, `/payments`, `/platform_admins`, `/saas_payments`, `/company_subscriptions`, and `/platform_audit_logs` forbid unauthenticated reads and enforce strict ownership or tenant-scoped staff/superadmin bounds.
 7. **Single-Key / Action-Scoped Updates**: Client updates on operational entities must pass `incoming().diff(existing()).affectedKeys().hasOnly([...])` for the allowed action or `isSuperAdmin()`.
+8. **Cross-Tenant `company_id` Isolation**: Single-document reads, writes, and deletes on tenant collections (`vehicles`, `drivers`, `bookings`, `customers`, `payments`, `maintenance`, `expenses`, `handovers`, `tasks`, `activity_logs`, `company_subscriptions`) verify `isSameCompany(...)` against the caller's `/users/{uid}` document and prevent re-assigning `company_id` on updates.
+9. **Firebase Storage Vehicle Media Security (`/storage.rules`)**: Allows public read of storefront vehicle photos while restricting uploads to verified users with image content types (`image/*`) under `5 MB`.
 
 ---
 

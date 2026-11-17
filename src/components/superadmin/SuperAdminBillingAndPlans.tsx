@@ -17,7 +17,9 @@ import {
   SaasPaymentStatus,
 } from '../../types';
 import { ColorTheme } from '../../theme';
-import { ReasonActionModal, exportToCsv, getStatusStyles } from './SuperAdminShared';
+import { ReasonActionModal, exportToCsv, getStatusDotColor, getStatusStyles } from './SuperAdminShared';
+import { useI18n } from '../../utils/i18n';
+import { formatHumanDate } from '../../utils/dates';
 
 interface SuperAdminBillingAndPlansProps {
   mode: 'subscriptions' | 'plans' | 'saas_payments' | 'revenue';
@@ -50,6 +52,7 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
   onReconcilePayment,
   onRefundPayment,
 }) => {
+  const { currency, formatMoney, tr } = useI18n();
   const [subStatusFilter, setSubStatusFilter] = useState<'all' | CompanySubscriptionStatus>('all');
   const [extendTarget, setExtendTarget] = useState<CompanySubscription | null>(null);
   const [newRenewalDate, setNewRenewalDate] = useState('');
@@ -149,123 +152,127 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
   // -------------------------------------------------------------------------
   if (mode === 'subscriptions') {
     return (
-      <div className="space-y-5">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-              Company Plans
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {tr('Company plans')}
             </h3>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
-              Change renewal dates, give free trial days, or upgrade a company plan. Every change saves a reason.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {tr('Change renewal dates, give free trial days, or upgrade a company plan. Every change saves a reason.')}
             </p>
           </div>
           <select
             value={subStatusFilter}
             onChange={(e) => setSubStatusFilter(e.target.value as any)}
-            className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm rounded-xl px-3.5 py-2.5 text-[#0a2540] dark:text-slate-200 outline-none"
+            className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-sm rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 outline-none"
           >
-            <option value="all">All Plans ({subscriptions.length})</option>
+            <option value="all">{tr('All plans')} ({subscriptions.length})</option>
             {(['Active', 'Trial', 'Past Due', 'Suspended', 'Cancelled', 'Expired'] as CompanySubscriptionStatus[]).map(
               (st) => (
                 <option key={st} value={st}>
-                  {st}
+                  {tr(st)}
                 </option>
               )
             )}
           </select>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider text-[#425466] dark:text-slate-400 font-semibold">
-            <div className="col-span-3">Company</div>
-            <div className="col-span-1">Plan</div>
-            <div className="col-span-2 text-right">Monthly Price</div>
-            <div className="col-span-2">Next Date / Trial</div>
-            <div className="col-span-1 text-center">Status</div>
-            <div className="col-span-3 text-right">Actions</div>
-          </div>
-          <div className="divide-y divide-slate-200 dark:divide-slate-800/70 text-sm text-[#0a2540] dark:text-slate-200">
-            {filteredSubs.map((sub) => (
-              <div
-                key={sub.id}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 px-4 py-3.5 items-center hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40"
-              >
-                <div className="lg:col-span-3 min-w-0">
-                  <div className="font-bold text-[#0a2540] dark:text-white truncate">{sub.company_name}</div>
-                  {sub.last_adjustment_reason && (
-                    <div className="text-xs text-[#425466] dark:text-slate-400 truncate">
-                      Note: {sub.last_adjustment_reason}
-                    </div>
-                  )}
-                </div>
-                <div className="lg:col-span-1 font-mono font-semibold text-xs truncate">{sub.plan_name}</div>
-                <div className="lg:col-span-2 lg:text-right font-mono tabular-nums font-bold whitespace-nowrap">
-                  {sub.monthly_fee_rwf.toLocaleString()} RWF
-                </div>
-                <div className="lg:col-span-2 font-mono tabular-nums text-xs">
-                  <div className="whitespace-nowrap">Renews: {sub.renewal_date}</div>
-                  {sub.trial_end_date && (
-                    <div className="text-sky-600 dark:text-sky-400 whitespace-nowrap">Free ends: {sub.trial_end_date}</div>
-                  )}
-                </div>
-                <div className="lg:col-span-1 lg:text-center">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full border text-xs font-semibold whitespace-nowrap ${getStatusStyles(sub.status)}`}>
-                    {sub.status}
-                  </span>
-                </div>
-                <div className="lg:col-span-3 flex items-center lg:justify-end gap-1.5 flex-wrap">
-                  {canEditBilling && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setExtendTarget(sub);
-                          setNewRenewalDate(sub.renewal_date);
-                          setExtendReason('');
-                        }}
-                        className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 whitespace-nowrap"
-                      >
-                        More Time
-                      </button>
-                      <button
-                        onClick={() => {
-                          setTrialTarget(sub);
-                          setTrialDays(14);
-                          setTrialReason('');
-                        }}
-                        className="px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/25 whitespace-nowrap"
-                      >
-                        Free Days
-                      </button>
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          const nextTier = e.target.value as 'starter' | 'growth' | 'enterprise';
-                          if (!nextTier) return;
-                          setPendingAction({
-                            title: `Change ${sub.company_name} Plan to ${nextTier.toUpperCase()}`,
-                            description: `Current plan: ${sub.plan_name}`,
-                            confirmLabel: `Set ${nextTier.toUpperCase()}`,
-                            execute: (reason) => onUpdateCompanyPlan(sub.company_id, nextTier, reason),
-                          });
-                        }}
-                        className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-2.5 py-1.5 text-xs outline-none"
-                      >
-                        <option value="">Change Plan...</option>
-                        <option value="starter">Starter (35k)</option>
-                        <option value="growth">Growth (75k)</option>
-                        <option value="enterprise">Enterprise (150k)</option>
-                      </select>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-4">{tr('Company')}</th>
+                <th className="py-3 px-4">{tr('Plan')}</th>
+                <th className="py-3 px-4 text-right">{tr('Monthly price')}</th>
+                <th className="py-3 px-4">{tr('Next date / trial')}</th>
+                <th className="py-3 px-4">{tr('Status')}</th>
+                <th className="py-3 px-4 text-right">{tr('Actions')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-900 dark:text-slate-100">
+              {filteredSubs.map((sub) => (
+                <tr key={sub.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-3 px-4">
+                    <div className="font-semibold">{sub.company_name}</div>
+                    {sub.last_adjustment_reason && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">
+                        Note: {sub.last_adjustment_reason}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 font-mono text-xs">{sub.plan_name}</td>
+                  <td className="py-3 px-4 text-right font-mono tabular-nums font-semibold whitespace-nowrap">
+                    {formatMoney(sub.monthly_fee_rwf)}
+                  </td>
+                  <td className="py-3 px-4 font-mono tabular-nums text-xs">
+                    <div className="whitespace-nowrap">{tr('Renews')}: {formatHumanDate(sub.renewal_date)}</div>
+                    {sub.trial_end_date && (
+                      <div className="text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                        {tr('Free ends')}: {formatHumanDate(sub.trial_end_date)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium">
+                      <span className={`w-2 h-2 rounded-full ${getStatusDotColor(sub.status)}`} />
+                      <span>{tr(sub.status)}</span>
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {canEditBilling && (
+                      <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+                        <button
+                          onClick={() => {
+                            setExtendTarget(sub);
+                            setNewRenewalDate(sub.renewal_date);
+                            setExtendReason('');
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap"
+                        >
+                          {tr('More time')}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setTrialTarget(sub);
+                            setTrialDays(14);
+                            setTrialReason('');
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 whitespace-nowrap"
+                        >
+                          {tr('Free days')}
+                        </button>
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const nextTier = e.target.value as 'starter' | 'growth' | 'enterprise';
+                            if (!nextTier) return;
+                            setPendingAction({
+                              title: `Change ${sub.company_name} plan to ${nextTier}`,
+                              description: `Current plan: ${sub.plan_name}`,
+                              confirmLabel: `Set ${nextTier}`,
+                              execute: (reason) => onUpdateCompanyPlan(sub.company_id, nextTier, reason),
+                            });
+                          }}
+                          className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs outline-none"
+                        >
+                          <option value="">{tr('Change plan...')}</option>
+                          <option value="starter">Starter ({formatMoney(35000)})</option>
+                          <option value="growth">Growth ({formatMoney(75000)})</option>
+                          <option value="enterprise">Enterprise ({formatMoney(150000)})</option>
+                        </select>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* More Time Modal */}
         {extendTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -273,54 +280,54 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
                 onExtendSubscription(extendTarget.id, newRenewalDate, extendReason.trim());
                 setExtendTarget(null);
               }}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-sm"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-                <h4 className="text-base font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
-                  <CalendarClock className="w-5 h-5" style={{ color: currentTheme.hex }} />
-                  <span>Give More Time: {extendTarget.company_name}</span>
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4 accent-text" />
+                  <span>Give more time: {extendTarget.company_name}</span>
                 </h4>
-                <button type="button" onClick={() => setExtendTarget(null)} className="text-slate-400 p-1 rounded-full">
-                  <X className="w-5 h-5" />
+                <button
+                  type="button"
+                  onClick={() => setExtendTarget(null)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <div>
-                <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">
-                  New Renewal Date
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  New renewal date
                 </label>
                 <input
                   type="date"
                   value={newRenewalDate}
                   onChange={(e) => setNewRenewalDate(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 font-mono text-[#0a2540] dark:text-white"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100"
                   required
                 />
               </div>
               <div>
-                <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Reason for Change</label>
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Reason for change</label>
                 <textarea
                   rows={2}
                   value={extendReason}
                   onChange={(e) => setExtendReason(e.target.value)}
                   placeholder="e.g. Bank transfer slip received, waiting to clear."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-[#0a2540] dark:text-white"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setExtendTarget(null)}
-                  className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300 font-semibold"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={`px-5 py-2 rounded-full font-semibold ${currentTheme.btnText}`}
-                  style={{ backgroundColor: currentTheme.hex }}
-                >
-                  Save New Date
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                  Save new date
                 </button>
               </div>
             </form>
@@ -329,7 +336,7 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
 
         {/* Free Days Modal */}
         {trialTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -337,53 +344,53 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
                 onGrantTrial(trialTarget.company_id, trialDays, trialReason.trim());
                 setTrialTarget(null);
               }}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-sm"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-                <h4 className="text-base font-bold text-[#0a2540] dark:text-white">
-                  Give Free Days: {trialTarget.company_name}
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                  Give free days: {trialTarget.company_name}
                 </h4>
-                <button type="button" onClick={() => setTrialTarget(null)} className="text-slate-400 p-1 rounded-full">
-                  <X className="w-5 h-5" />
+                <button
+                  type="button"
+                  onClick={() => setTrialTarget(null)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <div>
-                <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Number of Free Days</label>
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Number of free days</label>
                 <input
                   type="number"
                   min={1}
                   max={90}
                   value={trialDays}
                   onChange={(e) => setTrialDays(Number(e.target.value))}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 font-mono text-[#0a2540] dark:text-white"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100"
                   required
                 />
               </div>
               <div>
-                <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Reason for Change</label>
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Reason for change</label>
                 <textarea
                   rows={2}
                   value={trialReason}
                   onChange={(e) => setTrialReason(e.target.value)}
                   placeholder="e.g. Giving extra free days while they add their cars."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-[#0a2540] dark:text-white"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setTrialTarget(null)}
-                  className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300 font-semibold"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={`px-5 py-2 rounded-full font-semibold ${currentTheme.btnText}`}
-                  style={{ backgroundColor: currentTheme.hex }}
-                >
-                  Give {trialDays} Free Days
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                  Give {trialDays} free days
                 </button>
               </div>
             </form>
@@ -434,94 +441,90 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
     };
 
     return (
-      <div className="space-y-5">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-              Prices & Plans
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {tr('Prices & plans')}
             </h3>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
-              Changes to Starter, Growth, and Enterprise update on the pricing page right away.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {tr('Changes to Starter, Growth, and Enterprise update on the pricing page right away.')}
             </p>
           </div>
           {canEditBilling && (
             <button
               onClick={openCreatePlan}
-              className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap ${currentTheme.btnText}`}
-              style={{ backgroundColor: currentTheme.hex }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap accent-bg"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Plan</span>
+              <span>{tr('Add plan')}</span>
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {plans.map((plan) => {
             const count = companies.filter((c) => c.tier_id === plan.tier_key).length;
             return (
-              <div
-                key={plan.id}
-                className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4"
-              >
+              <div key={plan.id} className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-5 flex flex-col justify-between space-y-4">
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h4 className="text-base font-bold text-[#0a2540] dark:text-white">{plan.name}</h4>
-                      <p className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">
+                      <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">{plan.name}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {plan.target_fleet_size}
                       </p>
                     </div>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles(
+                      className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles(
                         plan.is_active ? 'Active' : 'Inactive'
                       )}`}
                     >
-                      {plan.is_active ? 'Active' : 'Hidden'}
+                      {plan.is_active ? tr('Active') : tr('Hidden')}
                     </span>
                   </div>
 
                   <div className="font-mono tabular-nums">
-                    <span className="text-2xl font-bold text-[#0a2540] dark:text-white">
-                      {plan.monthly_fee_rwf.toLocaleString()}
+                    <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                      {formatMoney(plan.monthly_fee_rwf)}
                     </span>
-                    <span className="text-sm text-[#425466] dark:text-slate-400 ml-1">RWF/mo</span>
-                    <div className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">
-                      Yearly: {plan.annual_fee_rwf.toLocaleString()} RWF · {plan.trial_days} free days
+                    <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">/mo</span>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {tr('Yearly')}: {formatMoney(plan.annual_fee_rwf)} · {plan.trial_days} {tr('free days')}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 text-sm font-mono tabular-nums">
-                    <div className="p-2.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                      <span className="text-[#425466] dark:text-slate-400 block text-sm">Cars</span>
-                      <span className="font-bold text-[#0a2540] dark:text-white">{plan.max_vehicles}</span>
+                  <div className="grid grid-cols-2 gap-2 text-sm font-mono tabular-nums">
+                    <div className="p-2.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Cars</span>
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{plan.max_vehicles}</span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                      <span className="text-[#425466] dark:text-slate-400 block text-sm">Staff</span>
-                      <span className="font-bold text-[#0a2540] dark:text-white">{plan.max_employees}</span>
+                    <div className="p-2.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Staff</span>
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{plan.max_employees}</span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                      <span className="text-[#425466] dark:text-slate-400 block text-sm">Offices</span>
-                      <span className="font-bold text-[#0a2540] dark:text-white">{plan.max_branches}</span>
+                    <div className="p-2.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Offices</span>
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{plan.max_branches}</span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                      <span className="text-[#425466] dark:text-slate-400 block text-sm">Trips/mo</span>
-                      <span className="font-bold text-[#0a2540] dark:text-white">{plan.max_monthly_bookings}</span>
+                    <div className="p-2.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Trips/mo</span>
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{plan.max_monthly_bookings}</span>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <div className="space-y-1.5 text-sm pt-2 border-t border-slate-100 dark:border-slate-800">
                     {plan.features.slice(0, 4).map((f, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-[#425466] dark:text-slate-300">
-                        <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <div key={idx} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                         <span>{f}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-sm">
-                  <span className="text-[#425466] dark:text-slate-400 font-mono">{count} companies</span>
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <span className="text-slate-500 dark:text-slate-400 font-mono tabular-nums">{count} companies</span>
                   {canEditBilling && (
                     <button
                       onClick={() => {
@@ -529,10 +532,10 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
                         setPlanFeaturesText(plan.features.join('\n'));
                         setPlanReason('');
                       }}
-                      className="px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold flex items-center gap-1.5"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit Limits</span>
+                      <span>Edit limits</span>
                     </button>
                   )}
                 </div>
@@ -543,7 +546,7 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
 
         {/* Plan Editor Modal */}
         {editingPlan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -560,32 +563,36 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
                 );
                 setEditingPlan(null);
               }}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-sm max-h-[90vh] overflow-y-auto"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4 text-sm max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-                <h4 className="text-base font-bold text-[#0a2540] dark:text-white">Edit Plan Prices & Limits</h4>
-                <button type="button" onClick={() => setEditingPlan(null)} className="text-slate-400 p-1 rounded-full">
-                  <X className="w-5 h-5" />
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">Edit plan prices & limits</h4>
+                <button
+                  type="button"
+                  onClick={() => setEditingPlan(null)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Plan Name</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Plan name</label>
                   <input
                     type="text"
                     value={editingPlan.name}
                     onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Plan Level</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Plan level</label>
                   <select
                     value={editingPlan.tier_key}
                     onChange={(e) => setEditingPlan({ ...editingPlan, tier_key: e.target.value as any })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
                   >
                     <option value="trial">Trial</option>
                     <option value="starter">Starter</option>
@@ -597,36 +604,46 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Monthly (RWF)</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Monthly (RWF)</label>
                   <input
                     type="number"
                     value={editingPlan.monthly_fee_rwf}
                     onChange={(e) =>
                       setEditingPlan({ ...editingPlan, monthly_fee_rwf: Number(e.target.value) })
                     }
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                     required
                   />
+                  {currency === 'USD' && (
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 block">
+                      ≈ {formatMoney(editingPlan.monthly_fee_rwf)}
+                    </span>
+                  )}
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Yearly (RWF)</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Yearly (RWF)</label>
                   <input
                     type="number"
                     value={editingPlan.annual_fee_rwf}
                     onChange={(e) =>
                       setEditingPlan({ ...editingPlan, annual_fee_rwf: Number(e.target.value) })
                     }
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                     required
                   />
+                  {currency === 'USD' && (
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 block">
+                      ≈ {formatMoney(editingPlan.annual_fee_rwf)}
+                    </span>
+                  )}
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Free Days</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Free days</label>
                   <input
                     type="number"
                     value={editingPlan.trial_days}
                     onChange={(e) => setEditingPlan({ ...editingPlan, trial_days: Number(e.target.value) })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                     required
                   />
                 </div>
@@ -634,52 +651,52 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Max Cars</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Max cars</label>
                   <input
                     type="number"
                     value={editingPlan.max_vehicles}
                     onChange={(e) => setEditingPlan({ ...editingPlan, max_vehicles: Number(e.target.value) })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Max Staff</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Max staff</label>
                   <input
                     type="number"
                     value={editingPlan.max_employees}
                     onChange={(e) => setEditingPlan({ ...editingPlan, max_employees: Number(e.target.value) })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Offices</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Offices</label>
                   <input
                     type="number"
                     value={editingPlan.max_branches}
                     onChange={(e) => setEditingPlan({ ...editingPlan, max_branches: Number(e.target.value) })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Trips/mo</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Trips/mo</label>
                   <input
                     type="number"
                     value={editingPlan.max_monthly_bookings}
                     onChange={(e) =>
                       setEditingPlan({ ...editingPlan, max_monthly_bookings: Number(e.target.value) })
                     }
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">What Is Included (one per line)</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">What is included (one per line)</label>
                 <textarea
                   rows={3}
                   value={planFeaturesText}
                   onChange={(e) => setPlanFeaturesText(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                 />
               </div>
 
@@ -690,7 +707,7 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
                     checked={editingPlan.is_public}
                     onChange={(e) => setEditingPlan({ ...editingPlan, is_public: e.target.checked })}
                   />
-                  <span>Show on Public Page</span>
+                  <span>Show on public page</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -698,36 +715,32 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
                     checked={editingPlan.is_active}
                     onChange={(e) => setEditingPlan({ ...editingPlan, is_active: e.target.checked })}
                   />
-                  <span>Open for New Companies</span>
+                  <span>Open for new companies</span>
                 </label>
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Reason for Change</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Reason for change</label>
                 <input
                   type="text"
                   value={planReason}
                   onChange={(e) => setPlanReason(e.target.value)}
                   placeholder="e.g. Updated prices for new year."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                   required
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingPlan(null)}
-                  className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={`px-5 py-2 rounded-full font-semibold ${currentTheme.btnText}`}
-                  style={{ backgroundColor: currentTheme.hex }}
-                >
-                  Save Plan
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                  Save plan
                 </button>
               </div>
             </form>
@@ -742,24 +755,24 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
   // -------------------------------------------------------------------------
   if (mode === 'saas_payments') {
     return (
-      <div className="space-y-5">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={paySearch}
               onChange={(e) => setPaySearch(e.target.value)}
               placeholder="Search receipt code, MoMo code, or company..."
-              className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-100 text-sm rounded-xl pl-10 pr-3.5 py-2.5 outline-none"
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg pl-9 pr-3 py-2 outline-none"
             />
           </div>
           <select
             value={payStatusFilter}
             onChange={(e) => setPayStatusFilter(e.target.value as any)}
-            className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm rounded-xl px-3.5 py-2.5 text-[#0a2540] dark:text-slate-200 outline-none"
+            className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-sm rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 outline-none"
           >
-            <option value="all">All Payments ({saasPayments.length})</option>
+            <option value="all">All payments ({saasPayments.length})</option>
             {(['Successful', 'Pending', 'Failed', 'Refunded', 'Partially Refunded', 'Cancelled'] as SaasPaymentStatus[]).map(
               (st) => (
                 <option key={st} value={st}>
@@ -770,95 +783,95 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
           </select>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider text-[#425466] dark:text-slate-400 font-semibold">
-            <div className="col-span-3">Payment Code</div>
-            <div className="col-span-3">Company & Plan</div>
-            <div className="col-span-2">How Paid</div>
-            <div className="col-span-2 text-right">Amount</div>
-            <div className="col-span-1 text-center">Status</div>
-            <div className="col-span-1 text-right">Actions</div>
-          </div>
-          <div className="divide-y divide-slate-200 dark:divide-slate-800/70 text-sm text-[#0a2540] dark:text-slate-200">
-            {filteredPayments.map((p) => (
-              <div
-                key={p.id}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 px-4 py-3.5 items-center hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40"
-              >
-                <div className="lg:col-span-3 font-mono min-w-0">
-                  <div className="font-bold text-[#0a2540] dark:text-white truncate">{p.transaction_ref}</div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 truncate">{p.provider_ref}</div>
-                  {p.ebm_invoice_ref && (
-                    <div className="text-xs text-emerald-600 dark:text-emerald-400 truncate">{p.ebm_invoice_ref}</div>
-                  )}
-                </div>
-                <div className="lg:col-span-3 min-w-0">
-                  <div className="font-semibold text-[#0a2540] dark:text-white truncate">{p.company_name}</div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 whitespace-nowrap truncate">
-                    {p.plan_name} · {p.created_at}
-                  </div>
-                  {p.failure_reason && <div className="text-xs text-rose-500 mt-0.5 truncate">{p.failure_reason}</div>}
-                  {p.reconciliation_notes && (
-                    <div className="text-xs text-[#425466] dark:text-slate-400 mt-0.5 truncate">Note: {p.reconciliation_notes}</div>
-                  )}
-                </div>
-                <div className="lg:col-span-2 min-w-0">
-                  <div className="truncate">{p.method}</div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 truncate">{p.provider}</div>
-                </div>
-                <div className="lg:col-span-2 lg:text-right font-mono tabular-nums font-bold">
-                  <div className="whitespace-nowrap">
-                    {p.amount_rwf.toLocaleString()} {p.currency}
-                  </div>
-                  {p.refunded_amount_rwf && (
-                    <div className="text-xs text-violet-600 dark:text-violet-400 whitespace-nowrap">
-                      -{p.refunded_amount_rwf.toLocaleString()} sent back
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-4">Payment code</th>
+                <th className="py-3 px-4">Company & plan</th>
+                <th className="py-3 px-4">How paid</th>
+                <th className="py-3 px-4 text-right">Amount</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-900 dark:text-slate-100">
+              {filteredPayments.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-3 px-4 font-mono">
+                    <div className="font-semibold text-xs">{p.transaction_ref}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{p.provider_ref}</div>
+                    {p.ebm_invoice_ref && (
+                      <div className="text-xs text-emerald-600 dark:text-emerald-400">{p.ebm_invoice_ref}</div>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="font-semibold">{p.company_name}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {p.plan_name} · {formatHumanDate(p.created_at)}
                     </div>
-                  )}
-                </div>
-                <div className="lg:col-span-1 lg:text-center">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full border text-xs font-semibold whitespace-nowrap ${getStatusStyles(p.status)}`}>
-                    {p.status}
-                  </span>
-                </div>
-                <div className="lg:col-span-1 flex items-center lg:justify-end gap-1.5 flex-wrap">
-                  {canEditBilling && (
-                    <>
-                      {(p.status === 'Pending' || p.status === 'Failed') && (
-                        <button
-                          onClick={() => {
-                            setReconcileTarget(p);
-                            setReconcileStatus('Successful');
-                            setReconcileNotes('');
-                          }}
-                          className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white whitespace-nowrap"
-                        >
-                          Confirm Paid
-                        </button>
-                      )}
-                      {(p.status === 'Successful' || p.status === 'Partially Refunded') && (
-                        <button
-                          onClick={() => {
-                            setRefundTarget(p);
-                            setRefundAmount(p.amount_rwf - (p.refunded_amount_rwf || 0));
-                            setRefundReason('');
-                          }}
-                          className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 whitespace-nowrap"
-                        >
-                          Refund
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+                    {p.failure_reason && <div className="text-xs text-rose-600 dark:text-rose-400 mt-0.5">{p.failure_reason}</div>}
+                    {p.reconciliation_notes && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Note: {p.reconciliation_notes}</div>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <div>{p.method}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{p.provider}</div>
+                  </td>
+                  <td className="py-3 px-4 text-right font-mono tabular-nums font-semibold">
+                    <div className="whitespace-nowrap">{formatMoney(p.amount_rwf)}</div>
+                    {p.refunded_amount_rwf && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        -{formatMoney(p.refunded_amount_rwf)} {tr('sent back')}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium">
+                      <span className={`w-2 h-2 rounded-full ${getStatusDotColor(p.status)}`} />
+                      <span>{tr(p.status)}</span>
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {canEditBilling && (
+                      <div className="inline-flex items-center gap-1.5 justify-end">
+                        {(p.status === 'Pending' || p.status === 'Failed') && (
+                          <button
+                            onClick={() => {
+                              setReconcileTarget(p);
+                              setReconcileStatus('Successful');
+                              setReconcileNotes('');
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap"
+                          >
+                            Confirm paid
+                          </button>
+                        )}
+                        {(p.status === 'Successful' || p.status === 'Partially Refunded') && (
+                          <button
+                            onClick={() => {
+                              setRefundTarget(p);
+                              setRefundAmount(p.amount_rwf - (p.refunded_amount_rwf || 0));
+                              setRefundReason('');
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap"
+                          >
+                            Refund
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Confirm Paid Modal */}
         {reconcileTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -866,56 +879,56 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
                 onReconcilePayment(reconcileTarget.id, reconcileStatus, reconcileNotes.trim());
                 setReconcileTarget(null);
               }}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-sm"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-                <h4 className="text-base font-bold text-[#0a2540] dark:text-white">
-                  Check Payment {reconcileTarget.transaction_ref}
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                  Check payment {reconcileTarget.transaction_ref}
                 </h4>
-                <button type="button" onClick={() => setReconcileTarget(null)} className="text-slate-400 p-1 rounded-full">
-                  <X className="w-5 h-5" />
+                <button
+                  type="button"
+                  onClick={() => setReconcileTarget(null)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono">
-                {reconcileTarget.company_name} · {reconcileTarget.amount_rwf.toLocaleString()} RWF
+              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 font-mono text-xs tabular-nums">
+                {reconcileTarget.company_name} · {formatMoney(reconcileTarget.amount_rwf)}
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Payment Result</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Payment result</label>
                 <select
                   value={reconcileStatus}
                   onChange={(e) => setReconcileStatus(e.target.value as SaasPaymentStatus)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                 >
-                  <option value="Successful">Paid (Turn On Company & Make Receipt)</option>
+                  <option value="Successful">Paid (turn on company & make receipt)</option>
                   <option value="Failed">Failed</option>
                   <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Note (Required)</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Note (required)</label>
                 <textarea
                   rows={2}
                   value={reconcileNotes}
                   onChange={(e) => setReconcileNotes(e.target.value)}
                   placeholder="e.g. Checked Bank of Kigali slip #449182."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setReconcileTarget(null)}
-                  className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={`px-5 py-2 rounded-full font-semibold ${currentTheme.btnText}`}
-                  style={{ backgroundColor: currentTheme.hex }}
-                >
-                  Save Result
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                  Save result
                 </button>
               </div>
             </form>
@@ -924,7 +937,7 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
 
         {/* Refund Modal */}
         {refundTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -932,49 +945,53 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
                 onRefundPayment(refundTarget.id, refundAmount, refundReason.trim());
                 setRefundTarget(null);
               }}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-sm"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-                <h4 className="text-base font-bold text-[#0a2540] dark:text-white">
-                  Send Money Back ({refundTarget.transaction_ref})
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                  Send money back ({refundTarget.transaction_ref})
                 </h4>
-                <button type="button" onClick={() => setRefundTarget(null)} className="text-slate-400 p-1 rounded-full">
-                  <X className="w-5 h-5" />
+                <button
+                  type="button"
+                  onClick={() => setRefundTarget(null)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Amount to Return (RWF)</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Amount to return (RWF)</label>
                 <input
                   type="number"
                   min={1000}
                   max={refundTarget.amount_rwf - (refundTarget.refunded_amount_rwf || 0)}
                   value={refundAmount}
                   onChange={(e) => setRefundAmount(Number(e.target.value))}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   required
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Reason for Refund</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Reason for refund</label>
                 <textarea
                   rows={2}
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
                   placeholder="e.g. Company paid twice by mistake on MoMo."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setRefundTarget(null)}
-                  className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="px-5 py-2 rounded-full font-semibold bg-rose-600 text-white">
-                  Confirm Refund
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold bg-rose-600 hover:bg-rose-700 text-white">
+                  Confirm refund
                 </button>
               </div>
             </form>
@@ -988,14 +1005,14 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
   // MODULE 7: MONEY SUMMARY
   // -------------------------------------------------------------------------
   return (
-    <div className="space-y-6">
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-5">
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-            Money Summary
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {tr('Money summary')}
           </h3>
-          <p className="text-sm text-[#425466] dark:text-slate-400">
-            Shows money already paid, money still waiting, failed payments, and money sent back.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Shows money already paid, money still waiting, failed payments, and money sent back.')}
           </p>
         </div>
         <button
@@ -1016,76 +1033,77 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
               ])
             )
           }
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap ${currentTheme.btnText}`}
-          style={{ backgroundColor: currentTheme.hex }}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap accent-bg"
         >
           <Download className="w-4 h-4" />
-          <span>Download CSV</span>
+          <span>{tr('Download CSV')}</span>
         </button>
       </div>
 
       {/* 5 Financial Buckets */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Money Paid (Net)</div>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums mt-1.5">
-            {revenueSummary.netCollected.toLocaleString()} RWF
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+          <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Money paid (net)')}</div>
+          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-1.5">
+            {formatMoney(revenueSummary.netCollected)}
           </div>
-          <div className="text-sm text-[#425466] dark:text-slate-400 mt-1">Paid minus refunds</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{tr('Paid minus refunds')}</div>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Still Waiting</div>
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono tabular-nums mt-1.5">
-            {revenueSummary.outstandingTotal.toLocaleString()} RWF
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+          <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Still waiting')}</div>
+          <div className="text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums mt-1.5">
+            {formatMoney(revenueSummary.outstandingTotal)}
           </div>
-          <div className="text-sm text-[#425466] dark:text-slate-400 mt-1">Not paid yet</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{tr('Not paid yet')}</div>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Failed Payments</div>
-          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono tabular-nums mt-1.5">
-            {revenueSummary.failedTotal.toLocaleString()} RWF
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+          <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Failed payments')}</div>
+          <div className="text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums mt-1.5">
+            {formatMoney(revenueSummary.failedTotal)}
           </div>
-          <div className="text-sm text-[#425466] dark:text-slate-400 mt-1">Needs retry</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{tr('Needs retry')}</div>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Sent Back</div>
-          <div className="text-2xl font-bold text-violet-600 dark:text-violet-400 font-mono tabular-nums mt-1.5">
-            {revenueSummary.refundedTotal.toLocaleString()} RWF
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+          <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Sent back')}</div>
+          <div className="text-lg font-bold text-slate-900 dark:text-slate-100 tabular-nums mt-1.5">
+            {formatMoney(revenueSummary.refundedTotal)}
           </div>
-          <div className="text-sm text-[#425466] dark:text-slate-400 mt-1">Refunded to companies</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{tr('Refunded to companies')}</div>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Monthly Total</div>
-          <div className="text-2xl font-bold text-[#0a2540] dark:text-white font-mono tabular-nums mt-1.5">
-            {revenueSummary.activeMrr.toLocaleString()} RWF
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+          <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Monthly total')}</div>
+          <div className="text-lg font-bold text-slate-900 dark:text-slate-100 tabular-nums mt-1.5">
+            {formatMoney(revenueSummary.activeMrr)}
           </div>
-          <div className="text-sm text-[#425466] dark:text-slate-400 mt-1 font-mono tabular-nums">
-            Average: {revenueSummary.arpu.toLocaleString()} RWF
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
+            {tr('Average')}: {formatMoney(revenueSummary.arpu)}
           </div>
         </div>
       </div>
 
       {/* Breakdown by Plan & Method */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
-          <h4 className="text-lg font-bold text-[#0a2540] dark:text-white">Money Paid by Plan</h4>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-5 space-y-4">
+          <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-3">
+            {tr('Money paid by plan')}
+          </h4>
           <div className="space-y-3 text-sm">
             {revenueSummary.byPlan.map(([planName, amount]) => {
               const pct = Math.round((amount / Math.max(1, revenueSummary.netCollected)) * 100);
               return (
                 <div key={planName} className="space-y-1.5">
-                  <div className="flex justify-between font-mono tabular-nums">
-                    <span className="font-semibold text-[#0a2540] dark:text-slate-200">{planName}</span>
+                  <div className="flex justify-between font-mono tabular-nums text-xs">
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">{planName}</span>
                     <span>
-                      {amount.toLocaleString()} RWF ({pct}%)
+                      {formatMoney(amount)} ({pct}%)
                     </span>
                   </div>
-                  <div className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: currentTheme.hex }} />
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div className="h-full rounded-full accent-bg" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -1093,21 +1111,23 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
           </div>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
-          <h4 className="text-lg font-bold text-[#0a2540] dark:text-white">Money Paid by Method</h4>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-5 space-y-4">
+          <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-3">
+            {tr('Money paid by method')}
+          </h4>
           <div className="space-y-3 text-sm">
             {revenueSummary.byMethod.map(([method, amount]) => {
               const pct = Math.round((amount / Math.max(1, revenueSummary.netCollected)) * 100);
               return (
                 <div key={method} className="space-y-1.5">
-                  <div className="flex justify-between font-mono tabular-nums">
-                    <span className="font-semibold text-[#0a2540] dark:text-slate-200">{method}</span>
+                  <div className="flex justify-between font-mono tabular-nums text-xs">
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">{method}</span>
                     <span>
-                      {amount.toLocaleString()} RWF ({pct}%)
+                      {formatMoney(amount)} ({pct}%)
                     </span>
                   </div>
-                  <div className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div className="h-full rounded-full bg-emerald-500 dark:bg-emerald-400" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );

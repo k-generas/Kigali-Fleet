@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Design Field Guide: type, layout and real-world style</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;600;800&family=Lora:ital,wght@0,400;0,700;1,400&family=Roboto+Slab:wght@400;700&family=Playfair+Display:wght@400;900&family=JetBrains+Mono:wght@400;700&family=Bebas+Neue&family=Poppins:wght@400;600&family=Caveat:wght@500;700&family=Archivo+Black&family=Work+Sans:wght@400;600&display=swap">
+<style>
+:root{--bg:#f3f5f8;--surface:#fff;--ink:#16202e;--mute:#5b6676;--line:#d5dbe4;--accent:#2447d6;--accent-ink:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141d;--surface:#171e2a;--ink:#e8ecf3;--mute:#9aa6b8;--line:#2a3445;--accent:#7b97ff;--accent-ink:#0f141d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f141d;--surface:#171e2a;--ink:#e8ecf3;--mute:#9aa6b8;--line:#2a3445;--accent:#7b97ff;--accent-ink:#0f141d;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.6 "Instrument Sans",system-ui,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px}
+h1,h2{font-family:"Young Serif",Georgia,serif;font-weight:400;line-height:1.15;margin:0}
+h1{font-size:clamp(2rem,6vw,3.2rem);margin-bottom:12px}
+h2{font-size:1.8rem;margin:64px 0 8px}
+h3{font-size:1.1rem;margin:0 0 4px}
+p{margin:0 0 12px}
+.lead{font-size:1.15rem;color:var(--mute);max-width:60ch}
+.note{color:var(--mute);font-size:.95rem;max-width:65ch}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0}
+nav a{padding:6px 12px;border:1px solid var(--line);border-radius:99px;color:var(--ink);text-decoration:none;font-size:.9rem}
+nav a:hover,nav a:focus-visible{background:var(--accent);color:var(--accent-ink);outline:none}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px;margin:14px 0}
+.spec{display:grid;grid-template-columns:150px 1fr;gap:6px 20px;align-items:baseline;padding:18px 0;border-bottom:1px solid var(--line)}
+.spec .name{font-size:.9rem;color:var(--mute)}
+.spec .name b{display:block;color:var(--ink);font-size:1rem}
+.spec .sample{font-size:2rem;line-height:1.2;overflow-wrap:anywhere}
+.spec .use{grid-column:2;color:var(--mute);font-size:.92rem}
+@media(max-width:620px){.spec{grid-template-columns:1fr}.spec .use{grid-column:1}}
+.scale div{display:flex;gap:16px;align-items:baseline;border-bottom:1px solid var(--line);padding:8px 0}
+.scale small{flex:0 0 150px;color:var(--mute);font-size:.85rem}
+.ctl{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:14px;font-size:.9rem}
+.ctl label{display:flex;flex-direction:column;gap:2px}
+#demoP{margin:0;transition:none}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.pair .box{margin:0}
+.tag{font-size:.85rem;color:var(--mute);margin-top:10px}
+.mini{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:16px 0}
+.mini .cap{padding:10px 16px;font-size:.9rem;background:var(--surface);border-bottom:1px solid var(--line)}
+.mini .cap b{font-weight:600}
+/* Sample A: newspaper-like local news */
+.sA{background:#fbfaf7;color:#1a1a1a;padding:24px;font-family:Lora,Georgia,serif}
+.sA .mast{font:900 2.2rem "Playfair Display",serif;border-bottom:3px double #1a1a1a;padding-bottom:6px}
+.sA h4{font:700 1.5rem/1.2 "Playfair Display",serif;margin:16px 0 8px}
+.sA p{font-size:1.02rem;line-height:1.7;max-width:62ch}
+/* Sample B: utility / government-style */
+.sB{background:#fff;color:#0b0c0c;font-family:Work Sans,Arial,sans-serif;padding:24px;border-top:10px solid #1d70b8}
+.sB h4{font:700 2rem/1.15 "Work Sans",sans-serif;margin:0 0 12px}
+.sB .btn{display:inline-block;background:#00703c;color:#fff;padding:10px 18px;font-weight:600;box-shadow:0 2px 0 #002d18}
+.sB .lnk{color:#1d70b8;text-decoration:underline}
+/* Sample C: friendly consumer */
+.sC{background:#fff7e8;color:#2b1f14;font-family:Poppins,sans-serif;padding:24px}
+.sC h4{font:600 1.8rem/1.2 Poppins,sans-serif;margin:0 0 8px}
+.sC .pill{display:inline-block;background:#ff5a36;color:#fff;border-radius:99px;padding:10px 22px;font-weight:600}
+.sC .tip{font:700 1.6rem Caveat,cursive;color:#ff5a36;transform:rotate(-2deg);display:inline-block}
+/* Sample D: dense dashboard */
+.sD{background:#101418;color:#d7dde4;font:400 13px/1.4 "Inter",sans-serif;padding:14px}
+.sD table{width:100%;border-collapse:collapse}
+.sD th{text-align:left;font-weight:600;color:#8793a1;padding:6px 8px;border-bottom:1px solid #2a323b}
+.sD td{padding:6px 8px;border-bottom:1px solid #1c2229}
+.sD .m{font-family:"JetBrains Mono",monospace}
+.sD .ok{color:#4cc38a}.sD .bad{color:#f0616d}
+/* Sample E: bold poster style */
+.sE{background:#e8ff3c;color:#111;padding:24px}
+.sE h4{font:400 clamp(2.6rem,9vw,5rem)/.9 "Bebas Neue",sans-serif;margin:0 0 10px}
+.sE .go{display:inline-block;background:#111;color:#e8ff3c;font:400 1.4rem "Archivo Black",sans-serif;padding:8px 16px}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.sw{width:112px;border:1px solid var(--line);border-radius:6px;overflow:hidden;font-size:.8rem;background:var(--surface)}
+.sw i{display:block;height:56px}
+.sw span{display:block;padding:6px 8px;color:var(--mute)}
+.sp div{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:.85rem;color:var(--mute)}
+.sp i{display:block;height:14px;background:var(--accent);border-radius:2px}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:620px){.vs{grid-template-columns:1fr}}
+.vs ul{margin:0;padding-left:20px}.vs li{margin:6px 0}
+.vs .box{margin:0}
+button.theme{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);border:0;border-radius:99px;padding:10px 16px;font:600 .9rem "Instrument Sans",sans-serif;cursor:pointer}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Design field guide</h1>
+<p class="lead">A hands-on page for learning how real designers choose type, size, spacing, color and layout. Every sample below is live text, so you can zoom, resize and compare.</p>
+<nav><a href="#fonts">Font families</a><a href="#scale">Sizes</a><a href="#pairs">Pairings</a><a href="#pages">Page styles</a><a href="#color">Color and space</a><a href="#tells">Avoiding the generic look</a></nav>
+
+<h2 id="fonts">Font families</h2>
+<p class="note">Fonts fall into a few families. Pick the family by the job the text does, then pick a specific font.</p>
+<div class="spec"><div class="name"><b>Neutral sans</b>Inter</div><div class="sample" style="font-family:Inter">Booking confirmed for Friday</div><div class="use">Interfaces, tables, forms. Built to disappear, so it is the safe choice for dashboards like your fleet app.</div></div>
+<div class="spec"><div class="name"><b>Geometric sans</b>Poppins</div><div class="sample" style="font-family:Poppins">Rent a car in Kigali</div><div class="use">Friendly consumer sites and apps. Round letters feel approachable, but wide spacing eats screen space.</div></div>
+<div class="spec"><div class="name"><b>Humanist serif</b>Lora</div><div class="sample" style="font-family:Lora">The road to Musanze was quiet</div><div class="use">Long reading: articles, stories, guides. Serifs guide the eye along long lines.</div></div>
+<div class="spec"><div class="name"><b>High-contrast serif</b>Playfair Display</div><div class="sample" style="font-family:'Playfair Display';font-weight:900">Evening Edition</div><div class="use">Headlines only, large sizes. Thin strokes break up at small sizes.</div></div>
+<div class="spec"><div class="name"><b>Slab serif</b>Roboto Slab</div><div class="sample" style="font-family:'Roboto Slab';font-weight:700">Heavy duty transport</div><div class="use">Sturdy, practical, a bit industrial. Works for trades, logistics, signage.</div></div>
+<div class="spec"><div class="name"><b>Monospace</b>JetBrains Mono</div><div class="sample" style="font-family:'JetBrains Mono'">RAD 450 B  1,075,000</div><div class="use">Plates, codes, prices, anything where digits must line up. Don’t use it for decoration.</div></div>
+<div class="spec"><div class="name"><b>Condensed display</b>Bebas Neue</div><div class="sample" style="font-family:'Bebas Neue';font-size:2.6rem">Big sale this weekend</div><div class="use">Posters and banners. Capitals only, short phrases only.</div></div>
+<div class="spec"><div class="name"><b>Heavy display</b>Archivo Black</div><div class="sample" style="font-family:'Archivo Black'">Move fast</div><div class="use">Loud, confident headings and buttons. Use one or two words at a time.</div></div>
+<div class="spec"><div class="name"><b>Handwritten</b>Caveat</div><div class="sample" style="font-family:Caveat;font-weight:700;font-size:2.4rem">Our driver will call you</div><div class="use">Small personal touches such as notes and signatures. Never for body text.</div></div>
+
+<h2 id="scale">Size, weight and line length</h2>
+<p class="note">A type scale is a short list of sizes you reuse everywhere. Here is a common one at a 16px base.</p>
+<div class="box scale">
+<div><small>12px caption</small><span style="font-size:12px">Updated 2 minutes ago</span></div>
+<div><small>14px small / table</small><span style="font-size:14px">Toyota RAV4 AWD, RAC 812 K</span></div>
+<div><small>16px body</small><span style="font-size:16px">All your cars and daily prices</span></div>
+<div><small>20px lead</small><span style="font-size:20px">Today’s bookings</span></div>
+<div><small>28px heading</small><span style="font-size:28px;font-family:'Young Serif'">Vehicles</span></div>
+<div><small>40px page title</small><span style="font-size:40px;font-family:'Young Serif'">Fleet</span></div>
+</div>
+<p class="note">Try it: change the controls and see what makes text comfortable. Good defaults are 16–18px, line height 1.5–1.7, and 45–75 characters per line.</p>
+<div class="box">
+<div class="ctl">
+<label>Size <span id="vS">17px</span><input id="rS" type="range" min="12" max="28" value="17"></label>
+<label>Line height <span id="vL">1.6</span><input id="rL" type="range" min="1" max="2.2" step=".05" value="1.6"></label>
+<label>Line width <span id="vW">60ch</span><input id="rW" type="range" min="20" max="120" value="60"></label>
+<label>Font<select id="rF"><option value="Instrument Sans">Instrument Sans</option><option value="Lora">Lora</option><option value="Roboto Slab">Roboto Slab</option><option value="Inter">Inter</option></select></label>
+</div>
+<p id="demoP">Kigali’s hills make driving an adventure. A good fleet manager checks insurance dates early, keeps spare keys in a safe place, and calls drivers before every long trip. When text lines run too long, readers lose their place; when they run too short, the eye jumps constantly. Test with real sentences, not placeholder text.</p>
+</div>
+<div class="box">
+<p style="font-weight:400;margin:0">Weight 400: body text</p>
+<p style="font-weight:600;margin:0">Weight 600: labels and emphasis</p>
+<p style="font-weight:700;font-size:1.4rem;margin:0">Weight 700: headings</p>
+<p class="note" style="margin-top:8px">Hierarchy comes from size and weight together. If everything is bold, nothing stands out.</p>
+</div>
+
+<h2 id="pairs">Font pairings that work</h2>
+<p class="note">Use one family, or two that are clearly different. Never two similar fonts.</p>
+<div class="pair">
+<div class="box"><div style="font:900 1.6rem 'Playfair Display'">Market day in Kimironko</div><p style="font-family:Lora;margin:8px 0 0">Serif headline with a serif body of different weight. Classic, editorial.</p><div class="tag">Playfair Display + Lora</div></div>
+<div class="box"><div style="font:700 1.6rem 'Roboto Slab'">Vehicle service log</div><p style="font-family:Inter;margin:8px 0 0">Slab headline, neutral sans body. Sturdy and clear.</p><div class="tag">Roboto Slab + Inter</div></div>
+<div class="box"><div style="font:400 1.6rem 'Young Serif'">Plan your trip</div><p style="font-family:'Instrument Sans';margin:8px 0 0">Warm serif heading, clean sans body. Friendly but serious.</p><div class="tag">Young Serif + Instrument Sans</div></div>
+<div class="box"><div style="font:600 1.6rem Poppins">Drivers on duty</div><p style="font:400 1rem 'JetBrains Mono';margin:8px 0 0">Sans heading, mono for numbers. Good for data.</p><div class="tag">Poppins + JetBrains Mono</div></div>
+</div>
+
+<h2 id="pages">Five page styles, side by side</h2>
+<p class="note">The same fleet business, five different identities. Notice what changes: font, density, color, corner shape, and tone of voice.</p>
+
+<div class="mini"><div class="cap"><b>A. Editorial.</b> Serif type, paper color, long readable lines. Suits news, blogs, guides.</div>
+<div class="sA"><div class="mast">The Kigali Ledger</div><h4>Why rental prices dip in the rainy season</h4><p>Owners across the city say demand for four-by-fours drops in April, then climbs again once the roads dry. We asked six fleet managers how they plan for it.</p></div></div>
+
+<div class="mini"><div class="cap"><b>B. Utility.</b> Plain sans, strong blue bar, underlined links, square green button. Suits forms and services where clarity beats beauty.</div>
+<div class="sB"><h4>Check a vehicle’s insurance</h4><p>Enter the plate number. You will see the expiry date and who to call.</p><p><a class="lnk" href="#pages" onclick="return false">What if the plate is not found?</a></p><span class="btn">Check plate</span></div></div>
+
+<div class="mini"><div class="cap"><b>C. Friendly consumer.</b> Round sans, warm background, pill button, one handwritten touch. Suits booking sites.</div>
+<div class="sC"><h4>Your ride, sorted.</h4><p>Pick a car, choose a driver, pay with mobile money.</p><span class="pill">Book a car</span> &nbsp;<span class="tip">no hidden fees!</span></div></div>
+
+<div class="mini"><div class="cap"><b>D. Dense dashboard.</b> Small type, thin lines, mono numbers, color only for status. Suits daily-use tools.</div>
+<div class="sD"><table><tr><th>Plate</th><th>Model</th><th>Status</th><th style="text-align:right">Per day</th></tr>
+<tr><td class="m">RAD 450 B</td><td>Prado TXL</td><td class="bad">In repair</td><td class="m" style="text-align:right">180,000</td></tr>
+<tr><td class="m">RAE 109 M</td><td>V8 Executive</td><td class="ok">Ready</td><td class="m" style="text-align:right">250,000</td></tr>
+<tr><td class="m">RAC 812 K</td><td>RAV4 AWD</td><td class="ok">Ready</td><td class="m" style="text-align:right">95,000</td></tr></table></div></div>
+
+<div class="mini"><div class="cap"><b>E. Poster.</b> One loud color, huge condensed type, almost no detail. Suits campaigns and events.</div>
+<div class="sE"><h4>Weekend rates<br>now open</h4><span class="go">Reserve today</span></div></div>
+
+<h2 id="color">Color and spacing</h2>
+<p class="note">Start with one neutral, one text color, one accent. Add status colors only when the data needs them.</p>
+<div class="swatches">
+<div class="sw"><i style="background:#f3f5f8"></i><span>Background #f3f5f8</span></div>
+<div class="sw"><i style="background:#16202e"></i><span>Text #16202e</span></div>
+<div class="sw"><i style="background:#2447d6"></i><span>Accent #2447d6</span></div>
+<div class="sw"><i style="background:#1f8a5b"></i><span>Success #1f8a5b</span></div>
+<div class="sw"><i style="background:#c9362f"></i><span>Error #c9362f</span></div>
+</div>
+<p class="note" style="margin-top:12px">Text needs a contrast ratio of at least 4.5 to 1 against its background. Light grey on white fails that test more often than people expect.</p>
+<div class="box sp"><p class="note" style="margin-bottom:6px">Spacing steps in multiples of 4 or 8 keep layouts tidy:</p>
+<div><i style="width:4px"></i>4px: icon to label</div><div><i style="width:8px"></i>8px: related items</div><div><i style="width:16px"></i>16px: inside cards</div><div><i style="width:24px"></i>24px: between groups</div><div><i style="width:48px"></i>48px: between sections</div><div><i style="width:96px"></i>96px: page-level breathing room</div></div>
+
+<h2 id="tells">Avoiding the generic, machine-made look</h2>
+<p class="note">Generated designs share habits. None is wrong alone; the problem is using them by default regardless of the subject.</p>
+<div class="vs">
+<div class="box"><h3>Common tells</h3><ul>
+<li>Every section is the same rounded card with the same soft shadow.</li>
+<li>Small ALL-CAPS label above every heading.</li>
+<li>One word of every headline colored or italicized.</li>
+<li>Gradient glows and purple-to-blue washes.</li>
+<li>Numbered 01 / 02 / 03 for content that has no order.</li>
+<li>Fade-and-slide animation on every element.</li>
+<li>Stock phrases like “seamless” and “empower your workflow”.</li></ul></div>
+<div class="box"><h3>What human work does instead</h3><ul>
+<li>Starts from the real subject: plates, routes, mobile money, local places.</li>
+<li>Uses real photos, real names, real prices.</li>
+<li>Varies shape and size by importance, not uniformly.</li>
+<li>Picks one memorable element and keeps the rest quiet.</li>
+<li>Writes plain labels: “Add car”, not “Get started today”.</li>
+<li>Moves things only in response to a click.</li>
+<li>Tests on a cheap phone with sunlight on the screen.</li></ul></div>
+</div>
+
+<h2>Practice</h2>
+<div class="box"><ol style="margin:0;padding-left:20px">
+<li>Pick one of the five page styles and rebuild one Kigali Fleet screen in it. Keep the data the same.</li>
+<li>Limit yourself to two fonts and three sizes. See how far hierarchy alone can go.</li>
+<li>Screenshot a site you admire, then list its fonts, colors, and spacing. Copy the structure, not the look.</li>
+<li>Print a screen in black and white. If the hierarchy still reads, your design is sound.</li></ol></div>
+</div>
+<button class="theme" id="tb" type="button">Switch theme</button>
+<script>
+(function(){
+var p=document.getElementById('demoP');
+function u(){
+try{
+var s=document.getElementById('rS').value,l=document.getElementById('rL').value,w=document.getElementById('rW').value,f=document.getElementById('rF').value;
+p.style.fontSize=s+'px';p.style.lineHeight=l;p.style.maxWidth=w+'ch';p.style.fontFamily='"'+f+'",sans-serif';
+document.getElementById('vS').textContent=s+'px';document.getElementById('vL').textContent=l;document.getElementById('vW').textContent=w+'ch';
+}catch(e){}
+}
+['rS','rL','rW','rF'].forEach(function(i){document.getElementById(i).addEventListener('input',u)});u();
+var r=document.documentElement;
+document.getElementById('tb').addEventListener('click',function(){
+var dark=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);
+r.setAttribute('data-theme',dark?'light':'dark');
+});
+})();
+</script>
+</body>
+</html>

@@ -1,34 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import { Driver, DriverLanguage, DriverStatus, Vehicle, Booking, User } from '../types';
-import { checkDriverCollision, formatRwf } from '../utils/collision';
+import { checkDriverCollision } from '../utils/collision';
+import { formatHumanDateRange, formatHumanDate } from '../utils/dates';
+import { useI18n } from '../utils/i18n';
 import {
   Plus,
-  Users,
-  Phone,
-  Star,
-  Award,
-  ShieldCheck,
-  X,
-  CheckCircle,
-  AlertCircle,
-  Car,
-  Calendar,
   Search,
   Smartphone,
-  Navigation,
-  Clock,
-  MapPin,
-  FileText,
-  UserCheck,
-  History,
-  Plane,
-  Radio,
+  X,
   Edit2,
   Trash2,
-  Send,
-  ArrowRight,
-  ExternalLink,
-  MessageSquare,
+  CheckCircle,
+  AlertCircle,
+  Plane,
+  Radio,
+  Users,
+  UserCheck,
+  Navigation,
+  Star,
+  Phone,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -51,12 +41,16 @@ interface DriversViewProps {
   onDispatchSMS?: (bookingId: string, language?: 'RW' | 'EN') => void;
 }
 
+const formatDriverLanguages = (lang: string) => {
+  if (!lang) return '';
+  return lang.replace(/\//g, ', ');
+};
+
 export const DriversView: React.FC<DriversViewProps> = ({
   drivers,
   vehicles,
   bookings,
   currentUser,
-  currentTheme,
   onAddDriver,
   onUpdateStatus,
   onAssignDriver,
@@ -64,15 +58,16 @@ export const DriversView: React.FC<DriversViewProps> = ({
   onDeleteDriver,
   onAcknowledgeCheckin,
   onCompleteTrip,
-  onDispatchSMS,
 }) => {
-  const activeThemeColor = currentTheme?.hex || '#f59e0b';
-  const activeBtnText = currentTheme?.btnText || 'text-slate-950';
+  const { formatMoney, tr } = useI18n();
 
   const isDriverUser = currentUser?.role === 'driver';
-  const matchedDriverId = currentUser?.driver_id || drivers.find((d) => d.email === currentUser?.email || d.phone === currentUser?.phone)?.id || drivers[0]?.id || '';
+  const matchedDriverId =
+    currentUser?.driver_id ||
+    drivers.find((d) => d.email === currentUser?.email || d.phone === currentUser?.phone)?.id ||
+    drivers[0]?.id ||
+    '';
 
-  // Navigation tabs: auto-focus to portal if logged in as driver
   const [activeTab, setActiveTab] = useState<'roster' | 'assignments' | 'portal'>(
     isDriverUser ? 'portal' : 'roster'
   );
@@ -106,12 +101,11 @@ export const DriversView: React.FC<DriversViewProps> = ({
   const [assignedVehicleId, setAssignedVehicleId] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Metrics
   const metrics = useMemo(() => {
     const total = drivers.length;
     const available = drivers.filter((d) => d.status === 'Available').length;
     const onTrip = drivers.filter((d) => d.status === 'On Trip').length;
-    const offDuty = drivers.filter((d) => d.status === 'Off Duty').length;
+    const offDuty = drivers.filter((d) => d.status === 'Off Duty' || d.status === 'Rest Day' || d.status === 'On Leave').length;
     const avgRating = (
       drivers.reduce((sum, d) => sum + (d.rating || 5), 0) / (drivers.length || 1)
     ).toFixed(2);
@@ -120,7 +114,6 @@ export const DriversView: React.FC<DriversViewProps> = ({
     return { total, available, onTrip, offDuty, avgRating, totalTripsCompleted };
   }, [drivers]);
 
-  // Filtered drivers
   const filteredDrivers = useMemo(() => {
     return drivers.filter((d) => {
       if (selectedLanguageFilter !== 'All' && !d.language.includes(selectedLanguageFilter)) return false;
@@ -142,12 +135,10 @@ export const DriversView: React.FC<DriversViewProps> = ({
     return bookings.filter((b) => b.status === 'Confirmed' || b.status === 'In Progress');
   }, [bookings]);
 
-  // Active driver for portal view
   const portalDriver = useMemo(() => {
     return drivers.find((d) => d.id === activePortalDriverId) || drivers[0];
   }, [drivers, activePortalDriverId]);
 
-  // Active mission for the selected portal driver
   const portalDriverBookings = useMemo(() => {
     if (!portalDriver) return [];
     return bookings.filter(
@@ -202,840 +193,766 @@ export const DriversView: React.FC<DriversViewProps> = ({
     setAssignmentNotice(null);
     const res = onAssignDriver(bookingId, driverId);
     if (res.success) {
-      setAssignmentNotice({ type: 'success', message: 'Driver added to trip!' });
+      setAssignmentNotice({ type: 'success', message: 'Driver assigned to trip.' });
       setTimeout(() => setAssignmentNotice(null), 3500);
     } else {
       setAssignmentNotice({ type: 'error', message: res.error || 'Conflict detected.' });
     }
   };
 
+  const getDriverStatusStyle = (status: DriverStatus) => {
+    if (status === 'Available') {
+      return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/25';
+    }
+    if (status === 'On Trip') {
+      return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/25';
+    }
+    return 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+  };
+
   return (
     <div className="space-y-6">
-      {/* 1. Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 stripe-card">
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-[#0a2540] dark:text-white flex items-center gap-2.5">
-              <Users className="w-6 h-6" style={{ color: activeThemeColor }} />
-              <span>Drivers</span>
-            </h2>
-            <span
-              className="text-xs font-mono px-3 py-1 rounded-full font-semibold"
-              style={{
-                backgroundColor: `${activeThemeColor}18`,
-                color: activeThemeColor,
-              }}
-            >
-              {drivers.length} drivers
-            </span>
-          </div>
-          <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">
-            All your drivers, phone numbers, active trips, and driver phone screen.
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {tr('Drivers')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Phone numbers, current trips, and driver phone check-in.')}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 rounded-full p-1 border border-slate-200 dark:border-slate-700 text-sm">
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg">
             <button
+              type="button"
               onClick={() => setActiveTab('roster')}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
                 activeTab === 'roster'
-                  ? `${activeBtnText} shadow-xs`
-                  : 'text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
-              style={activeTab === 'roster' ? { backgroundColor: activeThemeColor } : undefined}
             >
-              All ({drivers.length})
+              {tr('Roster')} ({drivers.length})
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('assignments')}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
                 activeTab === 'assignments'
-                  ? `${activeBtnText} shadow-xs`
-                  : 'text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
-              style={activeTab === 'assignments' ? { backgroundColor: activeThemeColor } : undefined}
             >
-              Trips ({activeBookings.length})
+              {tr('Trips')} ({activeBookings.length})
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('portal')}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap inline-flex items-center gap-1.5 transition-colors ${
                 activeTab === 'portal'
-                  ? `${activeBtnText} shadow-xs`
-                  : 'text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
-              style={activeTab === 'portal' ? { backgroundColor: activeThemeColor } : undefined}
             >
-              <Smartphone className="w-4 h-4" />
-              <span>Phone View</span>
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>{tr('Phone view')}</span>
             </button>
           </div>
 
           <button
+            type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full transition-all shadow-xs active:scale-95 ${activeBtnText}`}
-            style={{ backgroundColor: activeThemeColor }}
+            className="accent-bg inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:opacity-95 transition-opacity shadow-xs shrink-0"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Add Driver</span>
+            <Plus className="w-4 h-4" />
+            <span>{tr('Add driver')}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-[#425466] dark:text-slate-400">All Drivers</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-[#0a2540] dark:text-white font-mono">{metrics.total}</span>
-            <Users className="w-4 h-4 text-slate-400" />
+      {/* 4-Card KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Drivers')}</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4" />
+            </span>
           </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {metrics.total}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {metrics.offDuty} off duty or on leave
+          </p>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Free</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{metrics.available}</span>
-            <CheckCircle className="w-4 h-4 text-emerald-500" />
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Free')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <UserCheck className="w-4 h-4" />
+            </span>
           </div>
+          <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 mt-2 tabular-nums">
+            {metrics.available}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Ready for immediate dispatch
+          </p>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">On Trip</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">{metrics.onTrip}</span>
-            <Navigation className="w-4 h-4 text-amber-500" />
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('On a trip')}</span>
+            <span className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Navigation className="w-4 h-4" />
+            </span>
           </div>
+          <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400 mt-2 tabular-nums">
+            {metrics.onTrip}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {metrics.totalTripsCompleted} total trips completed
+          </p>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-[#425466] dark:text-slate-400">Off Duty</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-[#425466] dark:text-slate-300 font-mono">{metrics.offDuty}</span>
-            <Clock className="w-4 h-4 text-slate-400" />
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Average rating')}</span>
+            <span className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Star className="w-4 h-4" />
+            </span>
           </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Rating</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">{metrics.avgRating} ★</span>
-            <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {metrics.avgRating}{' '}
+            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              / 5
+            </span>
           </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-[#425466] dark:text-slate-400">Trips Done</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-[#0a2540] dark:text-white font-mono">{metrics.totalTripsCompleted}</span>
-            <Award className="w-4 h-4 text-slate-400" />
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Guest feedback across roster
+          </p>
         </div>
       </div>
 
       {assignmentNotice && (
         <div
-          className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm ${
+          className={`px-4 py-3 rounded-xl border text-sm font-medium flex items-center gap-2.5 ${
             assignmentNotice.type === 'success'
-              ? 'bg-emerald-950/70 border border-emerald-600 text-emerald-300'
-              : 'bg-rose-950/70 border border-rose-600 text-rose-300'
+              ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+              : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-300'
           }`}
         >
           {assignmentNotice.type === 'success' ? (
-            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle className="w-4 h-4 shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
           )}
           <span>{assignmentNotice.message}</span>
         </div>
       )}
 
-      {/* VIEW 1: Driver Roster Grid */}
-      {activeTab === 'roster' && (
-        <div className="space-y-4">
-          {/* Search & Filter Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search driver by name, phone (+250...), or license..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-sm text-[#0a2540] dark:text-white outline-none focus:border-amber-500"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              {/* Status Pills */}
-              <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700">
-                {['All', 'Available', 'On Trip', 'Off Duty'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setSelectedStatusFilter(st)}
-                    className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors ${
-                      selectedStatusFilter === st
-                        ? 'bg-white dark:bg-slate-900 text-[#0a2540] dark:text-white shadow-xs font-bold'
-                        : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
+      {/* Main Content Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        {/* VIEW 1: Phone Roster Table */}
+        {activeTab === 'roster' && (
+          <div>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800">
+              <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg overflow-x-auto">
+                {[
+                  { value: 'All', label: tr('All') },
+                  { value: 'Available', label: tr('Available') },
+                  { value: 'On Trip', label: tr('On trip') },
+                  { value: 'Off Duty', label: tr('Off duty') },
+                ].map((tab) => {
+                  const active = selectedStatusFilter === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => setSelectedStatusFilter(tab.value)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                        active
+                          ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Language Pills */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {['All', 'RW', 'EN', 'FR'].map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => setSelectedLanguageFilter(lang)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
-                      selectedLanguageFilter === lang
-                        ? 'bg-amber-400 text-slate-950 border-amber-300 font-bold'
-                        : 'bg-[#f6f9fc] dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[#425466] dark:text-slate-300'
-                    }`}
-                  >
-                    {lang === 'All' ? 'All Languages' : lang === 'RW' ? 'Kinyarwanda' : lang === 'EN' ? 'English' : 'French'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Driver Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredDrivers.map((driver) => {
-              const assignedCar = vehicles.find((v) => v.id === driver.assigned_vehicle_id);
-              const driverBookings = bookings.filter((b) => b.driver_id === driver.id && b.status !== 'Cancelled');
-              const activeBooking = driverBookings.find((b) => b.status === 'Confirmed' || b.status === 'In Progress');
-
-              return (
-                <div
-                  key={driver.id}
-                  className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between"
+              <div className="flex flex-wrap items-center gap-2.5 text-sm">
+                <select
+                  value={selectedLanguageFilter}
+                  onChange={(e) => setSelectedLanguageFilter(e.target.value)}
+                  className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg px-3 py-1.5 outline-none cursor-pointer"
                 >
-                  <div className="space-y-3.5">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-2 min-w-0">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-11 h-11 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400 text-sm shrink-0">
-                          {driver.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join('')}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-base font-bold text-[#0a2540] dark:text-white truncate">{driver.name}</h3>
-                          <div className="text-sm text-amber-600 dark:text-amber-400 font-mono flex items-center gap-1 mt-0.5 truncate">
-                            <Phone className="w-3.5 h-3.5 shrink-0" />
-                            <span className="truncate">{driver.phone}</span>
-                          </div>
-                        </div>
-                      </div>
+                  <option value="All">{tr('Language')}: {tr('All')}</option>
+                  <option value="RW">Kinyarwanda</option>
+                  <option value="EN">English</option>
+                  <option value="FR">{tr('French')}</option>
+                </select>
 
-                      <select
-                        value={driver.status}
-                        onChange={(e) => onUpdateStatus(driver.id, e.target.value as DriverStatus)}
-                        className={`text-xs sm:text-sm font-semibold rounded-full px-2.5 py-1 border transition-colors outline-none cursor-pointer shrink-0 ${
-                          driver.status === 'Available'
-                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
-                            : driver.status === 'On Trip'
-                            ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700/60'
-                            : driver.status === 'On Leave'
-                            ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700/60'
-                            : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-400 border-slate-300 dark:border-slate-700'
-                        }`}
-                      >
-                        <option value="Available">Available</option>
-                        <option value="On Trip">On Trip</option>
-                        <option value="Off Duty">Off Duty</option>
-                        <option value="Rest Day">Rest Day</option>
-                        <option value="On Leave">On Leave</option>
-                      </select>
-                    </div>
-
-                    {/* Assigned Car Strip */}
-                    <div className="flex items-center justify-between text-sm p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                      <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold flex items-center gap-1.5">
-                        <Car className="w-4 h-4 text-amber-500" />
-                        Usual Car:
-                      </span>
-                      {assignedCar ? (
-                        <span className="font-semibold text-[#0a2540] dark:text-slate-200 flex items-center gap-1 font-mono text-sm">
-                          <span>{assignedCar.model_name.split('(')[0].trim()}</span>
-                          <span className="text-amber-600 dark:text-amber-400 font-bold">({assignedCar.plate_number})</span>
-                        </span>
-                      ) : (
-                        <span className="text-[#425466] dark:text-slate-400 text-sm">Any Car</span>
-                      )}
-                    </div>
-
-                    {/* Stats Strip */}
-                    <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center">
-                      <div>
-                        <div className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Languages</div>
-                        <div className="text-sm font-bold text-[#0a2540] dark:text-white mt-0.5">
-                          {driver.language}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Rating</div>
-                        <div className="text-sm font-bold text-amber-500 flex items-center justify-center gap-1 mt-0.5">
-                          <Star className="w-3.5 h-3.5 fill-amber-500" />
-                          <span>{driver.rating}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Trips Done</div>
-                        <div className="text-sm font-bold text-[#0a2540] dark:text-white mt-0.5 font-mono">
-                          {driver.trips_completed}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Active Trip Preview */}
-                    {activeBooking && (
-                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm space-y-1">
-                        <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 font-bold text-sm">
-                          <span>Active Trip</span>
-                          <span>#{activeBooking.id}</span>
-                        </div>
-                        <div className="text-[#0a2540] dark:text-white font-semibold truncate">
-                          {activeBooking.client_name}
-                        </div>
-                        <div className="text-sm text-[#425466] dark:text-slate-400 truncate">
-                          {activeBooking.destination} ({activeBooking.start_date} → {activeBooking.end_date})
-                        </div>
-                      </div>
-                    )}
-
-                    <p className="text-sm text-[#425466] dark:text-slate-400 italic line-clamp-2">
-                      "{driver.notes}"
-                    </p>
-                  </div>
-
-                  {/* Card Action Footer */}
-                  <div className="border-t border-slate-200 dark:border-slate-800 pt-3 flex items-center justify-between gap-2">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder={tr('Search name or phone...')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-8 py-1.5 w-60 text-sm text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+                  />
+                  {searchQuery && (
                     <button
-                      onClick={() => setSelectedDriverDetails(driver)}
-                      className="px-4 py-1.5 rounded-full text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                      aria-label="Clear search"
                     >
-                      Details & History
+                      <X className="w-3.5 h-3.5" />
                     </button>
-
-                    <button
-                      onClick={() => {
-                        setActivePortalDriverId(driver.id);
-                        setActiveTab('portal');
-                      }}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors"
-                      title="Open driver phone screen"
-                    >
-                      <Smartphone className="w-4 h-4" />
-                      <span>Phone View</span>
-                    </button>
-                  </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              </div>
+            </div>
 
-      {/* VIEW 2: Assign Drivers to Trips */}
-      {activeTab === 'assignments' && (
-        <div className="space-y-4">
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white mb-1">
-              Trips Needing a Driver
-            </h3>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
-              Pick or change the driver for each trip. Busy drivers on the same dates are blocked automatically.
-            </p>
-          </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm min-w-[780px]">
+                <thead>
+                  <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <th className="py-3 px-4">{tr('Driver')}</th>
+                    <th className="py-3 px-4">{tr('Phone')}</th>
+                    <th className="py-3 px-4">{tr('Status')}</th>
+                    <th className="py-3 px-4">{tr('Usual car')}</th>
+                    <th className="py-3 px-4 text-right">{tr('Action')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                  {filteredDrivers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 px-4 text-center text-slate-500 dark:text-slate-400">
+                        {tr('No drivers match your filters.')}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDrivers.map((driver) => {
+                      const assignedCar = vehicles.find((v) => v.id === driver.assigned_vehicle_id);
+                      const telHref = `tel:${driver.phone.replace(/\s+/g, '')}`;
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {activeBookings.map((booking) => {
-              const vehicle = vehicles.find((v) => v.id === booking.vehicle_id);
-              const currentDriver = drivers.find((d) => d.id === booking.driver_id);
+                      return (
+                        <tr
+                          key={driver.id}
+                          className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors"
+                        >
+                          <td className="py-3.5 px-4">
+                            <div className="font-medium text-slate-900 dark:text-white">
+                              {driver.name}
+                            </div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {formatDriverLanguages(driver.language)} · {driver.trips_completed} trips
+                            </div>
+                          </td>
 
-              return (
-                <div
-                  key={booking.id}
-                  className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-                    <div>
-                      <div className="flex items-center gap-1.5 font-mono text-sm text-amber-600 dark:text-amber-400 font-bold">
-                        <span>#{booking.id}</span>
-                        <span>·</span>
-                        <span className="text-[#425466] dark:text-slate-400 font-normal">{booking.destination}</span>
-                      </div>
-                      <h4 className="text-base font-bold text-[#0a2540] dark:text-white mt-0.5">
-                        {booking.client_name}
-                      </h4>
-                    </div>
+                          <td className="py-3.5 px-4 font-mono text-sm font-medium text-slate-900 dark:text-white whitespace-nowrap tabular-nums">
+                            {driver.phone}
+                          </td>
 
-                    <div className="text-right">
-                      <div className="text-sm text-[#425466] dark:text-slate-400 font-mono">
-                        {booking.start_date} → {booking.end_date}
-                      </div>
-                      <div className="text-sm font-bold text-[#0a2540] dark:text-white font-mono">
-                        {formatRwf(booking.total_rwf)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Car tag */}
-                  <div className="flex items-center justify-between text-sm p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <Car className="w-4 h-4 text-amber-500" />
-                      <span className="font-semibold text-[#0a2540] dark:text-slate-200">
-                        {vehicle?.model_name || 'Car'}
-                      </span>
-                    </div>
-                    <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">
-                      {vehicle?.plate_number}
-                    </span>
-                  </div>
-
-                  {/* Current Driver & Picker */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-[#425466] dark:text-slate-400 font-semibold">
-                        Driver:
-                      </span>
-                      {currentDriver ? (
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                          <CheckCircle className="w-4 h-4" />
-                          <span>{currentDriver.name} ({currentDriver.phone})</span>
-                        </span>
-                      ) : (
-                        <span className="text-rose-500 font-bold">No Driver Yet</span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-1">
-                      <select
-                        value={booking.driver_id}
-                        onChange={(e) => handleLinkDriver(booking.id, e.target.value)}
-                        className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-sm font-medium text-[#0a2540] dark:text-white outline-none focus:border-amber-400"
-                      >
-                        {drivers.map((drv) => {
-                          const driverConflict = checkDriverCollision(
-                            drv.id,
-                            booking.start_date,
-                            booking.end_date,
-                            bookings,
-                            booking.id
-                          );
-
-                          return (
-                            <option
-                              key={drv.id}
-                              value={drv.id}
-                              disabled={driverConflict.hasCollision && drv.id !== booking.driver_id}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <select
+                              value={driver.status}
+                              onChange={(e) => onUpdateStatus(driver.id, e.target.value as DriverStatus)}
+                              aria-label={`Status for ${driver.name}`}
+                              className={`px-2.5 py-1 text-xs font-medium rounded-md border outline-none cursor-pointer ${getDriverStatusStyle(
+                                driver.status
+                              )}`}
                             >
-                              {drv.name} ({drv.phone}) · {drv.language}
-                              {driverConflict.hasCollision && drv.id !== booking.driver_id
-                                ? ' [BUSY ON THESE DATES]'
-                                : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                              <option value="Available" className="text-slate-900 bg-white dark:text-white dark:bg-slate-900">
+                                {tr('Available')}
+                              </option>
+                              <option value="On Trip" className="text-slate-900 bg-white dark:text-white dark:bg-slate-900">
+                                {tr('On trip')}
+                              </option>
+                              <option value="Off Duty" className="text-slate-900 bg-white dark:text-white dark:bg-slate-900">
+                                {tr('Off duty')}
+                              </option>
+                              <option value="Rest Day" className="text-slate-900 bg-white dark:text-white dark:bg-slate-900">
+                                {tr('Rest day')}
+                              </option>
+                              <option value="On Leave" className="text-slate-900 bg-white dark:text-white dark:bg-slate-900">
+                                {tr('On leave')}
+                              </option>
+                            </select>
+                          </td>
 
-      {/* VIEW 3: Driver Phone Screen */}
-      {activeTab === 'portal' && (
-        <div className="space-y-6">
-          {/* Driver Switcher Bar */}
-          <div className="stripe-card flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-            <div className="flex items-center gap-3">
-              <Smartphone className="w-5 h-5 text-amber-500" />
+                          <td className="py-3.5 px-4">
+                            {assignedCar ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-900 dark:text-white font-medium">
+                                  {assignedCar.model_name.split('(')[0].trim()}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                                  {assignedCar.plate_number}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 dark:text-slate-500">{tr('Not set')}</span>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-2">
+                              <a
+                                href={telHref}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                              >
+                                <Phone className="w-3 h-3" />
+                                <span>{tr('Call')}</span>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedDriverDetails(driver)}
+                                className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                              >
+                                {tr('Details')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActivePortalDriverId(driver.id);
+                                  setActiveTab('portal');
+                                }}
+                                className="accent-tint accent-text px-2.5 py-1 rounded-md text-xs font-medium hover:opacity-90"
+                              >
+                                {tr('Phone view')}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 2: Assign Drivers to Trips */}
+        {activeTab === 'assignments' && (
+          <div>
+            <div className="px-5 py-4 border-b border-slate-200/80 dark:border-slate-800">
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                {tr('Trips needing a driver')}
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                {tr('Pick or change the driver for each trip. Busy drivers on the same dates are blocked automatically.')}
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm min-w-[720px]">
+                <thead>
+                  <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <th className="py-3 px-4">{tr('Guest & trip')}</th>
+                    <th className="py-3 px-4">{tr('Car')}</th>
+                    <th className="py-3 px-4">{tr('Dates')}</th>
+                    <th className="py-3 px-4">{tr('Driver')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                  {activeBookings.map((booking) => {
+                    const vehicle = vehicles.find((v) => v.id === booking.vehicle_id);
+                    const currentDriver = drivers.find((d) => d.id === booking.driver_id);
+
+                    return (
+                      <tr
+                        key={booking.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors"
+                      >
+                        <td className="py-3.5 px-4">
+                          <div className="font-medium text-slate-900 dark:text-white">
+                            {booking.client_name}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            <span className="font-mono">#{booking.id}</span> · {booking.destination}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="text-slate-900 dark:text-white font-medium">
+                            {vehicle?.model_name || 'Car'}
+                          </div>
+                          <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            {vehicle?.plate_number}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="text-slate-900 dark:text-white tabular-nums">
+                            {formatHumanDateRange(booking.start_date, booking.end_date)}
+                          </div>
+                          <div className="font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
+                            {formatMoney(booking.total_rwf)}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <select
+                            value={booking.driver_id}
+                            onChange={(e) => handleLinkDriver(booking.id, e.target.value)}
+                            className="w-full max-w-xs bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-900 dark:text-white outline-none focus:border-slate-400"
+                          >
+                            <option value="">{tr('No driver yet')}</option>
+                            {drivers.map((drv) => {
+                              const driverConflict = checkDriverCollision(
+                                drv.id,
+                                booking.start_date,
+                                booking.end_date,
+                                bookings,
+                                booking.id
+                              );
+
+                              return (
+                                <option
+                                  key={drv.id}
+                                  value={drv.id}
+                                  disabled={driverConflict.hasCollision && drv.id !== booking.driver_id}
+                                >
+                                  {drv.name} ({drv.phone}) · {drv.language}
+                                  {driverConflict.hasCollision && drv.id !== booking.driver_id
+                                    ? ` [${tr('Busy')}]`
+                                    : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          {!currentDriver && (
+                            <div className="text-xs text-rose-600 dark:text-rose-400 font-medium mt-1">
+                              {tr('No driver yet')}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 3: Driver Phone Screen */}
+        {activeTab === 'portal' && (
+          <div className="p-5 sm:p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-                  Driver Phone Screen & SMS Check-In
-                </h3>
-                <p className="text-sm text-[#425466] dark:text-slate-400">
-                  See what the driver sees on their phone on the road in Rwanda.
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                  {tr('Driver phone screen & SMS check-in')}
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  {tr('See what the driver sees on their phone on the road in Rwanda.')}
                 </p>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[#425466] dark:text-slate-400 font-medium">Driver:</span>
-              <select
-                value={activePortalDriverId}
-                onChange={(e) => setActivePortalDriverId(e.target.value)}
-                className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm font-semibold text-[#0a2540] dark:text-white outline-none focus:border-amber-400"
-              >
-                {drivers.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.status})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Mobile Phone Viewport */}
-          <div className="max-w-md mx-auto bg-slate-950 border-4 border-slate-800 rounded-3xl p-5 shadow-2xl space-y-5 text-slate-100">
-            {/* Phone Top Bar */}
-            <div className="flex items-center justify-between text-sm text-slate-400 font-mono pb-2.5 border-b border-slate-800">
-              <span className="font-bold text-white">KigaliFleet Driver</span>
-              <button
-                type="button"
-                onClick={() => setIsLowSignalMode(!isLowSignalMode)}
-                className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold border transition-colors ${
-                  isLowSignalMode
-                    ? 'bg-amber-950/80 text-amber-400 border-amber-600/50'
-                    : 'bg-emerald-950/80 text-emerald-400 border-emerald-600/50'
-                }`}
-                title="Switch between internet and offline park mode"
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    isLowSignalMode ? 'bg-amber-500' : 'bg-emerald-500'
-                  }`}
-                />
-                <span>{isLowSignalMode ? 'Offline Park Mode' : 'Online'}</span>
-              </button>
-            </div>
-
-            {isLowSignalMode && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-amber-300 leading-snug flex items-start gap-2.5">
-                <Radio className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold block">Weak Signal Mode (Parks)</span>
-                  Updates save on this phone and send via *134# SMS or when signal returns.
-                </div>
-              </div>
-            )}
-
-            {/* Driver Header Card */}
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-amber-500 text-slate-950 font-extrabold flex items-center justify-center text-base">
-                  {portalDriver?.name.split(' ').map((n) => n[0]).join('')}
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-white">{portalDriver?.name}</h4>
-                  <div className="text-sm text-amber-400 font-mono">{portalDriver?.phone}</div>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <span className="text-sm px-2.5 py-0.5 rounded-full font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
-                  {portalDriver?.status}
-                </span>
-                <div className="text-sm text-slate-400 mt-1">
-                  {portalDriver?.trips_completed} trips done
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500 dark:text-slate-400">{tr('Driver')}:</span>
+                <select
+                  value={activePortalDriverId}
+                  onChange={(e) => setActivePortalDriverId(e.target.value)}
+                  className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-900 dark:text-white outline-none"
+                >
+                  {drivers.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.status})
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Active Trip Card */}
-            {activeMission ? (
-              <div className="bg-slate-900 border border-amber-500/40 rounded-2xl p-4 space-y-4 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-mono px-3 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold">
-                    Current Trip
-                  </span>
-                  <span className="font-mono text-sm text-amber-400 font-bold">
-                    #{activeMission.id}
-                  </span>
-                </div>
+            <div className="max-w-md mx-auto bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 text-slate-100 kf-modal">
+              <div className="flex items-center justify-between text-sm text-slate-400 pb-3 border-b border-slate-800">
+                <span className="font-semibold text-white">KigaliFleet Driver</span>
+                <button
+                  type="button"
+                  onClick={() => setIsLowSignalMode(!isLowSignalMode)}
+                  className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors"
+                  title="Switch between internet and offline park mode"
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isLowSignalMode ? 'bg-amber-400' : 'bg-emerald-400'
+                    }`}
+                  />
+                  <span>{isLowSignalMode ? 'Offline park mode' : 'Online'}</span>
+                </button>
+              </div>
 
-                <div>
-                  <h4 className="text-lg font-bold text-white">{activeMission.client_name}</h4>
-                  <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-0.5">
-                    <MapPin className="w-4 h-4 text-amber-500" />
-                    <span>{activeMission.destination}</span>
-                  </p>
-                </div>
-
-                {/* Dates & Guest Phone */}
-                <div className="grid grid-cols-2 gap-2.5 text-sm bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+              {isLowSignalMode && (
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-300 flex items-start gap-2.5">
+                  <Radio className="w-4 h-4 shrink-0 mt-0.5" />
                   <div>
-                    <span className="text-sm text-slate-400">Dates</span>
-                    <p className="font-mono text-white text-sm font-semibold mt-0.5">
-                      {activeMission.start_date} → {activeMission.end_date}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-slate-400">Client Phone</span>
-                    <p className="font-mono text-amber-400 text-sm font-bold mt-0.5">
-                      {activeMission.client_phone}
-                    </p>
+                    <span className="font-semibold block">Weak signal mode (Parks)</span>
+                    Updates save on this phone and send via *134# SMS or when signal returns.
                   </div>
                 </div>
+              )}
 
-                {/* Flight Info */}
-                {activeMission.flight_number && (
-                  <div className="p-3.5 rounded-xl bg-sky-950/40 border border-sky-800/60 text-sm space-y-1">
-                    <div className="flex items-center justify-between text-sky-400 font-bold text-sm">
-                      <span className="flex items-center gap-1.5">
-                        <Plane className="w-4 h-4" />
-                        <span>Airport Flight</span>
+              <div className="bg-slate-800/70 p-3.5 rounded-lg flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-base font-semibold text-white">{portalDriver?.name}</h4>
+                  <div className="text-xs text-slate-400 font-mono mt-0.5">{portalDriver?.phone}</div>
+                </div>
+                <div className="text-right text-sm">
+                  <span className="font-medium text-emerald-400">
+                    {portalDriver?.status}
+                  </span>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    {portalDriver?.trips_completed} trips done
+                  </div>
+                </div>
+              </div>
+
+              {activeMission ? (
+                <div className="bg-slate-800/70 border border-slate-700/70 rounded-xl p-4 space-y-3.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-white uppercase tracking-wide">Current trip</span>
+                    <span className="font-mono text-slate-400">#{activeMission.id}</span>
+                  </div>
+
+                  <div>
+                    <h4 className="text-base font-semibold text-white">{activeMission.client_name}</h4>
+                    <p className="text-sm text-slate-400 mt-0.5">{activeMission.destination}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-900/70 text-sm">
+                    <div>
+                      <span className="text-xs text-slate-400 block">Dates</span>
+                      <span className="font-medium text-white tabular-nums">
+                        {formatHumanDateRange(activeMission.start_date, activeMission.end_date)}
                       </span>
-                      <span>{activeMission.flight_number}</span>
                     </div>
-                    <p className="text-sm text-slate-300">
-                      From: <strong>{activeMission.flight_origin || 'Entebbe (EBB)'}</strong> ·{' '}
-                      <strong className={activeMission.flight_status === 'Delayed' ? 'text-rose-400' : 'text-emerald-400'}>
-                        {activeMission.flight_status || 'On Time'}
-                      </strong>
-                    </p>
-                  </div>
-                )}
-
-                {/* 4-Step Interactive Check-In */}
-                <div className="space-y-2.5 pt-2 border-t border-slate-800">
-                  <div className="flex items-center justify-between text-sm font-semibold text-slate-300">
-                    <span>Trip Step:</span>
-                    <span className="text-amber-400 font-mono text-sm">
-                      {activeMission.dispatch_status}
-                    </span>
+                    <div>
+                      <span className="text-xs text-slate-400 block">Guest phone</span>
+                      <span className="font-mono font-medium text-white">
+                        {activeMission.client_phone}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2.5 pt-1">
-                    {activeMission.dispatch_status === 'Not Sent' || activeMission.dispatch_status === 'Dispatched (SMS)' ? (
+                  {activeMission.flight_number && (
+                    <div className="p-3 rounded-lg bg-slate-900/70 text-sm space-y-1">
+                      <div className="flex items-center justify-between font-medium text-white">
+                        <span className="flex items-center gap-1.5">
+                          <Plane className="w-4 h-4 text-slate-400" />
+                          <span>Airport flight</span>
+                        </span>
+                        <span className="font-mono">{activeMission.flight_number}</span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        From: {activeMission.flight_origin || 'Entebbe (EBB)'} ·{' '}
+                        <strong
+                          className={
+                            activeMission.flight_status === 'Delayed' ? 'text-rose-400' : 'text-emerald-400'
+                          }
+                        >
+                          {activeMission.flight_status || 'On time'}
+                        </strong>
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 pt-2 border-t border-slate-700/70">
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span>Trip step</span>
+                      <span className="font-mono text-slate-200">{activeMission.dispatch_status}</span>
+                    </div>
+
+                    {activeMission.dispatch_status === 'Not Sent' ||
+                    activeMission.dispatch_status === 'Dispatched (SMS)' ? (
                       <button
-                        onClick={() => {
-                          if (onAcknowledgeCheckin) onAcknowledgeCheckin(activeMission.id, 'Acknowledged by Driver');
-                        }}
-                        className="w-full py-3 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
+                        type="button"
+                        onClick={() => onAcknowledgeCheckin?.(activeMission.id, 'Acknowledged by Driver')}
+                        className="accent-bg w-full py-2.5 rounded-lg font-medium text-sm"
                       >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>1. Confirm Trip (*134#)</span>
+                        1. Confirm trip (*134#)
                       </button>
                     ) : activeMission.dispatch_status === 'Acknowledged by Driver' ? (
                       <button
-                        onClick={() => {
-                          if (onAcknowledgeCheckin) onAcknowledgeCheckin(activeMission.id, 'Driver at Terminal');
-                        }}
-                        className="w-full py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
+                        type="button"
+                        onClick={() => onAcknowledgeCheckin?.(activeMission.id, 'Driver at Terminal')}
+                        className="accent-bg w-full py-2.5 rounded-lg font-medium text-sm"
                       >
-                        <MapPin className="w-4 h-4" />
-                        <span>2. I Arrived at Pickup</span>
+                        2. I arrived at pickup
                       </button>
                     ) : activeMission.dispatch_status === 'Driver at Terminal' ? (
                       <button
-                        onClick={() => {
-                          if (onAcknowledgeCheckin) onAcknowledgeCheckin(activeMission.id, 'Client Onboard');
-                        }}
-                        className="w-full py-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
+                        type="button"
+                        onClick={() => onAcknowledgeCheckin?.(activeMission.id, 'Client Onboard')}
+                        className="accent-bg w-full py-2.5 rounded-lg font-medium text-sm"
                       >
-                        <Users className="w-4 h-4" />
-                        <span>3. Client in Car (Start Trip)</span>
+                        3. Guest in car (Start trip)
                       </button>
                     ) : (
                       <button
-                        onClick={() => {
-                          if (onCompleteTrip) onCompleteTrip(activeMission.id);
-                        }}
-                        className="w-full py-3 rounded-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
+                        type="button"
+                        onClick={() => onCompleteTrip?.(activeMission.id)}
+                        className="accent-bg w-full py-2.5 rounded-lg font-medium text-sm"
                       >
-                        <Award className="w-4 h-4" />
-                        <span>4. Finish Trip</span>
+                        4. Finish trip
                       </button>
                     )}
 
-                    {/* Problem Report Button */}
                     <button
+                      type="button"
                       onClick={() => {
                         setDriverReportNotice('Problem sent: Office alerted by SMS.');
                         setTimeout(() => setDriverReportNotice(null), 4000);
                       }}
-                      className="w-full py-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-colors"
+                      className="w-full py-2 rounded-lg border border-slate-700 text-slate-200 text-sm font-medium hover:bg-slate-800 transition-colors"
                     >
-                      Report Delay or Car Problem
+                      Report delay or car problem
                     </button>
+
                     {driverReportNotice && (
-                      <div className="p-2.5 text-center text-sm text-rose-400 bg-rose-950/60 rounded-xl border border-rose-800">
+                      <div className="p-2.5 text-center text-sm text-rose-300 bg-rose-500/10 rounded-lg border border-rose-500/30">
                         {driverReportNotice}
                       </div>
                     )}
                   </div>
-                </div>
 
-                {/* SMS Code */}
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-sm space-y-1">
-                  <div className="flex items-center justify-between text-slate-400 font-mono">
-                    <span>No-Internet SMS Code:</span>
-                    <span className="text-amber-400 font-bold">2121</span>
+                  <div className="p-3 rounded-lg bg-slate-900/70 text-xs text-slate-400">
+                    <div className="flex items-center justify-between font-mono">
+                      <span>No-internet SMS code:</span>
+                      <span className="text-white font-semibold">2121</span>
+                    </div>
+                    <p className="mt-1">
+                      Send <strong className="text-white">KIGALI ACK {activeMission.id}</strong> to check in by SMS.
+                    </p>
                   </div>
-                  <p className="text-slate-400">
-                    Send <strong>KIGALI ACK {activeMission.id}</strong> to check in by SMS.
+                </div>
+              ) : (
+                <div className="bg-slate-800/60 rounded-xl p-6 text-center space-y-1">
+                  <h4 className="text-base font-semibold text-white">No trip right now</h4>
+                  <p className="text-sm text-slate-400">
+                    {portalDriver?.name} is free for new bookings.
                   </p>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3">
-                <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto opacity-70" />
-                <h4 className="text-base font-bold text-white">No Trip Right Now</h4>
-                <p className="text-sm text-slate-400">
-                  {portalDriver?.name} is free for new bookings.
-                </p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* 4. Driver Details & History Modal */}
+      {/* Driver Details & History Modal */}
       {selectedDriverDetails && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl">
-            {/* Header */}
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 kf-modal">
             <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400 text-lg">
-                  {selectedDriverDetails.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join('')}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-                    {selectedDriverDetails.name}
-                  </h3>
-                  <div className="text-sm text-amber-600 dark:text-amber-400 font-mono flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span>{selectedDriverDetails.phone}</span>
-                    <span>•</span>
-                    <span>{selectedDriverDetails.email || 'kigalifleet.rw'}</span>
-                  </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {selectedDriverDetails.name}
+                </h3>
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                  {selectedDriverDetails.phone} · {selectedDriverDetails.email || 'kigalifleet.rw'}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
+                  type="button"
                   onClick={() => setEditingDriver(selectedDriverDetails)}
-                  className="p-2 rounded-full text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Edit driver details"
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSelectedDriverDetails(null)}
-                  className="p-2 rounded-full text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Driver Info */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">National ID</span>
-                <p className="font-mono text-[#0a2540] dark:text-white font-bold mt-0.5 truncate">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50/90 dark:bg-slate-800/40 text-sm">
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">National ID</span>
+                <span className="font-mono font-medium text-slate-900 dark:text-white mt-0.5 block truncate">
                   {selectedDriverDetails.national_id || '1199080012345678'}
-                </p>
+                </span>
               </div>
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">License Number</span>
-                <p className="font-mono text-[#0a2540] dark:text-white font-bold mt-0.5">
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">License number</span>
+                <span className="font-mono font-medium text-slate-900 dark:text-white mt-0.5 block">
                   {selectedDriverDetails.license_number}
-                </p>
+                </span>
               </div>
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">License Ends</span>
-                <p className="font-mono text-[#0a2540] dark:text-white font-bold mt-0.5">
-                  {selectedDriverDetails.license_expiry || '2027-12-31'}
-                </p>
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">License ends</span>
+                <span className="font-medium text-slate-900 dark:text-white mt-0.5 block tabular-nums">
+                  {formatHumanDate(selectedDriverDetails.license_expiry || '2027-12-31')}
+                </span>
               </div>
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Years Driving</span>
-                <p className="font-mono text-[#0a2540] dark:text-white font-bold mt-0.5">
-                  {selectedDriverDetails.experience_years || 7} Years
-                </p>
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Years driving</span>
+                <span className="font-mono font-medium text-slate-900 dark:text-white mt-0.5 block">
+                  {selectedDriverDetails.experience_years || 7} years
+                </span>
               </div>
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Languages</span>
-                <p className="text-[#0a2540] dark:text-white font-bold mt-0.5">
-                  {selectedDriverDetails.language}
-                </p>
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Languages</span>
+                <span className="font-medium text-slate-900 dark:text-white mt-0.5 block">
+                  {formatDriverLanguages(selectedDriverDetails.language)}
+                </span>
               </div>
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-sm text-[#425466] dark:text-slate-400 font-semibold">Emergency Phone</span>
-                <p className="font-mono text-[#0a2540] dark:text-white font-bold mt-0.5 truncate">
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Emergency phone</span>
+                <span className="font-mono font-medium text-slate-900 dark:text-white mt-0.5 block">
                   {selectedDriverDetails.emergency_phone || '+250 788 000 111'}
-                </p>
+                </span>
               </div>
             </div>
 
-            {/* Trip Records */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
-                  <History className="w-4 h-4 text-slate-400" />
-                  <span>Trips by {selectedDriverDetails.name}</span>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-sm">
+                <h4 className="font-semibold text-slate-900 dark:text-white">
+                  Trips by {selectedDriverDetails.name}
                 </h4>
-                <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {bookings.filter((b) => b.driver_id === selectedDriverDetails.id).length} Trips
+                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                  {bookings.filter((b) => b.driver_id === selectedDriverDetails.id).length} trips
                 </span>
               </div>
 
               {bookings.filter((b) => b.driver_id === selectedDriverDetails.id).length === 0 ? (
-                <div className="p-6 text-center text-sm text-[#425466] dark:text-slate-400 bg-[#f6f9fc] dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+                <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400 bg-slate-50/90 dark:bg-slate-800/40 rounded-lg">
                   No trips for this driver yet.
                 </div>
               ) : (
-                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden text-sm divide-y divide-slate-200 dark:divide-slate-800">
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                   {bookings
                     .filter((b) => b.driver_id === selectedDriverDetails.id)
                     .map((bk) => (
-                      <div
-                        key={bk.id}
-                        className="p-3.5 bg-white dark:bg-slate-900 flex items-center justify-between gap-2"
-                      >
+                      <div key={bk.id} className="p-3 flex items-center justify-between gap-2">
                         <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-bold text-amber-600 dark:text-amber-400">#{bk.id}</span>
-                            <span className="font-semibold text-[#0a2540] dark:text-white">
-                              {bk.client_name}
-                            </span>
-                            <span
-                              className={`text-sm px-2.5 py-0.5 rounded-full font-semibold ${
-                                bk.status === 'Completed'
-                                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
-                                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                              }`}
-                            >
-                              {bk.status}
+                          <div className="font-medium text-slate-900 dark:text-white">
+                            {bk.client_name}{' '}
+                            <span className="font-mono text-xs font-normal text-slate-500 dark:text-slate-400 ml-1">
+                              #{bk.id}
                             </span>
                           </div>
-                          <div className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">
-                            {bk.start_date} → {bk.end_date} • {bk.destination}
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            {formatHumanDateRange(bk.start_date, bk.end_date)} · {bk.destination} · {bk.status}
                           </div>
                         </div>
-
-                        <div className="text-right">
-                          <span className="font-mono font-bold text-[#0a2540] dark:text-white">
-                            {formatRwf(bk.total_rwf)}
-                          </span>
-                        </div>
+                        <span className="font-mono font-semibold text-slate-900 dark:text-white tabular-nums">
+                          {formatMoney(bk.total_rwf)}
+                        </span>
                       </div>
                     ))}
                 </div>
@@ -1044,48 +961,53 @@ export const DriversView: React.FC<DriversViewProps> = ({
 
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <button
+                type="button"
                 onClick={() => {
                   if (onDeleteDriver) {
                     onDeleteDriver(selectedDriverDetails.id);
                     setSelectedDriverDetails(null);
                   }
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Remove Driver</span>
+                <span>{tr('Remove driver')}</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   setActivePortalDriverId(selectedDriverDetails.id);
                   setActiveTab('portal');
                   setSelectedDriverDetails(null);
                 }}
-                className={`px-5 py-2 text-sm font-semibold rounded-full transition-all ${activeBtnText}`}
-                style={{ backgroundColor: activeThemeColor }}
+                className="accent-bg px-4 py-2 text-sm font-medium rounded-lg shadow-xs"
               >
-                Open Phone View
+                {tr('Open phone view')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 5. Add Driver Modal */}
+      {/* Add Driver Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto kf-modal">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-                  Add New Driver
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {tr('Add new driver')}
                 </h3>
-                <p className="text-sm text-[#425466] dark:text-slate-400">Enter driver details and driving license</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {tr('Enter driver details and driving license')}
+                </p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1.5 rounded-full"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1093,8 +1015,8 @@ export const DriversView: React.FC<DriversViewProps> = ({
 
             <form onSubmit={handleCreateDriver} className="space-y-4 text-sm">
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                  Full Name
+                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                  Full name
                 </label>
                 <input
                   type="text"
@@ -1102,13 +1024,13 @@ export const DriversView: React.FC<DriversViewProps> = ({
                   placeholder="e.g. Jean-Baptiste Habineza"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none focus:border-amber-400"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
                     Phone (+250)
                   </label>
                   <input
@@ -1117,11 +1039,11 @@ export const DriversView: React.FC<DriversViewProps> = ({
                     placeholder="+250 788 123 456"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-amber-600 dark:text-amber-400 font-mono font-bold outline-none focus:border-amber-400"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono outline-none focus:border-slate-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
                     Email
                   </label>
                   <input
@@ -1129,47 +1051,47 @@ export const DriversView: React.FC<DriversViewProps> = ({
                     placeholder="driver@kigalifleet.rw"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                    National ID (16 Numbers)
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    National ID (16 numbers)
                   </label>
                   <input
                     type="text"
                     placeholder="1199080012345678"
                     value={nationalId}
                     onChange={(e) => setNationalId(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white font-mono outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono outline-none focus:border-slate-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                    Driving License Number
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    Driving license number
                   </label>
                   <input
                     type="text"
                     placeholder="DL-RWA-2024-5510"
                     value={licenseNumber}
                     onChange={(e) => setLicenseNumber(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white font-mono outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
                     Languages
                   </label>
                   <select
                     value={language}
                     onChange={(e) => setLanguage(e.target.value as DriverLanguage)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   >
                     <option value="EN/RW">English & Kinyarwanda</option>
                     <option value="RW">Kinyarwanda Only</option>
@@ -1178,8 +1100,8 @@ export const DriversView: React.FC<DriversViewProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                    Years Driving
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    Years driving
                   </label>
                   <input
                     type="number"
@@ -1187,33 +1109,33 @@ export const DriversView: React.FC<DriversViewProps> = ({
                     max="40"
                     value={experienceYears}
                     onChange={(e) => setExperienceYears(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                    License End Date
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    License end date
                   </label>
                   <input
                     type="date"
                     value={licenseExpiry}
                     onChange={(e) => setLicenseExpiry(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                    Usual Car
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    Usual car
                   </label>
                   <select
                     value={assignedVehicleId}
                     onChange={(e) => setAssignedVehicleId(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   >
-                    <option value="">Any Car</option>
+                    <option value="">Any car</option>
                     {vehicles.map((v) => (
                       <option key={v.id} value={v.id}>
                         {v.model_name} ({v.plate_number})
@@ -1222,45 +1144,44 @@ export const DriversView: React.FC<DriversViewProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                    Emergency Phone
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    Emergency phone
                   </label>
                   <input
                     type="text"
                     value={emergencyPhone}
                     onChange={(e) => setEmergencyPhone(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white font-mono outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                  Routes & Notes
+                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                  Routes & notes
                 </label>
                 <textarea
                   rows={2}
                   placeholder="e.g. Kigali Airport pickups, Nyungwe forest trips, Akagera park"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none focus:border-amber-400"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                 />
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-full text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white font-semibold"
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Cancel
+                  {tr('Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className={`px-5 py-2 rounded-full font-semibold ${activeBtnText}`}
-                  style={{ backgroundColor: activeThemeColor }}
+                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
                 >
-                  Save Driver
+                  {tr('Save driver')}
                 </button>
               </div>
             </form>
@@ -1268,17 +1189,19 @@ export const DriversView: React.FC<DriversViewProps> = ({
         </div>
       )}
 
-      {/* 6. Edit Driver Modal */}
+      {/* Edit Driver Modal */}
       {editingDriver && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-                Edit Driver ({editingDriver.name})
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 kf-modal">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Edit driver ({editingDriver.name})
               </h3>
               <button
+                type="button"
                 onClick={() => setEditingDriver(null)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1.5 rounded-full"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1286,21 +1209,21 @@ export const DriversView: React.FC<DriversViewProps> = ({
 
             <form onSubmit={handleSaveEditDriver} className="space-y-4 text-sm">
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                  Full Name
+                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                  Full name
                 </label>
                 <input
                   type="text"
                   required
                   value={editingDriver.name}
                   onChange={(e) => setEditingDriver({ ...editingDriver, name: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
                     Phone (+250)
                   </label>
                   <input
@@ -1308,19 +1231,24 @@ export const DriversView: React.FC<DriversViewProps> = ({
                     required
                     value={editingDriver.phone}
                     onChange={(e) => setEditingDriver({ ...editingDriver, phone: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-amber-600 dark:text-amber-400 font-mono font-bold outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono outline-none focus:border-slate-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
-                    Usual Car
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    Usual car
                   </label>
                   <select
                     value={editingDriver.assigned_vehicle_id || ''}
-                    onChange={(e) => setEditingDriver({ ...editingDriver, assigned_vehicle_id: e.target.value || undefined })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    onChange={(e) =>
+                      setEditingDriver({
+                        ...editingDriver,
+                        assigned_vehicle_id: e.target.value || undefined,
+                      })
+                    }
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                   >
-                    <option value="">Any Car</option>
+                    <option value="">Any car</option>
                     {vehicles.map((v) => (
                       <option key={v.id} value={v.id}>
                         {v.model_name} ({v.plate_number})
@@ -1331,31 +1259,30 @@ export const DriversView: React.FC<DriversViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-300 font-semibold mb-1">
+                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
                   Notes
                 </label>
                 <textarea
                   rows={2}
                   value={editingDriver.notes}
                   onChange={(e) => setEditingDriver({ ...editingDriver, notes: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
                 />
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingDriver(null)}
-                  className="px-4 py-2 rounded-full text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white font-semibold"
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Cancel
+                  {tr('Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className={`px-5 py-2 rounded-full font-semibold ${activeBtnText}`}
-                  style={{ backgroundColor: activeThemeColor }}
+                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
                 >
-                  Save Changes
+                  {tr('Save changes')}
                 </button>
               </div>
             </form>

@@ -6,6 +6,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "category": { "type": "string", "enum": ["RAV4", "LandCruiser", "Coaster", "Safari Van", "Luxury Sedan"] },
         "model_name": { "type": "string", "maxLength": 200 },
         "plate_number": { "type": "string", "maxLength": 20 },
@@ -16,7 +17,18 @@
         "seating_capacity": { "type": "number" },
         "current_odometer_km": { "type": "number" },
         "location": { "type": "string", "maxLength": 200 },
-        "image_url": { "type": "string", "maxLength": 1000 },
+        "image_url": { "type": "string", "maxLength": 250000 },
+        "gallery_urls": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "type": "string", "maxLength": 250000 }
+        },
+        "description": { "type": "string", "maxLength": 1000 },
+        "features": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "type": "string", "maxLength": 80 }
+        },
         "year": { "type": "number" },
         "assigned_driver_id": { "type": "string", "maxLength": 128 },
         "assigned_driver_name": { "type": "string", "maxLength": 200 },
@@ -34,6 +46,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 200 },
         "phone": { "type": "string", "maxLength": 50 },
         "email": { "type": "string", "maxLength": 200 },
@@ -57,6 +70,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "client_name": { "type": "string", "maxLength": 200 },
         "client_email": { "type": "string", "maxLength": 200 },
         "client_phone": { "type": "string", "maxLength": 50 },
@@ -140,6 +154,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 200 },
         "phone": { "type": "string", "maxLength": 50 },
         "email": { "type": "string", "maxLength": 200 },
@@ -163,6 +178,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "booking_id": { "type": "string", "maxLength": 128 },
         "customer_name": { "type": "string", "maxLength": 200 },
         "customer_phone": { "type": "string", "maxLength": 50 },
@@ -185,6 +201,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "vehicle_id": { "type": "string", "maxLength": 128 },
         "vehicle_plate": { "type": "string", "maxLength": 30 },
         "vehicle_model": { "type": "string", "maxLength": 200 },
@@ -212,6 +229,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "title": { "type": "string", "maxLength": 200 },
         "category": { "type": "string", "maxLength": 100 },
         "amount_rwf": { "type": "number" },
@@ -235,6 +253,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "booking_id": { "type": "string", "maxLength": 128 },
         "vehicle_id": { "type": "string", "maxLength": 128 },
         "vehicle_plate": { "type": "string", "maxLength": 30 },
@@ -260,6 +279,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "title": { "type": "string", "maxLength": 200 },
         "description": { "type": "string", "maxLength": 1000 },
         "assigned_to_name": { "type": "string", "maxLength": 200 },
@@ -279,6 +299,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
+        "company_id": { "type": "string", "maxLength": 128 },
         "timestamp": { "type": "string", "maxLength": 50 },
         "action": { "type": "string", "maxLength": 200 },
         "details": { "type": "string", "maxLength": 500 },

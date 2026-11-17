@@ -23,7 +23,9 @@ import {
 } from '../../types';
 import { ColorTheme } from '../../theme';
 import { isSuperAdminEmail } from '../../utils/auth';
-import { ReasonActionModal, getStatusStyles } from './SuperAdminShared';
+import { ReasonActionModal, getStatusDotColor, getStatusStyles } from './SuperAdminShared';
+import { useI18n } from '../../utils/i18n';
+import { formatHumanDate, formatHumanDateRange, formatHumanDateTime } from '../../utils/dates';
 
 interface SuperAdminTenantsAndUsersProps {
   mode: 'companies' | 'users';
@@ -89,6 +91,7 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
   onTriggerUserRecovery,
   onNavigateToTenantDashboard,
 }) => {
+  const { formatMoney, tr } = useI18n();
   const [compSearch, setCompSearch] = useState('');
   const [compStatusFilter, setCompStatusFilter] = useState<'all' | CompanyStatus>('all');
   const [compTierFilter, setCompTierFilter] = useState<'all' | 'starter' | 'growth' | 'enterprise'>('all');
@@ -185,17 +188,17 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
 
   if (mode === 'users') {
     return (
-      <div className="space-y-5">
+      <div className="space-y-4">
         {/* Filters */}
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
               placeholder="Search people by name, email, or phone..."
-              className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-100 text-sm rounded-xl pl-10 pr-3.5 py-2.5 outline-none focus:border-amber-500"
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg pl-9 pr-3 py-2 outline-none"
             />
           </div>
 
@@ -203,26 +206,26 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
             <select
               value={userRoleFilter}
               onChange={(e) => setUserRoleFilter(e.target.value)}
-              className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-300 text-sm rounded-xl px-3 py-2.5 outline-none"
+              className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg px-3 py-2 outline-none"
             >
-              <option value="all">All Roles ({users.length})</option>
+              <option value="all">All roles ({users.length})</option>
               <option value="owner">Owner</option>
               <option value="manager">Manager</option>
               <option value="dispatcher">Dispatcher</option>
               <option value="accountant">Accountant</option>
-              <option value="fleet_manager">Car Manager</option>
+              <option value="fleet_manager">Car manager</option>
               <option value="mechanic">Mechanic</option>
               <option value="driver">Driver</option>
-              <option value="receptionist">Front Desk</option>
-              <option value="superadmin">Main Owner</option>
+              <option value="receptionist">Front desk</option>
+              <option value="superadmin">Main owner</option>
             </select>
 
             <select
               value={userStatusFilter}
               onChange={(e) => setUserStatusFilter(e.target.value)}
-              className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-300 text-sm rounded-xl px-3 py-2.5 outline-none"
+              className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg px-3 py-2 outline-none"
             >
-              <option value="all">All Statuses</option>
+              <option value="all">All statuses</option>
               <option value="Active">Active</option>
               <option value="Suspended">Suspended</option>
               <option value="Invited">Invited</option>
@@ -231,167 +234,171 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
           </div>
         </div>
 
-        {/* Users Grid */}
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider text-[#425466] dark:text-slate-400 font-semibold">
-            <div className="col-span-3">Person</div>
-            <div className="col-span-3">Company</div>
-            <div className="col-span-2">Role</div>
-            <div className="col-span-2">Last Sign In</div>
-            <div className="col-span-1 text-center">Status</div>
-            <div className="col-span-1 text-right">Actions</div>
-          </div>
-          <div className="divide-y divide-slate-200 dark:divide-slate-800/70 text-sm text-[#0a2540] dark:text-slate-200">
-            {filteredUsers.map((u) => {
-              const comp = companies.find((c) => c.id === u.company_id);
-              const isMasterOwner = isSuperAdminEmail(u.email) || u.role === 'superadmin';
-              const st = u.status || 'Active';
+        {/* Users Table */}
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-4">{tr('Person')}</th>
+                <th className="py-3 px-4">{tr('Company')}</th>
+                <th className="py-3 px-4">{tr('Role')}</th>
+                <th className="py-3 px-4">{tr('Last sign in')}</th>
+                <th className="py-3 px-4">{tr('Status')}</th>
+                <th className="py-3 px-4 text-right">{tr('Actions')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-900 dark:text-slate-100">
+              {filteredUsers.map((u) => {
+                const comp = companies.find((c) => c.id === u.company_id);
+                const isMasterOwner = isSuperAdminEmail(u.email) || u.role === 'superadmin';
+                const st = u.status || 'Active';
 
-              return (
-                <div
-                  key={u.id}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 px-4 py-3.5 items-center hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40"
-                >
-                  <div className="lg:col-span-3 min-w-0">
-                    <div className="font-semibold text-[#0a2540] dark:text-white truncate">{u.name}</div>
-                    <div className="text-xs font-mono text-[#425466] dark:text-slate-400 truncate">{u.email}</div>
-                  </div>
-                  <div className="lg:col-span-3 min-w-0">
-                    <div className="text-[#0a2540] dark:text-slate-300 font-medium truncate">
-                      {isMasterOwner ? 'Main Platform' : comp?.name || u.company_id}
-                    </div>
-                    <div className="text-xs font-mono text-[#425466] dark:text-slate-400 whitespace-nowrap">{u.phone}</div>
-                  </div>
-                  <div className="lg:col-span-2">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 bg-[#f6f9fc] dark:bg-slate-800 font-mono text-xs capitalize whitespace-nowrap">
-                      {isMasterOwner ? 'Main Owner' : u.role.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <div className="lg:col-span-2 font-mono text-xs text-[#425466] dark:text-slate-400">
-                    <div className="whitespace-nowrap">{u.last_login ? u.last_login.slice(0, 16).replace('T', ' ') : 'Signed in now'}</div>
-                    {u.sessions_revoked_at && (
-                      <div className="text-amber-600 dark:text-amber-400 text-xs whitespace-nowrap">
-                        Signed out {u.sessions_revoked_at.slice(0, 10)}
+                return (
+                  <tr key={u.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                    <td className="py-3 px-4">
+                      <div className="font-semibold">{u.name}</div>
+                      <div className="text-xs font-mono text-slate-500 dark:text-slate-400">{u.email}</div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div>{isMasterOwner ? 'Main platform' : comp?.name || u.company_id}</div>
+                      <div className="text-xs font-mono text-slate-500 dark:text-slate-400">{u.phone}</div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-xs capitalize whitespace-nowrap">
+                        {isMasterOwner ? 'Main owner' : u.role.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                      <div className="whitespace-nowrap">
+                        {u.last_login ? formatHumanDateTime(u.last_login) : 'Signed in now'}
                       </div>
-                    )}
-                  </div>
-                  <div className="lg:col-span-1 lg:text-center">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full border text-xs font-semibold whitespace-nowrap ${getStatusStyles(st)}`}>
-                      {st}
-                    </span>
-                  </div>
-                  <div className="lg:col-span-1 flex items-center lg:justify-end gap-1.5 flex-wrap">
-                    <button
-                      onClick={() => setSelectedUser(u)}
-                      className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold whitespace-nowrap"
-                    >
-                      View
-                    </button>
-                    {!isMasterOwner && canSuspendUsers && (
-                      <button
-                        onClick={() =>
-                          setPendingAction({
-                            title: st === 'Suspended' ? `Turn Account On for ${u.name}` : `Pause Account for ${u.name}`,
-                            description: `${u.email} · ${comp?.name || u.company_id}`,
-                            confirmLabel: st === 'Suspended' ? 'Turn On' : 'Pause Account',
-                            danger: st !== 'Suspended',
-                            execute: (reason) =>
-                              onUpdateUserStatus(u.id, st === 'Suspended' ? 'Active' : 'Suspended', reason),
-                          })
-                        }
-                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap border ${
-                          st === 'Suspended'
-                            ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
-                            : 'border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
-                        }`}
-                      >
-                        {st === 'Suspended' ? 'Turn On' : 'Pause'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      {u.sessions_revoked_at && (
+                        <div className="text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                          Signed out {formatHumanDate(u.sessions_revoked_at)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium">
+                        <span className={`w-2 h-2 rounded-full ${getStatusDotColor(st)}`} />
+                        <span>{st}</span>
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          onClick={() => setSelectedUser(u)}
+                          className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold whitespace-nowrap transition-colors"
+                        >
+                          View
+                        </button>
+                        {!isMasterOwner && canSuspendUsers && (
+                          <button
+                            onClick={() =>
+                              setPendingAction({
+                                title: st === 'Suspended' ? `Turn account on for ${u.name}` : `Pause account for ${u.name}`,
+                                description: `${u.email} · ${comp?.name || u.company_id}`,
+                                confirmLabel: st === 'Suspended' ? 'Turn on' : 'Pause account',
+                                danger: st !== 'Suspended',
+                                execute: (reason) =>
+                                  onUpdateUserStatus(u.id, st === 'Suspended' ? 'Active' : 'Suspended', reason),
+                              })
+                            }
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border transition-colors ${
+                              st === 'Suspended'
+                                ? 'border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
+                                : 'border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10'
+                            }`}
+                          >
+                            {st === 'Suspended' ? 'Turn on' : 'Pause'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
 
-        {/* User Detail Drawer Modal */}
+        {/* User Detail Modal */}
         {selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
-            <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-              <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
+            <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4">
+              <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
                 <div>
-                  <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">{selectedUser.name}</h3>
-                  <p className="text-sm font-mono text-[#425466] dark:text-slate-400">{selectedUser.email}</p>
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{selectedUser.name}</h3>
+                  <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">{selectedUser.email}</p>
                 </div>
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-full"
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-sm text-[#425466] dark:text-slate-400">Role</div>
-                  <div className="font-mono font-bold text-[#0a2540] dark:text-white mt-0.5 capitalize">
+                <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Role</div>
+                  <div className="font-mono font-semibold text-slate-900 dark:text-slate-100 mt-0.5 capitalize">
                     {selectedUser.role.replace('_', ' ')}
                   </div>
                 </div>
-                <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-sm text-[#425466] dark:text-slate-400">Status</div>
-                  <div className="font-semibold text-[#0a2540] dark:text-white mt-0.5">
+                <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Status</div>
+                  <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
                     {selectedUser.status || 'Active'}
                   </div>
                 </div>
-                <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-sm text-[#425466] dark:text-slate-400">Phone</div>
-                  <div className="font-mono text-[#0a2540] dark:text-white mt-0.5">{selectedUser.phone}</div>
+                <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Phone</div>
+                  <div className="font-mono text-slate-900 dark:text-slate-100 mt-0.5">{selectedUser.phone}</div>
                 </div>
-                <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-sm text-[#425466] dark:text-slate-400">Password Help Sent</div>
-                  <div className="font-mono text-[#0a2540] dark:text-white mt-0.5">
+                <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Password help sent</div>
+                  <div className="font-mono text-slate-900 dark:text-slate-100 mt-0.5">
                     {selectedUser.recovery_requested_at
-                      ? selectedUser.recovery_requested_at.slice(0, 10)
+                      ? formatHumanDate(selectedUser.recovery_requested_at)
                       : 'Never'}
                   </div>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2.5">
-                <Lock className="w-5 h-5 shrink-0" />
+              <div className="p-3.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-xs text-amber-800 dark:text-amber-400 flex items-center gap-2.5">
+                <Lock className="w-4 h-4 shrink-0" />
                 <span>
                   For safety, nobody can see or change another person&apos;s password. You can only send a reset link or sign them out.
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   onClick={() => {
                     onTriggerUserRecovery(selectedUser.id);
                     setSelectedUser(null);
                   }}
-                  className="px-4 py-2 rounded-full text-sm font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-lg text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
                 >
                   <KeyRound className="w-4 h-4" />
-                  <span>Send Reset Link</span>
+                  <span>Send reset link</span>
                 </button>
                 <button
                   onClick={() => {
                     const target = selectedUser;
                     setSelectedUser(null);
                     setPendingAction({
-                      title: `Log Out ${target.name} Everywhere`,
+                      title: `Log out ${target.name} everywhere`,
                       description: `Signs out ${target.email} from all phones and computers right now.`,
-                      confirmLabel: 'Log Out Everywhere',
+                      confirmLabel: 'Log out everywhere',
                       danger: true,
                       execute: (reason) => onRevokeUserSessions(target.id, reason),
                     });
                   }}
-                  className="px-4 py-2 rounded-full text-sm font-semibold bg-rose-600 hover:bg-rose-500 text-white"
+                  className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors"
                 >
-                  Log Out Everywhere
+                  Log out everywhere
                 </button>
               </div>
             </div>
@@ -428,17 +435,17 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
     : [];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Search, Filters & Add Company CTA */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={compSearch}
             onChange={(e) => setCompSearch(e.target.value)}
             placeholder="Search company, tax number, city, or owner..."
-            className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-100 text-sm rounded-xl pl-10 pr-3.5 py-2.5 outline-none focus:border-amber-500"
+            className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg pl-9 pr-3 py-2 outline-none"
           />
         </div>
 
@@ -446,9 +453,9 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
           <select
             value={compStatusFilter}
             onChange={(e) => setCompStatusFilter(e.target.value as any)}
-            className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-300 text-sm rounded-xl px-3 py-2.5 outline-none"
+            className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg px-3 py-2 outline-none"
           >
-            <option value="all">All Statuses ({companies.length})</option>
+            <option value="all">All statuses ({companies.length})</option>
             {STATUS_OPTIONS.map((st) => (
               <option key={st} value={st}>
                 {st} ({companies.filter((c) => (c.status || 'Active') === st).length})
@@ -459,9 +466,9 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
           <select
             value={compTierFilter}
             onChange={(e) => setCompTierFilter(e.target.value as any)}
-            className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[#0a2540] dark:text-slate-300 text-sm rounded-xl px-3 py-2.5 outline-none"
+            className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg px-3 py-2 outline-none"
           >
-            <option value="all">All Plans</option>
+            <option value="all">All plans</option>
             <option value="enterprise">Enterprise</option>
             <option value="growth">Growth</option>
             <option value="starter">Starter</option>
@@ -469,225 +476,226 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap ${currentTheme.btnText}`}
-            style={{ backgroundColor: currentTheme.hex }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap accent-bg"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Company</span>
+            <span>{tr('Add company')}</span>
           </button>
         </div>
       </div>
 
-      {/* Companies Grid */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider text-[#425466] dark:text-slate-400 font-semibold">
-          <div className="col-span-3">Company & Tax ID</div>
-          <div className="col-span-3">Owner & City</div>
-          <div className="col-span-2">Plan & Cars</div>
-          <div className="col-span-1 text-right">Price/mo</div>
-          <div className="col-span-1 text-center">Status</div>
-          <div className="col-span-2 text-right">Actions</div>
-        </div>
-        <div className="divide-y divide-slate-200 dark:divide-slate-800/70 text-sm text-[#0a2540] dark:text-slate-200">
-          {filteredCompanies.map((comp) => {
-            const status = comp.status || 'Active';
-            const isPending = status === 'Pending' || status === 'Pending Verification';
-            const isCurrent = comp.id === currentCompany.id;
-            const fee =
-              comp.monthly_fee_rwf ??
-              (comp.tier_id === 'enterprise' ? 150000 : comp.tier_id === 'growth' ? 75000 : 35000);
+      {/* Companies Table */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-x-auto">
+        <table className="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <th className="py-3 px-4">{tr('Company & tax ID')}</th>
+              <th className="py-3 px-4">{tr('Owner & city')}</th>
+              <th className="py-3 px-4">{tr('Plan & cars')}</th>
+              <th className="py-3 px-4 text-right">{tr('Price/mo')}</th>
+              <th className="py-3 px-4">{tr('Status')}</th>
+              <th className="py-3 px-4 text-right">{tr('Actions')}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-900 dark:text-slate-100">
+            {filteredCompanies.map((comp) => {
+              const status = comp.status || 'Active';
+              const isPending = status === 'Pending' || status === 'Pending Verification';
+              const isCurrent = comp.id === currentCompany.id;
+              const fee =
+                comp.monthly_fee_rwf ??
+                (comp.tier_id === 'enterprise' ? 150000 : comp.tier_id === 'growth' ? 75000 : 35000);
 
-            return (
-              <div
-                key={comp.id}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 px-4 py-3.5 items-center hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40"
-              >
-                <div className="lg:col-span-3 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-[#0a2540] dark:text-white truncate">{comp.name}</span>
-                    {isCurrent && (
-                      <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 whitespace-nowrap">
-                        Open Now
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs font-mono text-[#425466] dark:text-slate-400 mt-0.5 truncate">
-                    TIN: {comp.tin_number} · {comp.business_type}
-                  </div>
-                </div>
+              return (
+                <tr key={comp.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{comp.name}</span>
+                      {isCurrent && (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                          Open now
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                      TIN {comp.tin_number} · {comp.business_type}
+                    </div>
+                  </td>
 
-                <div className="lg:col-span-3 min-w-0">
-                  <div className="font-medium text-[#0a2540] dark:text-slate-200 truncate">
-                    {comp.owner_name || 'Company Owner'}
-                  </div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 flex items-center gap-1 mt-0.5 flex-wrap">
-                    <MapPin className="w-3.5 h-3.5 shrink-0" />
-                    <span>{comp.city}</span>
-                    <span>·</span>
-                    <span className="font-mono whitespace-nowrap">{comp.phone}</span>
-                  </div>
-                </div>
+                  <td className="py-3 px-4">
+                    <div>{comp.owner_name || 'Company owner'}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 flex-wrap">
+                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                      <span>{comp.city}</span>
+                      <span>·</span>
+                      <span className="font-mono whitespace-nowrap">{comp.phone}</span>
+                    </div>
+                  </td>
 
-                <div className="lg:col-span-2 min-w-0">
-                  <div className="font-mono font-semibold uppercase text-xs">{comp.tier_id}</div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 tabular-nums">
-                    {comp.vehicle_count || 0} cars · {comp.branches_count || 1} office(s)
-                  </div>
-                </div>
+                  <td className="py-3 px-4">
+                    <div className="font-mono font-semibold text-xs capitalize">{comp.tier_id}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                      {comp.vehicle_count || 0} cars · {comp.branches_count || 1} office(s)
+                    </div>
+                  </td>
 
-                <div className="lg:col-span-1 lg:text-right font-mono tabular-nums">
-                  <div className="font-bold text-[#0a2540] dark:text-white whitespace-nowrap text-xs">
-                    {fee.toLocaleString()} RWF
-                  </div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 whitespace-nowrap">
-                    {comp.renewal_date ? comp.renewal_date : 'Trial'}
-                  </div>
-                </div>
+                  <td className="py-3 px-4 text-right font-mono tabular-nums">
+                    <div className="font-semibold whitespace-nowrap">{formatMoney(fee)}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                      {comp.renewal_date ? formatHumanDate(comp.renewal_date) : tr('Trial')}
+                    </div>
+                  </td>
 
-                <div className="lg:col-span-1 lg:text-center">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full border text-xs font-semibold whitespace-nowrap ${getStatusStyles(status)}`}>
-                    {status}
-                  </span>
-                </div>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium">
+                      <span className={`w-2 h-2 rounded-full ${getStatusDotColor(status)}`} />
+                      <span>{tr(status)}</span>
+                    </span>
+                  </td>
 
-                <div className="lg:col-span-2 flex items-center lg:justify-end gap-1.5 flex-wrap">
-                  <button
-                    onClick={() => {
-                      setDossierCompany(comp);
-                      setDossierTab('profile');
-                    }}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 whitespace-nowrap flex items-center gap-1"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Open</span>
-                  </button>
+                  <td className="py-3 px-4 text-right">
+                    <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+                      <button
+                        onClick={() => {
+                          setDossierCompany(comp);
+                          setDossierTab('profile');
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap inline-flex items-center gap-1 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Open</span>
+                      </button>
 
-                  {isPending && canApproveCompanies && (
-                    <button
-                      onClick={() =>
-                        setPendingAction({
-                          title: `Approve Company: ${comp.name}`,
-                          description: `TIN ${comp.tin_number} will be turned on so they can use the system.`,
-                          confirmLabel: 'Approve Now',
-                          execute: (reason) => onUpdateCompanyStatus(comp.id, 'Active', reason),
-                        })
-                      }
-                      className="px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white whitespace-nowrap flex items-center gap-1"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Approve</span>
-                    </button>
-                  )}
+                      {isPending && canApproveCompanies && (
+                        <button
+                          onClick={() =>
+                            setPendingAction({
+                              title: `Approve company: ${comp.name}`,
+                              description: `TIN ${comp.tin_number} will be turned on so they can use the system.`,
+                              confirmLabel: 'Approve now',
+                              execute: (reason) => onUpdateCompanyStatus(comp.id, 'Active', reason),
+                            })
+                          }
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap inline-flex items-center gap-1 transition-colors"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Approve</span>
+                        </button>
+                      )}
 
-                  <button
-                    onClick={() => {
-                      onSwitchCompanyContext(comp.id, `Opened company workspace from Admin Desk`);
-                      onNavigateToTenantDashboard?.();
-                    }}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 whitespace-nowrap flex items-center gap-1"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" style={{ color: currentTheme.hex }} />
-                    <span>View</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                      <button
+                        onClick={() => {
+                          onSwitchCompanyContext(comp.id, `Opened company workspace from Admin Desk`);
+                          onNavigateToTenantDashboard?.();
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap inline-flex items-center gap-1 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 accent-text" />
+                        <span>View</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Company Full Info Modal */}
       {dossierCompany && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full p-6 shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-4xl w-full p-5 max-h-[90vh] flex flex-col">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">{dossierCompany.name}</h3>
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{dossierCompany.name}</h3>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles(
+                    className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles(
                       dossierCompany.status || 'Active'
                     )}`}
                   >
                     {dossierCompany.status || 'Active'}
                   </span>
                 </div>
-                <p className="text-sm font-mono text-[#425466] dark:text-slate-400 mt-1">
-                  ID: {dossierCompany.id} · TIN: {dossierCompany.tin_number} · {dossierCompany.city}
+                <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-1">
+                  ID {dossierCompany.id} · TIN {dossierCompany.tin_number} · {dossierCompany.city}
                 </p>
               </div>
               <button
                 onClick={() => setDossierCompany(null)}
-                className="text-slate-400 hover:text-slate-800 dark:hover:text-white p-1.5 rounded-full"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 border-b border-slate-200 dark:border-slate-800 py-3">
-              {(
-                [
-                  { id: 'profile', label: 'Details & Controls' },
-                  { id: 'users', label: `People (${dossierUsers.length})` },
-                  { id: 'fleet', label: `Cars` },
-                  { id: 'bookings', label: `Recent Trips` },
-                  { id: 'billing', label: `Payments (${dossierPayments.length})` },
-                  { id: 'audit', label: `Change History (${dossierAudits.length})` },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setDossierTab(tab.id)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
-                    dossierTab === tab.id
-                      ? 'bg-[#0a2540] text-white dark:bg-slate-800'
-                      : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            {/* Segmented Tabs */}
+            <div className="pt-3 overflow-x-auto">
+              <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg gap-1">
+                {(
+                  [
+                    { id: 'profile', label: 'Details & controls' },
+                    { id: 'users', label: `People (${dossierUsers.length})` },
+                    { id: 'fleet', label: 'Cars' },
+                    { id: 'bookings', label: 'Recent trips' },
+                    { id: 'billing', label: `Payments (${dossierPayments.length})` },
+                    { id: 'audit', label: `Change history (${dossierAudits.length})` },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setDossierTab(tab.id)}
+                    className={`px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors ${
+                      dossierTab === tab.id
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 space-y-4 text-sm">
               {dossierTab === 'profile' && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                      <div className="text-sm text-[#425466] dark:text-slate-400">Company Owner</div>
-                      <div className="font-bold text-[#0a2540] dark:text-white mt-0.5">
+                    <div className="p-3.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400">Company owner</div>
+                      <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
                         {dossierCompany.owner_name || 'Owner'}
                       </div>
-                      <div className="font-mono text-sm text-[#425466] dark:text-slate-400">{dossierCompany.email}</div>
+                      <div className="font-mono text-xs text-slate-500 dark:text-slate-400">{dossierCompany.email}</div>
                     </div>
-                    <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                      <div className="text-sm text-[#425466] dark:text-slate-400">Plan</div>
-                      <div className="font-bold text-[#0a2540] dark:text-white uppercase mt-0.5">
+                    <div className="p-3.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{tr('Plan')}</div>
+                      <div className="font-semibold text-slate-900 dark:text-slate-100 capitalize mt-0.5">
                         {dossierCompany.tier_id}
                       </div>
-                      <div className="font-mono text-sm text-[#425466] dark:text-slate-400">
-                        {(dossierCompany.monthly_fee_rwf || 0).toLocaleString()} RWF / month
+                      <div className="font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                        {formatMoney(dossierCompany.monthly_fee_rwf || 0)} / {tr('month')}
                       </div>
                     </div>
-                    <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                      <div className="text-sm text-[#425466] dark:text-slate-400">Support Person</div>
-                      <div className="font-mono text-[#0a2540] dark:text-white mt-0.5 break-all">
+                    <div className="p-3.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400">Support person</div>
+                      <div className="font-mono text-xs text-slate-900 dark:text-slate-100 mt-1 break-all">
                         {dossierCompany.assigned_support_admin || 'support.lead@kigalifleet.rw'}
                       </div>
                     </div>
                   </div>
 
                   {dossierCompany.suspension_reason && (
-                    <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300">
-                      <strong>Last Reason Saved:</strong> {dossierCompany.suspension_reason}
+                    <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-sm">
+                      <strong className="font-semibold">Last reason saved:</strong> {dossierCompany.suspension_reason}
                     </div>
                   )}
 
                   {canSuspendCompanies && (
-                    <div className="p-5 rounded-2xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
-                      <div className="font-bold text-[#0a2540] dark:text-white">
-                        Change Company Status (Reason Saved)
+                    <div className="p-4 rounded-xl bg-slate-50/90 dark:bg-slate-800/40 space-y-3">
+                      <div className="font-semibold text-slate-900 dark:text-slate-100">
+                        Change company status (reason saved)
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {(['Active', 'Trial', 'Grace Period', 'Restricted', 'Suspended', 'Closed'] as CompanyStatus[]).map(
@@ -706,7 +714,7 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
                                   },
                                 })
                               }
-                              className="px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-amber-500 font-semibold whitespace-nowrap"
+                              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold whitespace-nowrap transition-colors"
                             >
                               {targetStatus}
                             </button>
@@ -714,26 +722,26 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
                         )}
                       </div>
 
-                      <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-2">
-                        <span className="text-[#425466] dark:text-slate-400 font-medium">Change Plan:</span>
+                      <div className="pt-3 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Change plan:</span>
                         {(['starter', 'growth', 'enterprise'] as const).map((tier) => (
                           <button
                             key={tier}
                             onClick={() =>
                               setPendingAction({
-                                title: `Change ${dossierCompany.name} Plan to ${tier.toUpperCase()}`,
-                                description: `Updates how many cars they can add and their monthly price.`,
-                                confirmLabel: `Switch to ${tier.toUpperCase()}`,
+                                title: `Change ${dossierCompany.name} plan to ${tier}`,
+                                description: 'Updates how many cars they can add and their monthly price.',
+                                confirmLabel: `Switch to ${tier}`,
                                 execute: (reason) => {
                                   onUpdateCompanyPlan(dossierCompany.id, tier, reason);
                                   setDossierCompany({ ...dossierCompany, tier_id: tier });
                                 },
                               })
                             }
-                            className={`px-3.5 py-1.5 rounded-full font-mono uppercase text-sm font-bold border ${
+                            className={`px-3 py-1.5 rounded-lg font-mono capitalize text-xs font-semibold border transition-colors ${
                               dossierCompany.tier_id === tier
-                                ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-500/10'
-                                : 'border-slate-200 dark:border-slate-700 text-[#425466] dark:text-slate-300'
+                                ? 'accent-border accent-text accent-tint'
+                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300'
                             }`}
                           >
                             {tier}
@@ -746,20 +754,19 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
               )}
 
               {dossierTab === 'users' && (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {dossierUsers.length === 0 ? (
-                    <p className="text-[#425466] dark:text-slate-400">No staff accounts added for this company yet.</p>
+                    <p className="p-4 text-slate-500 dark:text-slate-400">No staff accounts added for this company yet.</p>
                   ) : (
                     dossierUsers.map((u) => (
-                      <div
-                        key={u.id}
-                        className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
-                      >
+                      <div key={u.id} className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 flex items-center justify-between">
                         <div>
-                          <div className="font-bold text-[#0a2540] dark:text-white">{u.name}</div>
-                          <div className="font-mono text-sm text-[#425466] dark:text-slate-400">{u.email} · {u.phone}</div>
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">{u.name}</div>
+                          <div className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                            {u.email} · {u.phone}
+                          </div>
                         </div>
-                        <span className="px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 font-mono text-sm capitalize">
+                        <span className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs capitalize">
                           {u.role.replace('_', ' ')}
                         </span>
                       </div>
@@ -770,23 +777,23 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
 
               {dossierTab === 'fleet' && (
                 <div className="space-y-3">
-                  <p className="text-[#425466] dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Showing cars in the system ({vehicles.length} total):
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {vehicles.slice(0, 6).map((v) => (
                       <div
                         key={v.id}
-                        className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                        className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 flex items-center justify-between"
                       >
                         <div>
-                          <div className="font-bold text-[#0a2540] dark:text-white">{v.model_name}</div>
-                          <div className="font-mono text-sm text-[#425466] dark:text-slate-400">
-                            {v.plate_number} · {v.daily_rate_rwf.toLocaleString()} RWF/day
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">{v.model_name}</div>
+                          <div className="font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                            {v.plate_number} · {formatMoney(v.daily_rate_rwf)}{tr('/day')}
                           </div>
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded-full border text-sm ${getStatusStyles(v.status)}`}>
-                          {v.status}
+                        <span className={`px-2 py-0.5 rounded-md border text-xs font-medium ${getStatusStyles(v.status)}`}>
+                          {tr(v.status)}
                         </span>
                       </div>
                     ))}
@@ -795,22 +802,22 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
               )}
 
               {dossierTab === 'bookings' && (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {bookings.slice(0, 6).map((b) => (
                     <div
                       key={b.id}
-                      className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                      className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 flex items-center justify-between"
                     >
                       <div>
-                        <div className="font-bold text-[#0a2540] dark:text-white">
+                        <div className="font-semibold text-slate-900 dark:text-slate-100">
                           {b.client_name} · {b.destination}
                         </div>
-                        <div className="font-mono text-sm text-[#425466] dark:text-slate-400">
-                          {b.start_date} → {b.end_date} · {b.total_rwf.toLocaleString()} RWF
+                        <div className="font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                          {formatHumanDateRange(b.start_date, b.end_date)} · {formatMoney(b.total_rwf)}
                         </div>
                       </div>
-                      <span className={`px-2.5 py-0.5 rounded-full border text-sm ${getStatusStyles(b.status)}`}>
-                        {b.status}
+                      <span className={`px-2 py-0.5 rounded-md border text-xs font-medium ${getStatusStyles(b.status)}`}>
+                        {tr(b.status)}
                       </span>
                     </div>
                   ))}
@@ -818,38 +825,38 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
               )}
 
               {dossierTab === 'billing' && (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {dossierSubs.map((sub) => (
                     <div
                       key={sub.id}
-                      className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                      className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 flex items-center justify-between"
                     >
                       <div>
-                        <div className="font-bold text-[#0a2540] dark:text-white">{sub.plan_name} Plan</div>
-                        <div className="font-mono text-sm text-[#425466] dark:text-slate-400">
-                          Renews {sub.renewal_date} · {sub.monthly_fee_rwf.toLocaleString()} RWF/month
+                        <div className="font-semibold text-slate-900 dark:text-slate-100">{sub.plan_name} {tr('plan')}</div>
+                        <div className="font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                          {tr('Renews')} {formatHumanDate(sub.renewal_date)} · {formatMoney(sub.monthly_fee_rwf)}/{tr('month')}
                         </div>
                       </div>
-                      <span className={`px-2.5 py-0.5 rounded-full border text-sm ${getStatusStyles(sub.status)}`}>
-                        {sub.status}
+                      <span className={`px-2 py-0.5 rounded-md border text-xs font-medium ${getStatusStyles(sub.status)}`}>
+                        {tr(sub.status)}
                       </span>
                     </div>
                   ))}
                   {dossierPayments.map((p) => (
                     <div
                       key={p.id}
-                      className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                      className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 flex items-center justify-between"
                     >
                       <div>
-                        <div className="font-mono font-bold text-[#0a2540] dark:text-white">
-                          {p.transaction_ref} · {p.amount_rwf.toLocaleString()} RWF
+                        <div className="font-mono font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                          {p.transaction_ref} · {formatMoney(p.amount_rwf)}
                         </div>
-                        <div className="text-sm text-[#425466] dark:text-slate-400">
-                          {p.method} ({p.provider_ref}) · {p.created_at}
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {p.method} ({p.provider_ref}) · {formatHumanDate(p.created_at)}
                         </div>
                       </div>
-                      <span className={`px-2.5 py-0.5 rounded-full border text-sm ${getStatusStyles(p.status)}`}>
-                        {p.status}
+                      <span className={`px-2 py-0.5 rounded-md border text-xs font-medium ${getStatusStyles(p.status)}`}>
+                        {tr(p.status)}
                       </span>
                     </div>
                   ))}
@@ -857,20 +864,19 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
               )}
 
               {dossierTab === 'audit' && (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {dossierAudits.length === 0 ? (
-                    <p className="text-[#425466] dark:text-slate-400">No changes saved for this company yet.</p>
+                    <p className="p-4 text-slate-500 dark:text-slate-400">No changes saved for this company yet.</p>
                   ) : (
                     dossierAudits.map((a) => (
-                      <div
-                        key={a.id}
-                        className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
-                      >
+                      <div key={a.id} className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-[#0a2540] dark:text-white">{a.action}</span>
-                          <span className="font-mono text-sm text-[#425466] dark:text-slate-400">{a.timestamp}</span>
+                          <span className="font-semibold text-slate-900 dark:text-slate-100">{a.action}</span>
+                          <span className="font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                            {formatHumanDateTime(a.timestamp)}
+                          </span>
                         </div>
-                        <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                           {a.actor_email}: {a.reason}
                         </p>
                       </div>
@@ -885,57 +891,60 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
 
       {/* Modal: Add New Company */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
               <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5" style={{ color: currentTheme.hex }} />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-                  Add New Company
+                <Building2 className="w-4 h-4 accent-text" />
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                  Add new company
                 </h3>
               </div>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-full">
-                <X className="w-5 h-5" />
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleCreateCompany} className="space-y-4 text-sm">
               <div>
-                <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">
-                  Company Name
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Company name
                 </label>
                 <input
                   type="text"
                   value={newCompName}
                   onChange={(e) => setNewCompName(e.target.value)}
                   placeholder="e.g. Nyungwe Canopy Tours Ltd"
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Type of Work</label>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Type of work</label>
                   <select
                     value={newCompType}
                     onChange={(e) => setNewCompType(e.target.value as any)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
                   >
-                    <option value="Car Rental">Car Rental</option>
-                    <option value="Tour Operator">Tour Operator</option>
-                    <option value="Airport Shuttle">Airport Shuttle</option>
-                    <option value="Corporate Transport">Company Transport</option>
+                    <option value="Car Rental">Car rental</option>
+                    <option value="Tour Operator">Tour operator</option>
+                    <option value="Airport Shuttle">Airport shuttle</option>
+                    <option value="Corporate Transport">Company transport</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Tax Number (TIN)</label>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Tax number (TIN)</label>
                   <input
                     type="text"
                     value={newCompTin}
                     onChange={(e) => setNewCompTin(e.target.value)}
                     placeholder="109283746"
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 font-mono text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
                     required
                   />
                 </div>
@@ -943,21 +952,21 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">City</label>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">City</label>
                   <input
                     type="text"
                     value={newCompCity}
                     onChange={(e) => setNewCompCity(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Plan</label>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Plan</label>
                   <select
                     value={newCompTier}
                     onChange={(e) => setNewCompTier(e.target.value as any)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
                   >
                     <option value="starter">Starter (35k)</option>
                     <option value="growth">Growth (75k)</option>
@@ -965,52 +974,52 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Start Status</label>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Start status</label>
                   <select
                     value={newCompStatus}
                     onChange={(e) => setNewCompStatus(e.target.value as CompanyStatus)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
                   >
                     <option value="Active">Active</option>
-                    <option value="Trial">Free Trial (14d)</option>
-                    <option value="Pending">Waiting Approval</option>
+                    <option value="Trial">Free trial (14d)</option>
+                    <option value="Pending">Waiting approval</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Company Email</label>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Company email</label>
                   <input
                     type="email"
                     value={newCompEmail}
                     onChange={(e) => setNewCompEmail(e.target.value)}
                     placeholder="ops@company.rw"
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#0a2540] dark:text-slate-300 mb-1">Company Phone</label>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Company phone</label>
                   <input
                     type="text"
                     value={newCompPhone}
                     onChange={(e) => setNewCompPhone(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 font-mono text-[#0a2540] dark:text-white outline-none"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
                     required
                   />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
-                <span className="text-sm font-bold text-[#0a2540] dark:text-slate-300 block">Company Owner Login</span>
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 block">Company owner login</span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <input
                     type="text"
                     value={newOwnerName}
                     onChange={(e) => setNewOwnerName(e.target.value)}
-                    placeholder="Owner Name"
-                    className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-[#0a2540] dark:text-white outline-none"
+                    placeholder="Owner name"
+                    className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
                     required
                   />
                   <input
@@ -1018,32 +1027,28 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
                     value={newOwnerEmail}
                     onChange={(e) => setNewOwnerEmail(e.target.value)}
                     placeholder="owner@company.rw"
-                    className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-[#0a2540] dark:text-white outline-none"
+                    className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
                   />
                   <input
                     type="text"
                     value={newOwnerPhone}
                     onChange={(e) => setNewOwnerPhone(e.target.value)}
                     placeholder="+250 788..."
-                    className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono text-[#0a2540] dark:text-white outline-none"
+                    className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300 font-semibold"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={`px-5 py-2 rounded-full font-semibold ${currentTheme.btnText}`}
-                  style={{ backgroundColor: currentTheme.hex }}
-                >
-                  Add Company
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                  Add company
                 </button>
               </div>
             </form>

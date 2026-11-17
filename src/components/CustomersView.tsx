@@ -1,28 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { Customer, CustomerCategory, Booking, Vehicle } from '../types';
-import { formatRwf } from '../utils/collision';
 import {
-  Users,
   Building2,
   Briefcase,
   Globe,
   Compass,
   User,
-  Phone,
-  Mail,
-  MapPin,
   Search,
   Plus,
-  DollarSign,
-  CheckCircle,
   X,
-  Calendar,
-  MessageSquare,
-  ShieldCheck,
-  Edit2,
-  Receipt,
+  Users,
+  DollarSign,
+  AlertCircle,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { useI18n } from '../utils/i18n';
+import { formatHumanDateRange } from '../utils/dates';
 
 interface CustomersViewProps {
   customers: Customer[];
@@ -42,36 +35,31 @@ export function getCategoryBadge(category: CustomerCategory) {
       return {
         label: 'Company',
         icon: Building2,
-        badgeClass:
-          'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30',
+        badgeClass: 'text-blue-700 dark:text-blue-400',
       };
     case 'NGO / Diplomatic':
       return {
         label: 'NGO / Group',
         icon: Briefcase,
-        badgeClass:
-          'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30',
+        badgeClass: 'text-violet-700 dark:text-violet-400',
       };
     case 'Tourist / Expat':
       return {
         label: 'Visitor / Tourist',
         icon: Compass,
-        badgeClass:
-          'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30',
+        badgeClass: 'text-emerald-700 dark:text-emerald-400',
       };
     case 'Travel Agency':
       return {
         label: 'Tour Partner',
         icon: Globe,
-        badgeClass:
-          'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30',
+        badgeClass: 'text-cyan-700 dark:text-cyan-400',
       };
     default:
       return {
         label: 'Person',
         icon: User,
-        badgeClass:
-          'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+        badgeClass: 'text-slate-600 dark:text-slate-400',
       };
   }
 }
@@ -93,20 +81,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   customers,
   bookings,
   vehicles,
-  currentTheme,
   onAddCustomer,
   onUpdateCustomer,
   onRecordPayment,
   onOpenNewBookingForCustomer,
 }) => {
-  const activeThemeColor = currentTheme?.hex || '#635bff';
+  const { currency, formatMoney, tr } = useI18n();
 
-  // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [onlyWithBalances, setOnlyWithBalances] = useState(false);
 
-  // Modals state
   const [selectedDossierCustomer, setSelectedDossierCustomer] = useState<Customer | null>(null);
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -114,7 +99,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   const [paymentAmountInput, setPaymentAmountInput] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'MTN Mobile Money' | 'Bank Transfer'>('MTN Mobile Money');
 
-  // Form State for Add / Edit
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -128,7 +112,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     notes: '',
   });
 
-  // Calculate summary totals
   const summary = useMemo(() => {
     const totalCount = customers.length;
     const groupCount = customers.filter(
@@ -145,7 +128,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     };
   }, [customers]);
 
-  // Filtered customers list
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
       if (selectedCategory !== 'All' && c.category !== selectedCategory) {
@@ -265,392 +247,395 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   }, [selectedDossierCustomer, bookings]);
 
   const categoryTabs: { value: string; label: string }[] = [
-    { value: 'All', label: 'Everyone' },
-    { value: 'Corporate', label: 'Companies' },
-    { value: 'NGO / Diplomatic', label: 'NGOs & Embassies' },
-    { value: 'Tourist / Expat', label: 'Visitors' },
-    { value: 'Travel Agency', label: 'Tour Partners' },
-    { value: 'Individual', label: 'People' },
+    { value: 'All', label: tr('Everyone') },
+    { value: 'Corporate', label: tr('Companies') },
+    { value: 'NGO / Diplomatic', label: tr('NGOs & Embassies') },
+    { value: 'Tourist / Expat', label: tr('Visitors') },
+    { value: 'Travel Agency', label: tr('Tour Partners') },
+    { value: 'Individual', label: tr('People') },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Summary */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0a2540] dark:text-white tracking-tight">
-              Customers & Groups
-            </h1>
-            <p className="text-base text-[#425466] dark:text-slate-300 mt-1 max-w-2xl">
-              Save people, companies, and tour groups you work with. Track what they paid and what they still owe.
-            </p>
-          </div>
-
-          <button
-            onClick={handleOpenAdd}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold text-white shadow-sm hover:opacity-95 transition-opacity shrink-0"
-            style={{ backgroundColor: activeThemeColor }}
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Add Customer</span>
-          </button>
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {tr('Customers & Groups')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Save people, companies, and tour groups you work with. Track what they paid and what they still owe.')}
+          </p>
         </div>
 
-        {/* 4 Simple Number Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-          <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
-            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400 block">
-              All Customers
-            </span>
-            <span className="text-2xl font-extrabold text-[#0a2540] dark:text-white font-mono mt-1 block">
-              {summary.totalCount}
+        <button
+          type="button"
+          onClick={handleOpenAdd}
+          className="accent-bg inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:opacity-95 transition-opacity shrink-0 shadow-xs"
+        >
+          <Plus className="w-4 h-4" />
+          <span>{tr('Add Customer')}</span>
+        </button>
+      </div>
+
+      {/* 4-Card KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('All customers')}</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4" />
             </span>
           </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {summary.totalCount}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Saved accounts & travelers
+          </p>
+        </div>
 
-          <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
-            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400 block">
-              Company Accounts
-            </span>
-            <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 font-mono mt-1 block">
-              {summary.groupCount}
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Company accounts')}</span>
+            <span className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Building2 className="w-4 h-4" />
             </span>
           </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {summary.groupCount}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Companies, NGOs & tour partners
+          </p>
+        </div>
 
-          <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
-            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400 block">
-              Total Paid
-            </span>
-            <span className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-1 block truncate">
-              {formatRwf(summary.totalPaid)}
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Total paid')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4" />
             </span>
           </div>
+          <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 mt-2 font-mono tabular-nums">
+            {formatMoney(summary.totalPaid)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Lifetime cleared payments
+          </p>
+        </div>
 
-          <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
-            <span className="text-sm font-semibold text-[#425466] dark:text-slate-400 block">
-              Still Owed
-            </span>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Still owed')}</span>
             <span
-              className={`text-xl sm:text-2xl font-extrabold font-mono mt-1 block truncate ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                 summary.totalOwed > 0
-                  ? 'text-rose-600 dark:text-rose-400'
-                  : 'text-emerald-600 dark:text-emerald-400'
+                  ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                  : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
               }`}
             >
-              {formatRwf(summary.totalOwed)}
+              <AlertCircle className="w-4 h-4" />
             </span>
           </div>
-        </div>
-
-        {/* Search & Simple Filters */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search name, company, phone, or tax ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-9 py-2.5 text-sm text-[#0a2540] dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+          <div
+            className={`text-2xl font-semibold mt-2 font-mono tabular-nums ${
+              summary.totalOwed > 0
+                ? 'text-rose-600 dark:text-rose-400'
+                : 'text-emerald-600 dark:text-emerald-400'
+            }`}
+          >
+            {formatMoney(summary.totalOwed)}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {categoryTabs.map((cat) => {
-              const isSelected = selectedCategory === cat.value;
-              return (
-                <button
-                  key={cat.value}
-                  onClick={() => setSelectedCategory(cat.value)}
-                  className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-all border ${
-                    isSelected
-                      ? 'text-white border-transparent shadow-xs'
-                      : 'bg-white dark:bg-slate-950 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                  style={isSelected ? { backgroundColor: activeThemeColor } : undefined}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-
-            <button
-              onClick={() => setOnlyWithBalances(!onlyWithBalances)}
-              className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-all border ${
-                onlyWithBalances
-                  ? 'bg-rose-600 border-rose-600 text-white'
-                  : 'bg-white dark:bg-slate-950 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              Owes Money Only
-            </button>
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Open invoice balances
+          </p>
         </div>
       </div>
 
-      {/* Customer Directory Horizontal Grid */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 bg-[#f6f9fc] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-xs font-bold uppercase text-[#425466] dark:text-slate-400">
-          <div className="lg:col-span-3">Name & Company</div>
-          <div className="lg:col-span-2">Type</div>
-          <div className="lg:col-span-2">Phone & Email</div>
-          <div className="lg:col-span-2">Payment Rules</div>
-          <div className="lg:col-span-1 text-right">Paid</div>
-          <div className="lg:col-span-1 text-right">Owed</div>
-          <div className="lg:col-span-1 text-right">Actions</div>
+      {/* Main Customers Table Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg overflow-x-auto">
+            {categoryTabs.map((tab) => {
+              const active = selectedCategory === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setSelectedCategory(tab.value)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50/70 dark:bg-[#0f172a]">
+              <input
+                type="checkbox"
+                checked={onlyWithBalances}
+                onChange={(e) => setOnlyWithBalances(e.target.checked)}
+                className="w-3.5 h-3.5 accent-rose-600 rounded"
+              />
+              <span>Owes money only</span>
+            </label>
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search name, company, phone, or TIN"
+                className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg pl-9 pr-8 py-1.5 w-64 outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
-          {filteredCustomers.length === 0 ? (
-            <div className="text-center py-12 text-[#425466] dark:text-slate-400 text-base">
-              No customers match your search.
-            </div>
-          ) : (
-            filteredCustomers.map((c) => {
-              const badge = getCategoryBadge(c.category);
-              const IconComp = badge.icon;
-              const hasBalance = (c.outstanding_balance_rwf || 0) > 0;
+        {/* Customer Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm min-w-[920px]">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-4">Name & company</th>
+                <th className="py-3 px-4">Type</th>
+                <th className="py-3 px-4">Phone & email</th>
+                <th className="py-3 px-4">Payment rules</th>
+                <th className="py-3 px-4 text-right">Paid</th>
+                <th className="py-3 px-4 text-right">Owed</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+              {filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 px-4 text-center text-slate-500 dark:text-slate-400">
+                    No customers match your search.
+                  </td>
+                </tr>
+              ) : (
+                filteredCustomers.map((c) => {
+                  const badge = getCategoryBadge(c.category);
+                  const hasBalance = (c.outstanding_balance_rwf || 0) > 0;
 
-              return (
-                <div
-                  key={c.id}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-5 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                  onClick={() => setSelectedDossierCustomer(c)}
-                >
-                  <div className="lg:col-span-3 min-w-0">
-                    <div className="font-bold text-[#0a2540] dark:text-white text-base truncate">
-                      {c.name}
-                    </div>
-                    {c.organization ? (
-                      <div className="text-xs text-[#425466] dark:text-slate-400 flex items-center gap-1.5 mt-0.5 min-w-0">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{c.organization}</span>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-500">Personal Account</div>
-                    )}
-                  </div>
-
-                  <div className="lg:col-span-2 min-w-0">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${badge.badgeClass}`}
+                  return (
+                    <tr
+                      key={c.id}
+                      onClick={() => setSelectedDossierCustomer(c)}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 cursor-pointer transition-colors"
                     >
-                      <IconComp className="w-3.5 h-3.5 shrink-0" />
-                      <span>{badge.label}</span>
-                    </span>
-                  </div>
+                      <td className="py-3.5 px-4">
+                        <div className="font-medium text-slate-900 dark:text-white">{c.name}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {c.organization || 'Personal account'}
+                        </div>
+                      </td>
 
-                  <div className="lg:col-span-2 min-w-0">
-                    <div className="flex items-center gap-1.5 font-mono text-xs text-[#0a2540] dark:text-slate-200 whitespace-nowrap">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{c.phone}</span>
-                    </div>
-                    <div className="text-xs text-[#425466] dark:text-slate-400 truncate mt-0.5">
-                      {c.email}
-                    </div>
-                  </div>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className={`font-medium text-xs ${badge.badgeClass}`}>{badge.label}</span>
+                      </td>
 
-                  <div className="lg:col-span-2 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-200 px-2.5 py-0.5 rounded-lg font-medium whitespace-nowrap">
-                        {getFriendlyTerms(c.credit_terms)}
-                      </span>
-                      {c.discount_rate_pct ? (
-                        <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold whitespace-nowrap">
-                          {c.discount_rate_pct}% off
-                        </span>
-                      ) : null}
-                    </div>
-                    {c.tin_number && (
-                      <div className="text-xs text-[#425466] dark:text-slate-400 font-mono mt-0.5 whitespace-nowrap">
-                        TIN: {c.tin_number}
-                      </div>
-                    )}
-                  </div>
+                      <td className="py-3.5 px-4">
+                        <div className="font-mono text-slate-900 dark:text-white whitespace-nowrap text-xs">
+                          {c.phone}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[200px] mt-0.5">
+                          {c.email || '—'}
+                        </div>
+                      </td>
 
-                  <div className="lg:col-span-1 lg:text-right min-w-0">
-                    <div className="font-bold text-emerald-700 dark:text-emerald-400 font-mono whitespace-nowrap tabular-nums">
-                      {formatRwf(c.total_spent_rwf || 0)}
-                    </div>
-                    <div className="text-xs text-[#425466] dark:text-slate-400 whitespace-nowrap">
-                      {c.total_bookings_count || 0} trips
-                    </div>
-                  </div>
+                      <td className="py-3.5 px-4">
+                        <div className="text-slate-900 dark:text-white text-sm">
+                          {getFriendlyTerms(c.credit_terms)}
+                          {c.discount_rate_pct ? (
+                            <span className="ml-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                              {c.discount_rate_pct}% off
+                            </span>
+                          ) : null}
+                        </div>
+                        {c.tin_number && (
+                          <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            TIN: {c.tin_number}
+                          </div>
+                        )}
+                      </td>
 
-                  <div className="lg:col-span-1 lg:text-right min-w-0">
-                    {hasBalance ? (
-                      <div className="space-y-1">
-                        <span className="inline-block font-bold text-xs text-rose-700 dark:text-rose-300 font-mono bg-rose-50 dark:bg-rose-500/15 px-2 py-0.5 rounded-lg border border-rose-200 dark:border-rose-500/30 whitespace-nowrap">
-                          {formatRwf(c.outstanding_balance_rwf)}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenPayment(c);
-                          }}
-                          className="block text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold lg:ml-auto whitespace-nowrap"
-                        >
-                          Mark Paid
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold whitespace-nowrap text-xs">
-                        <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>Paid</span>
-                      </span>
-                    )}
-                  </div>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <div className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                          {formatMoney(c.total_spent_rwf || 0)}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {c.total_bookings_count || 0} trips
+                        </div>
+                      </td>
 
-                  <div
-                    className="lg:col-span-1 flex items-center lg:justify-end gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => onOpenNewBookingForCustomer(c.name, c.phone, c.email)}
-                      className="p-1.5 bg-blue-50 dark:bg-blue-500/15 hover:bg-blue-600 text-blue-700 dark:text-blue-300 hover:text-white rounded-lg transition-colors"
-                      title="Book a trip for this customer"
-                    >
-                      <Calendar className="w-4 h-4" />
-                    </button>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        {hasBalance ? (
+                          <div>
+                            <div className="font-mono font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
+                              {formatMoney(c.outstanding_balance_rwf)}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPayment(c)}
+                              className="accent-text text-xs font-medium hover:underline mt-0.5"
+                            >
+                              Mark paid
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            Paid
+                          </span>
+                        )}
+                      </td>
 
-                    <button
-                      onClick={() => handleOpenEdit(c)}
-                      className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-lg transition-colors"
-                      title="Edit customer"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-
-                    <a
-                      href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-600 text-emerald-700 dark:text-emerald-300 hover:text-white rounded-lg transition-colors"
-                      title="Message on WhatsApp"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                    </a>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onOpenNewBookingForCustomer(c.name, c.phone, c.email)}
+                            className="accent-tint accent-text px-2.5 py-1 rounded-md text-xs font-medium hover:opacity-90"
+                          >
+                            Book
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(c)}
+                            className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                          >
+                            Edit
+                          </button>
+                          <a
+                            href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
+                          >
+                            WhatsApp
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Customer Details Modal */}
       {selectedDossierCustomer && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-xl">
-                  {(() => {
-                    const Icon = getCategoryBadge(selectedDossierCustomer.category).icon;
-                    return <Icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />;
-                  })()}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">
-                    {selectedDossierCustomer.name}
-                  </h3>
-                  <div className="text-sm text-[#425466] dark:text-slate-400">
-                    {selectedDossierCustomer.organization || getCategoryBadge(selectedDossierCustomer.category).label}
-                  </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-2xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto kf-modal">
+            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {selectedDossierCustomer.name}
+                </h3>
+                <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  {selectedDossierCustomer.organization || getCategoryBadge(selectedDossierCustomer.category).label}
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => setSelectedDossierCustomer(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-sm">
-              <div>
-                <span className="text-[#425466] dark:text-slate-400 block">Total Paid</span>
-                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                  {formatRwf(selectedDossierCustomer.total_spent_rwf || 0)}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Total paid</span>
+                <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums mt-0.5 block">
+                  {formatMoney(selectedDossierCustomer.total_spent_rwf || 0)}
                 </span>
               </div>
 
-              <div>
-                <span className="text-[#425466] dark:text-slate-400 block">Still Owed</span>
+              <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Still owed</span>
                 <span
-                  className={`text-base font-extrabold font-mono ${
+                  className={`text-base font-semibold font-mono tabular-nums mt-0.5 block ${
                     (selectedDossierCustomer.outstanding_balance_rwf || 0) > 0
                       ? 'text-rose-600 dark:text-rose-400'
-                      : 'text-[#0a2540] dark:text-slate-300'
+                      : 'text-slate-900 dark:text-white'
                   }`}
                 >
-                  {formatRwf(selectedDossierCustomer.outstanding_balance_rwf || 0)}
+                  {formatMoney(selectedDossierCustomer.outstanding_balance_rwf || 0)}
                 </span>
               </div>
 
-              <div>
-                <span className="text-[#425466] dark:text-slate-400 block">Payment Rule</span>
-                <span className="font-bold text-[#0a2540] dark:text-white">
+              <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Payment rule</span>
+                <span className="font-medium text-slate-900 dark:text-white mt-0.5 block">
                   {getFriendlyTerms(selectedDossierCustomer.credit_terms)}
                 </span>
               </div>
 
-              <div>
-                <span className="text-[#425466] dark:text-slate-400 block">Discount</span>
-                <span className="font-bold text-amber-600 dark:text-amber-400 font-mono">
+              <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Discount</span>
+                <span className="font-semibold font-mono text-slate-900 dark:text-white tabular-nums mt-0.5 block">
                   {selectedDossierCustomer.discount_rate_pct || 0}%
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-              <div className="space-y-1.5">
-                <div className="text-[#425466] dark:text-slate-400 font-bold">Phone & Email</div>
-                <div className="flex items-center gap-2 text-[#0a2540] dark:text-white font-mono">
-                  <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>{selectedDossierCustomer.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-[#425466] dark:text-slate-300">
-                  <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span className="truncate">{selectedDossierCustomer.email || 'No email'}</span>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50/90 dark:bg-slate-800/40 text-sm">
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Phone & email</span>
+                <span className="text-slate-900 dark:text-white font-medium mt-0.5 block">
+                  <span className="font-mono">{selectedDossierCustomer.phone}</span>
+                  {selectedDossierCustomer.email ? ` · ${selectedDossierCustomer.email}` : ''}
+                </span>
               </div>
-
-              <div className="space-y-1.5">
-                <div className="text-[#425466] dark:text-slate-400 font-bold">Tax ID & Address</div>
-                <div className="text-[#0a2540] dark:text-slate-200">
-                  Tax ID (TIN): <strong className="font-mono">{selectedDossierCustomer.tin_number || 'None'}</strong>
-                </div>
-                <div className="text-[#425466] dark:text-slate-300 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-slate-400" />
-                  <span className="truncate">{selectedDossierCustomer.address || 'Kigali, Rwanda'}</span>
-                </div>
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Tax ID & address</span>
+                <span className="text-slate-900 dark:text-white font-medium mt-0.5 block">
+                  TIN: <span className="font-mono">{selectedDossierCustomer.tin_number || 'None'}</span> ·{' '}
+                  {selectedDossierCustomer.address || 'Kigali, Rwanda'}
+                </span>
               </div>
+              {selectedDossierCustomer.notes && (
+                <div className="sm:col-span-2">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 block">Notes</span>
+                  <span className="text-slate-900 dark:text-white mt-0.5 block">
+                    {selectedDossierCustomer.notes}
+                  </span>
+                </div>
+              )}
             </div>
-
-            {selectedDossierCustomer.notes && (
-              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-4 rounded-xl text-sm text-amber-900 dark:text-amber-200 space-y-1">
-                <span className="font-bold block">Notes:</span>
-                <p className="leading-relaxed">{selectedDossierCustomer.notes}</p>
-              </div>
-            )}
 
             {/* Trip History */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-[#0a2540] dark:text-white">
-                  Past & Current Trips ({customerBookings.length})
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Past & current trips ({customerBookings.length})
                 </h4>
                 <button
+                  type="button"
                   onClick={() => {
                     onOpenNewBookingForCustomer(
                       selectedDossierCustomer.name,
@@ -659,51 +644,40 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     );
                     setSelectedDossierCustomer(null);
                   }}
-                  className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                  className="accent-text text-sm font-medium hover:underline"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Book New Trip</span>
+                  + Book new trip
                 </button>
               </div>
 
               {customerBookings.length === 0 ? (
-                <div className="text-center py-6 text-[#425466] dark:text-slate-400 text-sm bg-[#f6f9fc] dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="text-center py-6 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/90 dark:bg-slate-800/40 rounded-xl">
                   No trips recorded for this customer yet.
                 </div>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
                   {customerBookings.map((b) => {
                     const veh = vehicles.find((v) => v.id === b.vehicle_id);
                     return (
-                      <div
-                        key={b.id}
-                        className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center justify-between text-sm"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#0a2540] dark:text-white">{b.destination}</span>
-                            <span
-                              className={`text-sm px-2 py-0.5 rounded-full font-semibold ${
-                                b.status === 'Completed'
-                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                                  : b.status === 'In Progress'
-                                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
-                                  : 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
-                              }`}
-                            >
-                              {b.status === 'In Progress' ? 'On Road' : b.status === 'Completed' ? 'Done' : b.status}
+                      <div key={b.id} className="p-3 flex items-center justify-between text-sm">
+                        <div>
+                          <div className="font-medium text-slate-900 dark:text-white">
+                            {b.destination}
+                            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                              ({b.status === 'In Progress' ? 'On road' : b.status === 'Completed' ? 'Done' : b.status})
                             </span>
                           </div>
-                          <div className="text-sm text-[#425466] dark:text-slate-400 font-mono">
-                            {b.start_date} → {b.end_date} · {veh?.model_name || 'Car'} ({veh?.plate_number})
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            {formatHumanDateRange(b.start_date, b.end_date)} · {veh?.model_name || 'Car'}{' '}
+                            {veh?.plate_number ? `(${veh.plate_number})` : ''}
                           </div>
                         </div>
 
                         <div className="text-right">
-                          <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
-                            {formatRwf(b.total_rwf)}
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+                            {formatMoney(b.total_rwf)}
                           </span>
-                          <div className="text-sm text-[#425466] dark:text-slate-400">{b.payment_status}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{b.payment_status}</div>
                         </div>
                       </div>
                     );
@@ -720,14 +694,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     handleOpenPayment(selectedDossierCustomer);
                     setSelectedDossierCustomer(null);
                   }}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-sm font-bold flex items-center gap-1.5 shadow-sm"
+                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
                 >
-                  <DollarSign className="w-4 h-4" />
-                  <span>Mark {formatRwf(selectedDossierCustomer.outstanding_balance_rwf)} Paid</span>
+                  Mark {formatMoney(selectedDossierCustomer.outstanding_balance_rwf)} paid
                 </button>
               ) : (
-                <div className="text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 font-semibold">
-                  <ShieldCheck className="w-4 h-4" /> Everything is paid (0 RWF owed)
+                <div className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                  {tr('Everything is paid')} ({formatMoney(0)} {tr('owed')})
                 </div>
               )}
 
@@ -738,16 +711,16 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     handleOpenEdit(selectedDossierCustomer);
                     setSelectedDossierCustomer(null);
                   }}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-sm font-semibold"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Edit
+                  {tr('Edit')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedDossierCustomer(null)}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-sm font-semibold"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Close
+                  {tr('Close')}
                 </button>
               </div>
             </div>
@@ -757,43 +730,42 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
       {/* Add / Edit Customer Modal */}
       {isAddCustomerOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl my-8">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-                  {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
-                </h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 my-8 max-h-[90vh] overflow-y-auto kf-modal">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {editingCustomer ? 'Edit customer' : 'Add new customer'}
+              </h3>
               <button
+                type="button"
                 onClick={() => setIsAddCustomerOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-4 text-sm">
+            <form onSubmit={handleSubmitForm} className="space-y-3.5 text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Full Name *</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Full name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Sarah Jenkins"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Customer Type *</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Customer type *</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as CustomerCategory })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3 py-2.5 text-sm focus:border-blue-500 outline-none font-medium"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
                   >
                     <option value="Corporate">Company</option>
                     <option value="NGO / Diplomatic">NGO / Embassy</option>
@@ -805,57 +777,57 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Company or Group</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Company or group</label>
                   <input
                     type="text"
                     placeholder="e.g. Bank of Kigali"
                     value={formData.organization}
                     onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Tax Number (TIN)</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Tax number (TIN)</label>
                   <input
                     type="text"
                     placeholder="e.g. 100293847"
                     value={formData.tin_number}
                     onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none font-mono"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Phone Number *</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Phone number *</label>
                   <input
                     type="text"
                     required
                     placeholder="+250 788 000 000"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none font-mono"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Email Address</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Email address</label>
                   <input
                     type="email"
                     placeholder="name@company.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">When They Pay</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">When they pay</label>
                   <select
                     value={formData.credit_terms}
                     onChange={(e) =>
@@ -864,17 +836,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         credit_terms: e.target.value as 'Immediate MoMo' | 'Net-15' | 'Net-30' | 'Pre-paid 50%',
                       })
                     }
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3 py-2.5 text-sm focus:border-blue-500 outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
                   >
-                    <option value="Immediate MoMo">Pay Now (MoMo / Card)</option>
-                    <option value="Net-15">Pay in 15 Days</option>
-                    <option value="Net-30">Pay in 30 Days</option>
-                    <option value="Pre-paid 50%">Half Before Trip</option>
+                    <option value="Immediate MoMo">Pay now (MoMo / Card)</option>
+                    <option value="Net-15">Pay in 15 days</option>
+                    <option value="Net-30">Pay in 30 days</option>
+                    <option value="Pre-paid 50%">Half before trip</option>
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Price Discount (%)</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Price discount (%)</label>
                   <input
                     type="number"
                     min="0"
@@ -882,47 +854,46 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     placeholder="0"
                     value={formData.discount_rate_pct}
                     onChange={(e) => setFormData({ ...formData, discount_rate_pct: Number(e.target.value) })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none font-mono"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Street or Area in Kigali</label>
+              <div>
+                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Street or area in Kigali</label>
                 <input
                   type="text"
                   placeholder="e.g. Kiyovu or Kimihurura"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Special Notes</label>
+              <div>
+                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Special notes</label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. Likes Land Cruiser, needs French-speaking driver..."
+                  placeholder="e.g. Likes Land Cruiser, needs French-speaking driver"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none resize-none focus:border-slate-400"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddCustomerOpen(false)}
-                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 text-white rounded-full text-sm font-bold shadow-sm"
-                  style={{ backgroundColor: activeThemeColor }}
+                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
                 >
-                  {editingCustomer ? 'Save Changes' : 'Save Customer'}
+                  {editingCustomer ? 'Save changes' : 'Save customer'}
                 </button>
               </div>
             </form>
@@ -932,30 +903,46 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
       {/* Settle Balance / Record Payment Modal */}
       {paymentModalCustomer && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Record Payment</h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 kf-modal">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record payment</h3>
               <button
+                type="button"
                 onClick={() => setPaymentModalCustomer(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="text-sm text-[#425466] dark:text-slate-300 bg-[#f6f9fc] dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-              <div>Customer: <strong className="text-[#0a2540] dark:text-white">{paymentModalCustomer.name}</strong></div>
-              <div>Company: <strong className="text-[#0a2540] dark:text-slate-200">{paymentModalCustomer.organization || 'Personal'}</strong></div>
-              <div>Still Owed: <strong className="text-rose-600 dark:text-rose-400 font-mono">{formatRwf(paymentModalCustomer.outstanding_balance_rwf || 0)}</strong></div>
+            <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50/90 dark:bg-slate-800/40 p-4 rounded-xl space-y-1.5">
+              <div>
+                Customer:{' '}
+                <strong className="font-semibold text-slate-900 dark:text-white">
+                  {paymentModalCustomer.name}
+                </strong>
+              </div>
+              <div>
+                Company:{' '}
+                <strong className="font-semibold text-slate-900 dark:text-white">
+                  {paymentModalCustomer.organization || 'Personal'}
+                </strong>
+              </div>
+              <div>
+                Still owed:{' '}
+                <strong className="font-semibold text-rose-600 dark:text-rose-400 font-mono tabular-nums">
+                  {formatMoney(paymentModalCustomer.outstanding_balance_rwf || 0)}
+                </strong>
+              </div>
             </div>
 
-            <form onSubmit={handleConfirmPayment} className="space-y-4 text-sm">
-              <div className="space-y-1">
-                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Amount Paid (RWF) *</label>
+            <form onSubmit={handleConfirmPayment} className="space-y-3.5 text-sm">
+              <div>
+                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">
+                  {tr('Amount Paid (RWF)')} *
+                </label>
                 <input
                   type="number"
                   required
@@ -963,35 +950,40 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   max={paymentModalCustomer.outstanding_balance_rwf || 99999999}
                   value={paymentAmountInput}
                   onChange={(e) => setPaymentAmountInput(Number(e.target.value))}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-500 outline-none font-mono font-bold"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
                 />
+                {currency === 'USD' && (
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
+                    ≈ {formatMoney(paymentAmountInput)}
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">How They Paid</label>
+              <div>
+                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">How they paid</label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as 'MTN Mobile Money' | 'Bank Transfer')}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl px-3 py-2.5 text-sm focus:border-blue-500 outline-none font-medium"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
                 >
                   <option value="MTN Mobile Money">MTN Mobile Money (MoMo)</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Bank Transfer">Bank transfer</option>
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setPaymentModalCustomer(null)}
-                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-sm font-bold shadow-sm"
+                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
                 >
-                  Save {formatRwf(paymentAmountInput)}
+                  Save {formatMoney(paymentAmountInput)}
                 </button>
               </div>
             </form>

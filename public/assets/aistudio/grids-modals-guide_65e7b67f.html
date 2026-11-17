@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grids, type details and modals</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Young+Serif&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{--bg:#f4f5f7;--surface:#fff;--ink:#14191f;--mute:#5a6472;--line:#dde1e7;--accent:#1c4ed8;--on:#fff;--ok:#146c43;--okbg:#dff3e8;--warn:#8a4b00;--warnbg:#fdecd0;--bad:#a3201a;--badbg:#fbe0de;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1117;--surface:#161b22;--ink:#e6eaf0;--mute:#98a3b3;--line:#2a313c;--accent:#7ea2ff;--on:#0d1117;--ok:#6fd49c;--okbg:#14301f;--warn:#f3b45f;--warnbg:#38280f;--bad:#ff8f87;--badbg:#3d1b19;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1117;--surface:#161b22;--ink:#e6eaf0;--mute:#98a3b3;--line:#2a313c;--accent:#7ea2ff;--on:#0d1117;--ok:#6fd49c;--okbg:#14301f;--warn:#f3b45f;--warnbg:#38280f;--bad:#ff8f87;--badbg:#3d1b19;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 Inter,system-ui,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px 90px}
+h1,h2{font-family:"Young Serif",Georgia,serif;font-weight:400;line-height:1.15;margin:0}
+h1{font-size:clamp(2rem,6vw,3rem);margin-bottom:10px}
+h2{font-size:1.65rem;margin:60px 0 6px}
+h3{font-size:1rem;font-weight:600;margin:0 0 6px}
+p{margin:0 0 12px}
+.lead{color:var(--mute);font-size:1.1rem;max-width:62ch}
+.note{color:var(--mute);font-size:.94rem;max-width:68ch}
+nav{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:18px}
+nav a{color:var(--accent);font-weight:500}
+.row3{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin:16px 0}
+.cap{font-size:.88rem;color:var(--mute);margin-top:8px}
+.cap b{color:var(--ink);font-weight:600}
+/* A: bad boxed card */
+.cA{background:#fff;border:1px solid #ddd;border-radius:22px;padding:14px;color:#222;box-shadow:0 4px 14px rgba(0,0,0,.1)}
+.cA .in{border:1px solid #e3e3e3;border-radius:14px;padding:10px;margin-top:8px;display:flex;justify-content:space-between;font-size:.9rem}
+.cA .bd{display:flex;gap:6px;margin-top:8px}
+.cA .bd span{flex:1;border-radius:10px;padding:6px 8px;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cA .y{background:#8a6a4f;color:#f5a623}.cA .r{background:#a84060;color:#ff8aa0}
+/* B: open card */
+.cB{background:var(--surface);border-radius:4px;padding:16px}
+.cB h4{margin:0;font-size:1.1rem;font-weight:600}
+.cB .sub{color:var(--mute);font-size:.9rem}
+.cB dl{margin:12px 0 0}
+.cB dl div{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:.95rem}
+.cB dt{color:var(--mute)}.cB dd{margin:0;font-weight:500;font-variant-numeric:tabular-nums}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;font-weight:500}
+.st::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.btn{font:600 .92rem Inter,sans-serif;border-radius:4px;border:0;padding:9px 14px;cursor:pointer;background:var(--accent);color:var(--on)}
+.btn.q{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.d{background:var(--bad);color:var(--surface)}
+/* C: table */
+.tw{overflow-x:auto;background:var(--surface);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:.92rem;min-width:520px}
+th{text-align:left;font-weight:500;color:var(--mute);padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:10px 12px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:"JetBrains Mono",monospace;font-size:.88rem}
+/* lab */
+.lab{background:var(--surface);border-radius:4px;padding:16px;margin:14px 0}
+.ctl{display:flex;flex-wrap:wrap;gap:16px;font-size:.9rem;margin-bottom:14px}
+.ctl label{display:flex;flex-direction:column;gap:2px}
+#demo{padding:16px;background:var(--bg);max-width:340px;border:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:620px){.two{grid-template-columns:1fr}}
+.box{background:var(--surface);border-radius:4px;padding:16px}
+.pill{display:inline-block;padding:3px 9px;border-radius:3px;font-size:.84rem;font-weight:500;white-space:nowrap}
+.pok{background:var(--okbg);color:var(--ok)}.pwarn{background:var(--warnbg);color:var(--warn)}.pbad{background:var(--badbg);color:var(--bad)}
+.nums span{display:block;font-size:1.1rem}
+.tab{font-variant-numeric:tabular-nums}
+.cap2{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+/* dialogs */
+dialog{border:0;border-radius:6px;padding:0;background:var(--surface);color:var(--ink);width:min(440px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(10,14,20,.55)}
+dialog .hd{padding:18px 20px 0}
+dialog .hd h3{font-size:1.15rem;margin:0 0 4px}
+dialog .bd{padding:8px 20px 4px;color:var(--mute)}
+dialog .ft{padding:16px 20px;display:flex;justify-content:flex-end;gap:8px}
+dialog input{width:100%;font:inherit;padding:9px 10px;border-radius:4px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-top:4px}
+dialog label{display:block;color:var(--ink);font-weight:500;font-size:.92rem;margin-top:10px}
+dialog.drawer{margin:0 0 0 auto;height:100%;max-height:100%;width:min(380px,100vw);border-radius:0}
+.bar{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+ul.rules{padding-left:20px;margin:0}ul.rules li{margin:6px 0}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.theme{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);border:0;border-radius:4px;padding:10px 14px;font:600 .9rem Inter,sans-serif;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Flat grids, careful type, honest modals</h1>
+<p class="lead">Notes from comparing two admin screens. The first shows what makes a data screen calm; the second shows what to avoid.</p>
+<nav><a href="#diag">What went wrong</a><a href="#grids">Borderless grids</a><a href="#lab">Radius lab</a><a href="#type">Type for data</a><a href="#modals">Modals</a></nav>
+
+<h2 id="diag">Reading the Kigali Fleet car card</h2>
+<p class="note">Problems seen in your screenshot, in order of how much they hurt:</p>
+<ul class="rules">
+<li><b>Cut-off text.</b> “Safety Che… Expires in …” hides the one fact the owner needs. Never truncate status text; let it wrap or shorten the label.</li>
+<li><b>Unreadable color pairs.</b> Amber text on brown, pink on magenta, mint on teal. Each fails contrast. Use dark text on a pale tint, or white on a deep color.</li>
+<li><b>Boxes inside boxes.</b> Card, then driver box, then badges, then rate box, then warning box. Five frames around eight facts. Whitespace and one hairline do the same job.</li>
+<li><b>Big radius everywhere.</b> Pills, cards and inner boxes all round at once, so nothing feels more important.</li>
+<li><b>Label/value split by distance.</b> “Main Driver:” sits far left and the name far right. The eye must travel across empty space.</li>
+<li><b>Too many actions.</b> Repair, Details, Book, Edit Rate and an arrow icon on one card. Pick one primary action (Book); put the rest behind Details.</li>
+</ul>
+<p class="note" style="margin-top:10px">About the Alanii Autos dashboard you sent: its strengths are the big page title, generous spacing, one typeface and a clear sidebar. It still uses outlined rounded cards and tracked capital labels, so it is cleaner, not fully flat. Treat it as a good middle step.</p>
+
+<h2 id="grids">One car, three layouts</h2>
+<div class="row3">
+<div><div class="cA"><b>Toyota Land Cruiser Prado</b><div class="in"><span>Main Driver:</span><b>Emmanuel N.</b></div>
+<div class="bd"><span class="y">Safety Check: Expires in 4 days</span><span class="r">Insurance: Expired (2026-10-01)</span></div>
+<div class="in"><span>Daily Rate</span><b>180,000 RWF</b></div></div>
+<div class="cap"><b>Boxed (avoid).</b> Frames, shadows, truncated badges.</div></div>
+
+<div><div class="cB"><h4>Land Cruiser Prado TXL</h4><div class="sub mono">RAD 450 B · 2023</div>
+<dl><div><dt>Driver</dt><dd>Emmanuel Nshimiyimana</dd></div><div><dt>Safety check</dt><dd class="warn">Due in 4 days</dd></div><div><dt>Insurance</dt><dd class="bad">Expired 1 Oct</dd></div><div><dt>Rate per day</dt><dd>180,000 RWF</dd></div></dl>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><span class="st warn">Booked</span><button class="btn">Book</button></div></div>
+<div class="cap"><b>Open list.</b> No frames. Hairlines only between rows. 4px radius.</div></div>
+
+<div><div class="box"><h3>Status first</h3><p class="note" style="margin:0 0 10px">Group by what needs action, so the owner sees problems before browsing.</p>
+<div style="display:grid;gap:8px"><div><span class="pill pbad">Insurance expired</span> RAC 812 K</div><div><span class="pill pwarn">Safety check in 4 days</span> RAD 450 B</div><div><span class="pill pok">All papers valid</span> RAE 109 M</div></div></div>
+<div class="cap"><b>Task view.</b> Short labels that fit, tinted backgrounds with dark text.</div></div>
+</div>
+<p class="note">When you have more than six cars, switch to a table. Rows scan faster than cards, and numbers line up in columns.</p>
+<div class="tw"><table><thead><tr><th>Plate</th><th>Model</th><th>Driver</th><th>Papers</th><th>Status</th><th class="num">Rate (RWF)</th></tr></thead><tbody>
+<tr><td class="mono">RAD 450 B</td><td>Prado TXL</td><td>Emmanuel N.</td><td><span class="pill pwarn">4 days</span></td><td>Booked</td><td class="num">180,000</td></tr>
+<tr><td class="mono">RAE 109 M</td><td>V8 Executive</td><td>Jean-Paul M.</td><td><span class="pill pok">Valid</span></td><td>Ready</td><td class="num">220,000</td></tr>
+<tr><td class="mono">RAC 812 K</td><td>RAV4 AWD</td><td>Claudine U.</td><td><span class="pill pbad">Expired</span></td><td>Ready</td><td class="num">65,000</td></tr></tbody></table></div>
+
+<h2 id="lab">Radius, border and shadow lab</h2>
+<p class="note">Change one thing at a time. Most professional tools sit between 2px and 8px radius, and use either a border or a shadow, rarely both.</p>
+<div class="lab"><div class="ctl">
+<label>Radius <span id="vR">4px</span><input id="rR" type="range" min="0" max="28" value="4"></label>
+<label>Border <select id="rB"><option value="none">None</option><option value="1px solid var(--line)">Hairline</option><option value="2px solid var(--ink)">Heavy</option></select></label>
+<label>Shadow <select id="rSh"><option value="none">None</option><option value="0 1px 3px rgba(0,0,0,.18)">Light</option><option value="0 10px 30px rgba(0,0,0,.25)">Heavy</option></select></label></div>
+<div id="demo"><h4 style="margin:0 0 4px">RAV4 AWD</h4><div class="note" style="margin:0">52,180 km · Kigali Airport</div><p style="margin:10px 0 0;font-weight:600">65,000 RWF per day</p></div></div>
+
+<h2 id="type">Typography for data screens</h2>
+<div class="two">
+<div class="box"><h3>Aligned digits</h3><p class="note">Turn on tabular figures so columns of numbers line up.</p>
+<div class="two" style="gap:8px"><div class="nums"><span style="font-weight:600;font-size:.85rem">Default</span><span style="font-variant-numeric:proportional-nums">1,075,000</span><span style="font-variant-numeric:proportional-nums">111,111</span><span style="font-variant-numeric:proportional-nums">65,000</span></div>
+<div class="nums tab"><span style="font-weight:600;font-size:.85rem">Tabular</span><span>1,075,000</span><span>111,111</span><span>65,000</span></div></div></div>
+<div class="box"><h3>Labels</h3><p class="cap2" style="margin:0 0 8px">Tracked capitals</p><p style="margin:0 0 8px;color:var(--mute);font-size:.9rem">Sentence case, normal spacing</p>
+<p class="note" style="margin:0">Capitals with wide spacing are hard to read and look like a template. Use them for at most one or two short labels per screen, or not at all.</p></div>
+<div class="box"><h3>Badges that pass</h3><p style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px"><span class="pill pok">Ready</span><span class="pill pwarn">Due in 4 days</span><span class="pill pbad">Expired</span></p><p class="note" style="margin:0">Dark text on a tint, full words, 14px or larger, no wrapping, no ellipsis.</p></div>
+<div class="box"><h3>Size floor</h3><p style="font-size:11px;margin:0 0 4px">11px: too small</p><p style="font-size:14px;margin:0 0 4px">14px: minimum for data</p><p style="font-size:16px;margin:0 0 8px">16px: comfortable body</p><p class="note" style="margin:0">Users on phones in daylight need larger text than your desk monitor suggests.</p></div>
+</div>
+
+<h2 id="modals">Modals</h2>
+<p class="note">A modal blocks everything behind it, so use one only when the person must decide or enter something before continuing. Open each type below.</p>
+<div class="bar">
+<button class="btn" data-open="mConfirm">Confirm dialog</button>
+<button class="btn q" data-open="mForm">Form dialog</button>
+<button class="btn q" data-open="mDrawer">Side drawer</button></div>
+<div class="two">
+<div class="box"><h3>Do</h3><ul class="rules"><li>Name the action in the title: “Delete this car?”</li><li>Button labels repeat the verb: “Delete car”, not “OK”.</li><li>Put the main action on the right, and make destructive actions red.</li><li>Close with Esc, the Cancel button, and a click outside.</li><li>Use a drawer for long forms so the page stays visible.</li></ul></div>
+<div class="box"><h3>Don’t</h3><ul class="rules"><li>Open a modal from a modal.</li><li>Use one for information that could sit on the page.</li><li>Add a large radius, thick border and gradient; a plain surface looks sharper.</li><li>Write “Are you sure?” with no detail.</li><li>Hide the close control or trap keyboard focus.</li></ul></div>
+</div>
+</div>
+
+<dialog id="mConfirm"><form method="dialog"><div class="hd"><h3>Delete this car?</h3></div><div class="bd">RAC 812 K and its booking history will be removed. This cannot be undone.</div><div class="ft"><button class="btn q" value="c">Cancel</button><button class="btn d" value="d">Delete car</button></div></form></dialog>
+<dialog id="mForm"><form method="dialog"><div class="hd"><h3>Edit daily rate</h3></div><div class="bd"><label>Rate per day (RWF)<input type="text" inputmode="numeric" value="65,000"></label><label>Applies from<input type="date"></label></div><div class="ft"><button class="btn q" value="c">Cancel</button><button class="btn" value="s">Save rate</button></div></form></dialog>
+<dialog id="mDrawer" class="drawer"><form method="dialog" style="display:flex;flex-direction:column;height:100%"><div class="hd"><h3>Car details</h3></div><div class="bd" style="flex:1">
+<dl style="margin:0"><div class="cB" style="padding:0"><dl><div><dt>Plate</dt><dd class="mono">RAC 812 K</dd></div><div><dt>Driver</dt><dd>Claudine Uwase</dd></div><div><dt>Odometer</dt><dd>52,180 km</dd></div><div><dt>Location</dt><dd>Kigali Airport</dd></div></dl></div></dl></div><div class="ft"><button class="btn q" value="c">Close</button><button class="btn" value="e">Edit car</button></div></form></dialog>
+<button class="theme" id="tb" type="button">Switch theme</button>
+<script>
+(function(){
+var d=document.getElementById('demo');
+function u(){var r=document.getElementById('rR').value;d.style.borderRadius=r+'px';d.style.border=document.getElementById('rB').value;d.style.boxShadow=document.getElementById('rSh').value;document.getElementById('vR').textContent=r+'px'}
+['rR','rB','rSh'].forEach(function(i){document.getElementById(i).addEventListener('input',u)});u();
+document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){try{document.getElementById(b.dataset.open).showModal()}catch(e){}})});
+document.querySelectorAll('dialog').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.close()})});
+var r=document.documentElement;
+document.getElementById('tb').addEventListener('click',function(){var dk=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);r.setAttribute('data-theme',dk?'light':'dark')});
+})();
+</script>
+</body>
+</html>

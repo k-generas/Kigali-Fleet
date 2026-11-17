@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Design Field Guide 2: flat grids, type details and modals</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{--bg:#f3f5f8;--surface:#fff;--ink:#16202e;--mute:#5b6676;--line:#d5dbe4;--accent:#2447d6;--accent-ink:#fff;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141d;--surface:#171e2a;--ink:#e8ecf3;--mute:#9aa6b8;--line:#2a3445;--accent:#7b97ff;--accent-ink:#0f141d;--bad:#ff8a80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f141d;--surface:#171e2a;--ink:#e8ecf3;--mute:#9aa6b8;--line:#2a3445;--accent:#7b97ff;--accent-ink:#0f141d;--bad:#ff8a80;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.6 "Instrument Sans",system-ui,sans-serif}
+.wrap{max-width:940px;margin:0 auto;padding:32px 20px 90px}
+h1,h2{font-family:"Young Serif",Georgia,serif;font-weight:400;line-height:1.15;margin:0}
+h1{font-size:clamp(2rem,6vw,3rem);margin-bottom:12px}
+h2{font-size:1.7rem;margin:60px 0 8px}
+h3{font-size:1.05rem;margin:0 0 6px}
+p{margin:0 0 12px}
+.lead{font-size:1.1rem;color:var(--mute);max-width:62ch}
+.note{color:var(--mute);font-size:.95rem;max-width:66ch}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+nav a{padding:6px 12px;border:1px solid var(--line);border-radius:99px;color:var(--ink);text-decoration:none;font-size:.9rem}
+nav a:hover{background:var(--accent);color:var(--accent-ink)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+@media(max-width:700px){.two{grid-template-columns:1fr}}
+.cap{font-size:.9rem;margin:0 0 8px;color:var(--mute)}.cap b{color:var(--ink)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+ul.fix{margin:10px 0;padding-left:20px}ul.fix li{margin:5px 0}
+/* BEFORE card: reproduces the problems */
+.bad{background:#fff;color:#111;border:1px solid #e3e3e3;border-radius:16px;padding:14px;font:15px/1.4 Inter,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.bad .chips{display:flex;gap:8px;margin:10px 0}
+.bad .chip{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:6px;padding:8px;font-size:13px}
+.bad .c1{background:#a8826a;color:#f2a500;border:1px solid #8a5c3b}
+.bad .c2{background:#79b5a6;color:#a8e6cf;border:1px solid #4f9a86}
+.bad .rate{background:#f5f5f5;border-radius:12px;padding:10px;margin-top:8px}
+/* AFTER card: flat grid, hairlines, 2px radius */
+.good{background:#fff;color:#14181f;border:1px solid #cfd5dd;border-radius:2px;font:15px/1.4 Inter,sans-serif}
+.good .top{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-bottom:1px solid #cfd5dd}
+.good .top b{font-size:17px;font-weight:600}
+.good .st{font-weight:600;font-size:14px}
+.good .st i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#1a7f4b;margin-right:6px}
+.good dl{margin:0;display:grid;grid-template-columns:auto 1fr}
+.good dt,.good dd{margin:0;padding:8px 14px;border-bottom:1px solid #e6e9ee}
+.good dt{color:#5a6472;font-size:14px}
+.good dd{text-align:right}
+.good .mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.good .warn{color:#8a4b00;font-weight:600}.good .exp{color:#b3261e;font-weight:600}
+.good .act{display:flex;gap:0}
+.good .act button{flex:1;font:600 14px Inter,sans-serif;padding:11px;border:0;border-right:1px solid #e6e9ee;background:#fff;color:#14181f;cursor:pointer}
+.good .act button:last-child{border:0;background:#14181f;color:#fff}
+/* flat grid demos */
+.g{background:#fff;color:#14181f;font:15px/1.4 Inter,sans-serif;margin:0}
+.gA{display:grid;grid-template-columns:repeat(3,1fr);gap:28px 24px;padding:18px}
+.gA small{display:block;color:#5a6472;font-size:13px}.gA b{font-size:22px;font-weight:600}
+.gB{width:100%;border-collapse:collapse}
+.gB th{text-align:left;font-weight:500;color:#5a6472;font-size:13px;padding:8px 12px;border-bottom:2px solid #14181f}
+.gB td{padding:9px 12px;border-bottom:1px solid #e6e9ee}
+.gB .n{text-align:right;font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.gC{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#d9dee5;border:1px solid #d9dee5}
+.gC div{background:#fff;padding:14px}.gC small{display:block;color:#5a6472;font-size:13px}.gC b{font-size:22px;font-weight:600}
+.gD{display:grid;grid-template-columns:140px 1fr}
+.gD>div{padding:14px}.gD .side{background:#eef1f5;color:#3a4350;font-size:14px}.gD .side p{margin:0 0 8px}
+@media(max-width:700px){.gA{grid-template-columns:1fr 1fr}.gC{grid-template-columns:1fr 1fr}.gD{grid-template-columns:1fr}}
+/* type demos */
+.tbl{width:100%;border-collapse:collapse;font-size:15px}
+.tbl td{padding:6px 0;border-bottom:1px solid var(--line)}
+.tbl .r{text-align:right}
+.tabs-no{font-family:"Instrument Sans";}
+.tabs-yes{font-family:"Instrument Sans";font-variant-numeric:tabular-nums}
+.lab1{font-size:13px;color:var(--mute)}
+.lab2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+/* buttons */
+.btn{font:600 .95rem "Instrument Sans",sans-serif;padding:10px 16px;border-radius:3px;border:1px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.dng{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.mgrid .panel p{font-size:.92rem;color:var(--mute);margin:6px 0 12px}
+/* dialogs */
+dialog{border:1px solid var(--line);padding:0;background:var(--surface);color:var(--ink);font:400 16px/1.5 "Instrument Sans",sans-serif}
+dialog::backdrop{background:rgba(8,12,20,.6)}
+dialog h3{font-size:1.15rem;margin:0 0 6px}
+dialog .bd{padding:20px}
+dialog .ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--line)}
+dialog label{display:block;font-size:.9rem;margin:12px 0 4px}
+dialog input,dialog select{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--mute);border-radius:3px;background:var(--bg);color:var(--ink)}
+.d1{width:min(420px,92vw);border-radius:4px;margin:auto}
+.d2{width:100%;max-width:520px;margin:auto auto 0;border-radius:14px 14px 0 0;border-bottom:0}
+.d2 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:10px auto 0}
+.d2 .opt{display:block;width:100%;text-align:left;padding:14px 20px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;cursor:pointer}
+.d3{margin:0 0 0 auto;height:100dvh;max-height:100dvh;width:min(420px,100vw);border-width:0 0 0 1px;display:flex;flex-direction:column}
+.d3 .bd{flex:1;overflow:auto}
+.d3 header,.d4 header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line)}
+.d3 header b,.d4 header b{font-size:1.05rem}
+.d4{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border:0;flex-direction:column}
+.d4[open]{display:flex}
+.d4 .bd{flex:1;overflow:auto;max-width:640px;width:100%;margin:0 auto}
+.d4 .ft{justify-content:space-between}
+.d5{width:min(460px,92vw);margin:auto;border-radius:0;border:2px solid var(--bad)}
+.d5 .bar{background:var(--bad);color:#fff;padding:10px 20px;font-weight:600}
+.d6{width:min(360px,92vw);margin:auto;border-radius:3px;text-align:center}
+.x{background:none;border:0;color:var(--mute);font-size:1.4rem;line-height:1;cursor:pointer;padding:4px 8px}
+.inl{display:inline-flex;gap:8px;align-items:center;font-size:.95rem}
+button.theme{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);border:0;border-radius:99px;padding:10px 16px;font:600 .9rem "Instrument Sans",sans-serif;cursor:pointer;z-index:5}
+@media(prefers-reduced-motion:no-preference){dialog[open]{animation:pop .14s ease-out}@keyframes pop{from{opacity:0;transform:translateY(6px)}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Field guide 2: flat grids, type details, modals</h1>
+<p class="lead">You spotted the real issue: heavy borders, big rounded corners and shadows on every box. This page shows what is wrong with the Kigali Fleet card, how flat grids fix it, and six modal designs you can open and test.</p>
+<nav><a href="#fix">Card rebuild</a><a href="#grids">Flat grids</a><a href="#type">Type details</a><a href="#modals">Modals</a><a href="#rules">Modal rules</a></nav>
+
+<h2 id="fix">The Kigali Fleet car card, before and after</h2>
+<p class="note">Left: the problems from your screenshot. Right: the same data on a flat grid. Both use the same content.</p>
+<div class="two">
+<div><p class="cap"><b>Before</b></p>
+<div class="bad"><b style="font-size:17px">Toyota RAV4 AWD (2022 Hybrid)</b>
+<div class="chips"><div class="chip c1">Safety C… Expired (2026-…</div><div class="chip c2">Insura… Expired (2026-…</div></div>
+<div class="rate">Daily Rate (RWF)<br><b>65,000 RWF</b> per day</div></div>
+<ul class="fix"><li>Text is cut off exactly where the important word is (“Expired”, the date).</li><li>Amber on brown and mint on teal are hard to read.</li><li>Red expired and green ready chips look alike to many eyes.</li><li>Cards inside cards: 16px corners, border, shadow, then a grey box inside.</li><li>The label “Daily Rate (RWF)” and the value “RWF” say the unit twice.</li></ul></div>
+<div><p class="cap"><b>After</b></p>
+<div class="good"><div class="top"><b>Toyota RAV4 AWD 2022</b><span class="st"><i></i>Ready</span></div>
+<dl><dt>Plate</dt><dd class="mono">RAC 812 K</dd>
+<dt>Driver</dt><dd>Claudine Uwase</dd>
+<dt>Safety check</dt><dd class="exp">Expired 12 Mar 2026</dd>
+<dt>Insurance</dt><dd class="warn">Expires in 4 days</dd>
+<dt>Daily rate</dt><dd class="mono">65,000 RWF</dd></dl>
+<div class="act"><button>Repair</button><button>Details</button><button>Book</button></div></div>
+<ul class="fix"><li>One border outside, hairlines inside. Radius 2px.</li><li>Full words and dates, never truncated. The label sits left, value right.</li><li>Status is a dot plus a word, so color is never the only clue.</li><li>Only the last button is filled, so there is one clear main action.</li></ul></div>
+</div>
+
+<h2 id="grids">Four ways to make a grid without boxes</h2>
+<p class="note">A box says “this is a separate thing”. If everything is boxed, nothing is. Use space, lines or shifts of tone to group instead.</p>
+<p class="cap"><b>A. Space only.</b> No lines, no borders. Gaps do the grouping.</p>
+<div class="g gA"><div><small>All cars</small><b>7</b></div><div><small>Ready</small><b>4</b></div><div><small>Booked</small><b>2</b></div><div><small>In repair</small><b>1</b></div><div><small>Papers due</small><b>5</b></div><div><small>Daily total</small><b>1,075,000 RWF</b></div></div>
+<p class="cap" style="margin-top:20px"><b>B. Hairline table.</b> A heavy line under the header, light lines between rows, numbers right-aligned.</p>
+<table class="g gB"><tr><th>Plate</th><th>Model</th><th>Status</th><th style="text-align:right">Per day (RWF)</th></tr>
+<tr><td>RAD 450 B</td><td>Prado TXL</td><td>Booked</td><td class="n">180,000</td></tr>
+<tr><td>RAE 109 M</td><td>V8 Executive</td><td>Ready</td><td class="n">220,000</td></tr>
+<tr><td>RAC 812 K</td><td>RAV4 AWD</td><td>Ready</td><td class="n">65,000</td></tr></table>
+<p class="cap" style="margin-top:20px"><b>C. Gap-as-border.</b> Cells sit on a grey background with a 1px gap, so lines appear only between cells.</p>
+<div class="g gC"><div><small>All cars</small><b>7</b></div><div><small>Ready</small><b>4</b></div><div><small>Booked</small><b>2</b></div><div><small>In repair</small><b>1</b></div></div>
+<p class="cap" style="margin-top:20px"><b>D. Tone shift.</b> A tinted column separates labels from content without any line.</p>
+<div class="g gD"><div class="side"><p>Cars</p><p><b>Drivers</b></p><p>Bookings</p></div><div><b style="font-size:19px">Drivers</b><p style="margin:6px 0 0;color:#5a6472">5 drivers, 3 on a trip today.</p></div></div>
+
+<h2 id="type">Type details that make interfaces feel professional</h2>
+<div class="two">
+<div class="panel"><h3>Numbers should line up</h3>
+<p class="note">Use tabular figures for money and distances so digits stack in columns.</p>
+<table class="tbl tabs-no"><tr><td>Prado</td><td class="r">111,111 RWF</td></tr><tr><td>V8</td><td class="r">220,000 RWF</td></tr><tr><td>RAV4</td><td class="r">65,000 RWF</td></tr></table>
+<p class="cap" style="margin-top:8px">Proportional: columns drift.</p>
+<table class="tbl tabs-yes"><tr><td>Prado</td><td class="r">111,111 RWF</td></tr><tr><td>V8</td><td class="r">220,000 RWF</td></tr><tr><td>RAV4</td><td class="r">65,000 RWF</td></tr></table>
+<p class="cap" style="margin:8px 0 0">Tabular: <code>font-variant-numeric: tabular-nums</code></p></div>
+<div class="panel"><h3>Labels: quiet is enough</h3>
+<div style="margin:10px 0"><div class="lab2">Total vehicles</div><b style="font-size:24px">9</b></div>
+<p class="cap">Tracked capitals. Common in generated dashboards, and harder to scan.</p>
+<div style="margin:10px 0"><div class="lab1">Total vehicles</div><b style="font-size:24px">9</b></div>
+<p class="cap" style="margin:0">Sentence case, 13px, muted grey. Reads faster.</p></div>
+</div>
+<div class="panel"><h3>Rules of thumb</h3><ul class="fix">
+<li><b>Never truncate a status or a date.</b> Let it wrap, or restructure the card.</li>
+<li><b>14px is the floor</b> for UI text. Phones in sunlight punish 11–12px.</li>
+<li><b>Two weights are enough:</b> 400 for text, 600 for emphasis. Size can handle the rest.</li>
+<li><b>Say the unit once.</b> “Daily rate” as the label, “65,000 RWF” as the value.</li>
+<li><b>Use grey carefully.</b> #767676 on white is about the lightest grey that still passes contrast.</li>
+<li><b>Write dates in full:</b> “12 Mar 2026”, not “2026-03-12”, for people who aren’t programmers.</li></ul></div>
+
+<h2 id="modals">Six modal designs, all live</h2>
+<p class="note">Press each button. Close with the button, by clicking outside, or with the Esc key. They use the browser’s built-in dialog element, which handles focus and keyboard correctly.</p>
+<div class="mgrid">
+<div class="panel"><h3>1. Centered dialog</h3><p>For short decisions with one or two choices. The default for desktop.</p><button class="btn" data-open="d1">Open</button></div>
+<div class="panel"><h3>2. Bottom sheet</h3><p>Best on phones. Thumb-reachable, easy to dismiss.</p><button class="btn" data-open="d2">Open</button></div>
+<div class="panel"><h3>3. Side drawer</h3><p>For details or edit forms while the list stays visible behind.</p><button class="btn" data-open="d3">Open</button></div>
+<div class="panel"><h3>4. Full-screen form</h3><p>For long forms like a new booking. Avoids a cramped box on phones.</p><button class="btn" data-open="d4">Open</button></div>
+<div class="panel"><h3>5. Danger confirmation</h3><p>For irreversible actions. Asks the user to type the plate.</p><button class="btn dng" data-open="d5">Open</button></div>
+<div class="panel"><h3>6. No modal at all</h3><p>Inline confirm. Often better than interrupting.</p>
+<span class="inl" id="inl"><button class="btn" id="inlB">Mark as repaired</button></span></div>
+</div>
+
+<dialog id="d1" class="d1"><div class="bd"><h3>Send repair request?</h3><p style="color:var(--mute);margin:0">The driver Claudine Uwase will get an SMS and the RAV4 will be marked In repair.</p></div><div class="ft"><button class="btn" data-close>Cancel</button><button class="btn pri" data-close>Send request</button></div></dialog>
+
+<dialog id="d2" class="d2"><div class="grab"></div><div class="bd" style="padding-bottom:10px"><h3>RAC 812 K</h3><p style="color:var(--mute);margin:0">Choose an action</p></div><button class="opt" data-close>Book this car</button><button class="opt" data-close>Edit daily rate</button><button class="opt" data-close>Send to repair</button><button class="opt" data-close style="color:var(--mute)">Cancel</button></dialog>
+
+<dialog id="d3" class="d3"><header><b>Edit daily rate</b><button class="x" data-close aria-label="Close">×</button></header><div class="bd"><label for="r1">Daily rate (RWF)</label><input id="r1" value="65,000" inputmode="numeric"><label for="r2">Applies from</label><input id="r2" type="date"><p class="note" style="margin-top:14px">Existing bookings keep their original price.</p></div><div class="ft"><button class="btn" data-close>Cancel</button><button class="btn pri" data-close>Save rate</button></div></dialog>
+
+<dialog id="d4" class="d4"><header><b>New booking</b><button class="x" data-close aria-label="Close">×</button></header><div class="bd"><label for="b1">Customer</label><input id="b1" placeholder="Name or phone number"><label for="b2">Car</label><select id="b2"><option>RAC 812 K, RAV4 AWD</option><option>RAE 109 M, Land Cruiser V8</option></select><label for="b3">Pickup date</label><input id="b3" type="date"><label for="b4">Return date</label><input id="b4" type="date"><label for="b5">Driver</label><select id="b5"><option>Claudine Uwase</option><option>Jean-Paul Mugisha</option></select></div><div class="ft"><button class="btn" data-close>Cancel</button><button class="btn pri" data-close>Create booking</button></div></dialog>
+
+<dialog id="d5" class="d5"><div class="bar">Delete this car</div><div class="bd"><p>This removes RAD 450 B and its booking history. You cannot undo it.</p><label for="cf">Type the plate to confirm</label><input id="cf" placeholder="RAD 450 B" autocomplete="off"></div><div class="ft"><button class="btn" data-close>Keep car</button><button class="btn dng" id="delB" disabled data-close>Delete car</button></div></dialog>
+
+<h2 id="rules">What makes a good modal</h2>
+<div class="two">
+<div class="panel"><h3>Do</h3><ul class="fix"><li>Title says the action: “Send repair request?”, not “Are you sure?”.</li><li>Buttons repeat the verb: “Send request”, “Delete car”, not “OK” or “Yes”.</li><li>Put the main action on the right, cancel on the left.</li><li>Close on Esc and on outside click, except forms with unsaved data.</li><li>Match the size to the job: small for choices, drawer for edits, full screen for long forms.</li><li>Dim the page behind, enough to separate it, not to black.</li></ul></div>
+<div class="panel"><h3>Don’t</h3><ul class="fix"><li>Stack a modal on top of another modal.</li><li>Use a modal for something the user can undo. Show a toast with “Undo” instead.</li><li>Put long, scrolling content in a small centered box.</li><li>Hide the close button, or make it tiny.</li><li>Add animation beyond a quick 150ms fade.</li><li>Make every dialog look the same when the stakes differ. Danger gets a different look.</li></ul></div>
+</div>
+<div class="panel"><h3>Practice</h3><ol style="margin:0;padding-left:20px"><li>Rebuild the car card from your app using the “after” layout. Show all dates in full.</li><li>Swap your stat cards for grid A or C. Count how many borders you removed.</li><li>Replace one “Are you sure?” dialog with an Undo toast, and keep the danger dialog for deletes only.</li></ol></div>
+</div>
+<button class="theme" id="tb" type="button">Switch theme</button>
+<script>
+(function(){
+document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){var d=document.getElementById(b.dataset.open);if(d&&d.showModal)d.showModal()})});
+document.querySelectorAll('dialog').forEach(function(d){
+d.addEventListener('click',function(e){if(e.target===d)d.close()});
+d.querySelectorAll('[data-close]').forEach(function(c){c.addEventListener('click',function(){d.close()})});
+});
+var cf=document.getElementById('cf'),del=document.getElementById('delB');
+cf.addEventListener('input',function(){del.disabled=cf.value.trim().toUpperCase()!=='RAD 450 B'});
+document.getElementById('d5').addEventListener('close',function(){cf.value='';del.disabled=true});
+var inl=document.getElementById('inl');
+function reset(){inl.innerHTML='<button class="btn" id="inlB">Mark as repaired</button>';document.getElementById('inlB').addEventListener('click',ask)}
+function ask(){inl.innerHTML='Mark RAD 450 B as repaired? <button class="btn pri" id="y">Yes, repaired</button> <button class="btn" id="n">Cancel</button>';
+document.getElementById('n').addEventListener('click',reset);
+document.getElementById('y').addEventListener('click',function(){inl.innerHTML='Marked as repaired. <button class="btn" id="u">Undo</button>';document.getElementById('u').addEventListener('click',reset)})}
+document.getElementById('inlB').addEventListener('click',ask);
+var r=document.documentElement;
+document.getElementById('tb').addEventListener('click',function(){
+var dark=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);
+r.setAttribute('data-theme',dark?'light':'dark')});
+})();
+</script>
+</body>
+</html>

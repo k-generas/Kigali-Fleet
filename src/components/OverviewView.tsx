@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import { Vehicle, Driver, Booking, ActivityLog, User, Company } from '../types';
 import { formatRwf } from '../utils/collision';
+import { formatExpiryStatus, formatHumanDateRange } from '../utils/dates';
+import { CATEGORY_DEFAULT_IMAGES } from '../utils/vehicleImages';
 import {
-  ShieldCheck,
   Plane,
-  Car,
   Send,
   CheckCircle2,
-  Clock,
-  Users,
-  Calendar,
-  AlertCircle,
-  Wrench,
-  Smartphone,
-  Check,
   ExternalLink,
   PhoneCall,
+  Check,
+  Smartphone,
+  Car,
+  Users,
+  DollarSign,
+  AlertTriangle,
+  ShieldCheck,
+  ArrowUpRight,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { useI18n } from '../utils/i18n';
 
 interface OverviewViewProps {
   vehicles: Vehicle[];
@@ -39,7 +41,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   drivers,
   bookings,
   logs,
-  currentTheme,
   currentUser,
   currentCompany,
   onOpenNewBooking,
@@ -48,6 +49,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onAcknowledgeCheckin,
   onNavigateTab,
 }) => {
+  const { formatMoney, tr } = useI18n();
   const [filterMode, setFilterMode] = useState<'all' | 'today' | 'airport' | 'safari'>('all');
 
   const availableVehicles = vehicles.filter((v) => v.status === 'Available');
@@ -56,6 +58,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
   const availableDrivers = drivers.filter((d) => d.status === 'Available');
   const onTripDrivers = drivers.filter((d) => d.status === 'On Trip');
+  const offDutyDrivers = drivers.filter((d) => d.status === 'Off Duty');
 
   const activeBookings = bookings.filter((b) => b.status === 'Confirmed' || b.status === 'In Progress');
   const totalRevenueRwf = activeBookings.reduce((sum, b) => sum + b.total_rwf, 0);
@@ -65,9 +68,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
     .reduce((sum, b) => sum + (b.payment_status === 'Fully Paid' ? b.total_rwf : b.total_rwf * 0.4), 0);
 
   const fleetUtilizationRate = Math.round((bookedVehicles.length / (vehicles.length || 1)) * 100);
-
-  const activeThemeColor = currentTheme?.hex || '#635bff';
-  const activeBtnText = currentTheme?.btnText || 'text-white';
 
   const userRole = currentUser?.role || 'owner';
   const isDriverView = userRole === 'driver';
@@ -96,459 +96,581 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   const unassignedBookings = bookings.filter((b) => !b.driver_id || b.driver_id === 'Pending');
   const delayedFlightBookings = bookings.filter((b) => b.flight_status === 'Delayed');
 
+  const complianceAlerts = vehicles
+    .map((v) => {
+      const ins = formatExpiryStatus(v.insurance_expiry);
+      const ct = formatExpiryStatus(v.controle_technique_expiry);
+      if (ins.level === 'problem' || ins.level === 'attention') {
+        return {
+          vehicle: v,
+          message: `Insurance for ${v.plate_number}: ${ins.text.toLowerCase()}.`,
+          level: ins.level,
+        };
+      }
+      if (ct.level === 'problem' || ct.level === 'attention') {
+        return {
+          vehicle: v,
+          message: `Safety check for ${v.plate_number}: ${ct.text.toLowerCase()}.`,
+          level: ct.level,
+        };
+      }
+      return null;
+    })
+    .filter((item): item is { vehicle: Vehicle; message: string; level: 'attention' | 'problem' } => Boolean(item))
+    .slice(0, 2);
+
+  const attentionCount =
+    maintenanceVehicles.length +
+    delayedFlightBookings.length +
+    (unassignedBookings.length > 0 ? 1 : 0) +
+    complianceAlerts.length;
+
+  const hasAttentionItems = !isDriverView && attentionCount > 0;
+
   return (
     <div className="space-y-6">
-      {/* 1. Welcome Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-5 stripe-card">
-        <div className="space-y-2">
-          <div className="text-sm font-semibold" style={{ color: activeThemeColor }}>
-            {currentCompany ? currentCompany.name : 'KigaliFleet'}
-          </div>
-
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0a2540] dark:text-white">
-            {isDriverView ? 'Your Trips Today' : "Today's Overview"}
-          </h2>
-          <p className="text-base text-[#425466] dark:text-slate-300 max-w-2xl">
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {isDriverView ? tr('Your Trips Today') : tr('Dashboard')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {currentCompany ? currentCompany.name : 'KigaliFleet'} ·{' '}
             {isDriverView
-              ? 'See your pickup times, guest names, and airport flight updates.'
-              : 'See which cars are free, who is driving, and how much money you made.'}
+              ? tr('See your pickup times, guest names, and airport flight updates.')
+              : tr('See which cars are free, who is driving, and how much money you made.')}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
+            type="button"
             onClick={onOpenStorefront}
-            className="px-4 py-2.5 text-sm font-semibold rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-2 shadow-xs"
           >
-            <span>Booking Website</span>
-            <ExternalLink className="w-4 h-4 text-[#425466] dark:text-slate-400" />
+            <span>{tr('Booking Website')}</span>
+            <ExternalLink className="w-4 h-4 text-slate-400" />
           </button>
 
           {!isDriverView && (
             <button
+              type="button"
               onClick={onOpenNewBooking}
-              className={`px-5 py-2.5 text-sm font-semibold rounded-full transition-all shadow-xs active:scale-95 flex items-center gap-2 ${activeBtnText}`}
-              style={{ backgroundColor: activeThemeColor }}
+              className="px-4 py-2 text-sm font-medium rounded-lg accent-bg hover:opacity-95 transition-opacity inline-flex items-center gap-1.5 shadow-xs"
             >
-              <span>+ New Booking</span>
+              <span>+ {tr('New Booking')}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* 2. Simple Action Alerts */}
-      {!isDriverView && (unassignedBookings.length > 0 || delayedFlightBookings.length > 0 || maintenanceVehicles.length > 0) && (
-        <div className="space-y-3">
-          {unassignedBookings.length > 0 && (
-            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-amber-900 dark:text-amber-200">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span>
-                  <strong className="font-semibold">{unassignedBookings.length} booking(s)</strong> still need a driver before the trip starts.
-                </span>
-              </div>
-              <button
-                onClick={() => onNavigateTab?.('calendar')}
-                className="px-4 py-2 rounded-full bg-amber-500 text-slate-950 font-semibold text-sm hover:bg-amber-400 transition-colors self-start sm:self-auto"
-              >
-                Pick Driver
-              </button>
-            </div>
-          )}
+      {/* 1. 4-Card Modern KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div
+          onClick={() => onNavigateTab?.('vehicles')}
+          className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Cars on Trips')}</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <Car className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {bookedVehicles.length}{' '}
+            <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
+              of {vehicles.length} ({fleetUtilizationRate}%)
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {availableVehicles.length} {tr('free')} · {maintenanceVehicles.length} {tr('Repairs').toLowerCase()}
+          </p>
+        </div>
 
-          {delayedFlightBookings.length > 0 && (
-            <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-sky-900 dark:text-sky-200">
-              <div className="flex items-center gap-3">
-                <Plane className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0" />
-                <span>
-                  <strong className="font-semibold">Flight {delayedFlightBookings[0].flight_number}</strong> is 35 minutes late. Let the driver know by SMS.
-                </span>
-              </div>
-              <button
-                onClick={() => onSelectBookingForDispatch(delayedFlightBookings[0].id)}
-                className="px-4 py-2 rounded-full bg-sky-600 text-white font-semibold text-sm hover:bg-sky-500 transition-colors self-start sm:self-auto"
-              >
-                Send SMS
-              </button>
-            </div>
-          )}
+        <div
+          onClick={() => onNavigateTab?.('reports')}
+          className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Money Earned')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white font-mono mt-2 tabular-nums">
+            {formatMoney(totalRevenueRwf)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between">
+            <span>
+              <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                {formatMoney(depositPaidRwf)}
+              </span>{' '}
+              {tr('Paid').toLowerCase()}
+            </span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+          </p>
+        </div>
 
-          {maintenanceVehicles.length > 0 && (
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-[#425466] dark:text-slate-300 stripe-card">
-              <div className="flex items-center gap-3">
-                <Wrench className="w-5 h-5 text-rose-500 shrink-0" />
-                <span>
-                  <strong className="text-[#0a2540] dark:text-white font-semibold">
-                    {maintenanceVehicles[0].model_name} ({maintenanceVehicles[0].plate_number})
-                  </strong>{' '}
-                  is in the garage for repairs. Nobody can book it right now.
-                </span>
-              </div>
-              <button
-                onClick={() => onNavigateTab?.('vehicles')}
-                className="text-sm font-semibold hover:underline self-start sm:self-auto"
-                style={{ color: activeThemeColor }}
-              >
-                See Repairs →
-              </button>
+        <div
+          onClick={() => onNavigateTab?.('drivers')}
+          className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Drivers Ready')}</span>
+            <span className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {availableDrivers.length}{' '}
+            <span className="text-sm font-normal text-slate-500 dark:text-slate-400">of {drivers.length}</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {onTripDrivers.length} driving · {offDutyDrivers.length} off duty
+          </p>
+        </div>
+
+        <div
+          onClick={() => onNavigateTab?.(maintenanceVehicles.length > 0 ? 'maintenance' : 'vehicles')}
+          className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {tr('Needs attention')}
+            </span>
+            <span
+              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                attentionCount > 0
+                  ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              }`}
+            >
+              {attentionCount > 0 ? (
+                <AlertTriangle className="w-4 h-4" />
+              ) : (
+                <ShieldCheck className="w-4 h-4" />
+              )}
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {attentionCount}{' '}
+            <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
+              {attentionCount === 1 ? 'item' : 'items'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {attentionCount > 0
+              ? 'Repairs, flights, drivers & papers'
+              : 'All fleet checks & flights normal'}
+          </p>
+        </div>
+      </div>
+
+      {/* 2. Needs Attention Panel */}
+      {hasAttentionItems && (
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                {tr('Needs attention')}
+              </h2>
             </div>
-          )}
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {attentionCount} action{attentionCount === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+            {maintenanceVehicles.map((v) => (
+              <div
+                key={`maint-${v.id}`}
+                className="px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-sm hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                  <span>
+                    <strong className="font-semibold text-slate-900 dark:text-white">
+                      {v.model_name} ({v.plate_number})
+                    </strong>{' '}
+                    is in the garage. Nobody can book it.
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab?.('maintenance')}
+                  className="px-3 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-700 shrink-0 transition-colors"
+                >
+                  See repairs
+                </button>
+              </div>
+            ))}
+
+            {delayedFlightBookings.map((bk) => (
+              <div
+                key={`flight-${bk.id}`}
+                className="px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-sm hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                  <span>
+                    <strong className="font-semibold text-slate-900 dark:text-white">
+                      Flight {bk.flight_number}
+                    </strong>{' '}
+                    is {bk.flight_delay_minutes || 35} minutes late. {bk.client_name} is waiting at pickup.
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onSelectBookingForDispatch(bk.id)}
+                  className="px-3 py-1 rounded-md text-xs font-medium accent-tint accent-text hover:opacity-90 shrink-0"
+                >
+                  Send SMS
+                </button>
+              </div>
+            ))}
+
+            {unassignedBookings.length > 0 && (
+              <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-sm hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                <span className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <span>
+                    <strong className="font-semibold text-slate-900 dark:text-white">
+                      {unassignedBookings.length} booking(s)
+                    </strong>{' '}
+                    still need a driver before the trip starts.
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab?.('dispatch')}
+                  className="px-3 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-700 shrink-0 transition-colors"
+                >
+                  Pick driver
+                </button>
+              </div>
+            )}
+
+            {complianceAlerts.map((item) => (
+              <div
+                key={`comp-${item.vehicle.id}`}
+                className="px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-sm hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      item.level === 'problem' ? 'bg-red-500' : 'bg-amber-500'
+                    }`}
+                  />
+                  <span>{item.message}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab?.('vehicles')}
+                  className="px-3 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-700 shrink-0 transition-colors"
+                >
+                  Open car
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* 3. Driver Active Trip Card */}
+      {/* Driver Active Trip View */}
       {isDriverView && (
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-5">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-              Your Next Trip
+            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Your Next Trip</span>
             </div>
-            <span className="text-sm text-[#425466] dark:text-slate-400">Kigali Airport (KIA)</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Kigali Airport (KIA)</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <div className="text-sm text-[#425466] dark:text-slate-400 mb-1">Guest & Where to Go</div>
-              <div className="font-bold text-[#0a2540] dark:text-white text-base">Dr. Sarah Jenkins</div>
-              <div className="text-sm mt-1 font-medium" style={{ color: activeThemeColor }}>
-                Kigali Airport → Musanze Lodge
+            <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <div className="text-xs text-slate-500 dark:text-slate-400">Guest and route</div>
+              <div className="font-semibold text-slate-900 dark:text-white text-base mt-1">
+                Dr. Sarah Jenkins
+              </div>
+              <div className="text-sm mt-1 font-medium accent-text">
+                Kigali Airport to Musanze Lodge
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <div className="text-sm text-[#425466] dark:text-slate-400 mb-1">Your Car</div>
-              <div className="font-bold text-[#0a2540] dark:text-white text-base">Toyota Prado TXL</div>
-              <div className="text-sm text-[#425466] dark:text-slate-300 font-mono mt-1">RAD 450 B</div>
+            <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <div className="text-xs text-slate-500 dark:text-slate-400">Your car</div>
+              <div className="font-semibold text-slate-900 dark:text-white text-base mt-1">
+                Toyota Prado TXL
+              </div>
+              <div className="text-sm text-slate-500 dark:text-slate-400 font-mono mt-1">RAD 450 B</div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-              <div>
-                <div className="text-sm text-[#425466] dark:text-slate-400 mb-1">Flight Time</div>
-                <div className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2 text-base">
-                  <Plane className="w-4 h-4" />
-                  <span>WB 402 · 35m Late</span>
-                </div>
+            <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <div className="text-xs text-slate-500 dark:text-slate-400">Flight time</div>
+              <div className="font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2 text-base mt-1">
+                <Plane className="w-4 h-4" />
+                <span className="font-mono">WB 402 · 35m late</span>
               </div>
-              <div className="text-sm text-[#425466] dark:text-slate-400 mt-1">Lands at 10:05 AM</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Lands at 10:05</div>
             </div>
           </div>
 
-          <div className="pt-1 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2.5">
               <button
+                type="button"
                 onClick={() => onAcknowledgeCheckin('bk-101')}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold shadow-xs transition-all active:scale-95 flex items-center gap-2 ${activeBtnText}`}
-                style={{ backgroundColor: activeThemeColor }}
+                className="px-4 py-2 rounded-lg text-sm font-medium accent-bg hover:opacity-95 inline-flex items-center gap-2 shadow-xs"
               >
                 <Check className="w-4 h-4" />
                 <span>I Am At The Airport</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => onNavigateTab?.('simulator')}
-                className="px-4 py-2.5 rounded-full text-sm font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2"
               >
-                <Smartphone className="w-4 h-4" style={{ color: activeThemeColor }} />
+                <Smartphone className="w-4 h-4 accent-text" />
                 <span>Test Driver SMS</span>
               </button>
             </div>
 
-            <div className="text-sm text-[#425466] dark:text-slate-300 flex items-center gap-2">
-              <PhoneCall className="w-4 h-4 text-emerald-500" />
-              <span>Office Phone: +250 788 100 200</span>
+            <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <PhoneCall className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-mono">Office: +250 788 100 200</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* 4. Top Numbers */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 stripe-card">
-          <div className="flex items-center justify-between text-sm font-medium text-[#425466] dark:text-slate-400">
-            <span>Cars on Trips</span>
-            <Car className="w-5 h-5" style={{ color: activeThemeColor }} />
+      {/* 3. Bookings & Dispatch Table Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+              {tr('Bookings')}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {filteredBookings.length} {tr('Bookings').toLowerCase()} shown
+            </p>
           </div>
-          <div className="mt-2.5 text-3xl font-bold text-[#0a2540] dark:text-white font-mono tabular-nums">
-            {fleetUtilizationRate}%
-          </div>
-          <div className="mt-1.5 text-sm text-[#425466] dark:text-slate-400">
-            {availableVehicles.length} free · {bookedVehicles.length} on trips · {maintenanceVehicles.length} in repair
+
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60 overflow-x-auto">
+            {(
+              [
+                { id: 'all', label: tr('All') },
+                { id: 'today', label: tr('Today') },
+                { id: 'airport', label: tr('Airport') },
+                { id: 'safari', label: tr('Safaris') },
+              ] as const
+            ).map((tab) => {
+              const active = filterMode === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFilterMode(tab.id)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                    active
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 stripe-card">
-          <div className="flex items-center justify-between text-sm font-medium text-[#425466] dark:text-slate-400">
-            <span>Money Earned</span>
-            <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">RWF</span>
-          </div>
-          <div className="mt-2.5 text-2xl sm:text-3xl font-bold text-[#0a2540] dark:text-white font-mono tabular-nums truncate">
-            {formatRwf(totalRevenueRwf)}
-          </div>
-          <div className="mt-1.5 flex items-center justify-between text-sm text-[#425466] dark:text-slate-400">
-            <span>
-              Paid: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatRwf(depositPaidRwf)}</strong>
-            </span>
-            {onNavigateTab && (
-              <button
-                onClick={() => onNavigateTab('reports')}
-                className="text-sm font-semibold hover:underline"
-                style={{ color: activeThemeColor }}
-              >
-                Reports →
-              </button>
-            )}
-          </div>
-        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-5">Guest</th>
+                <th className="py-3 px-4">Car & Driver</th>
+                <th className="py-3 px-4">Dates</th>
+                <th className="py-3 px-4 text-right">Price</th>
+                <th className="py-3 px-5 text-right">Driver SMS</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+              {filteredBookings.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-10 px-5 text-center text-sm text-slate-500 dark:text-slate-400">
+                    No bookings match this filter.
+                  </td>
+                </tr>
+              ) : (
+                filteredBookings.map((b) => {
+                  const vehicle = vehicles.find((v) => v.id === b.vehicle_id);
+                  const driver = drivers.find((d) => d.id === b.driver_id);
+                  const thumb = vehicle?.image_url || CATEGORY_DEFAULT_IMAGES[vehicle?.category || 'LandCruiser'];
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 stripe-card">
-          <div className="flex items-center justify-between text-sm font-medium text-[#425466] dark:text-slate-400">
-            <span>Drivers Ready</span>
-            <Users className="w-5 h-5 text-sky-500" />
-          </div>
-          <div className="mt-2.5 text-3xl font-bold text-[#0a2540] dark:text-white font-mono tabular-nums">
-            {availableDrivers.length} / {drivers.length}
-          </div>
-          <div className="mt-1.5 text-sm text-[#425466] dark:text-slate-400">
-            {onTripDrivers.length} driving now · {drivers.filter((d) => d.status === 'Off Duty').length} off duty
-          </div>
-        </div>
+                  return (
+                    <tr
+                      key={b.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-3.5 px-5 align-middle">
+                        <div className="font-medium text-slate-900 dark:text-white">{b.client_name}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{b.destination}</div>
+                      </td>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 stripe-card">
-          <div className="flex items-center justify-between text-sm font-medium text-[#425466] dark:text-slate-400">
-            <span>Double Bookings</span>
-            <ShieldCheck className="w-5 h-5 text-emerald-500" />
-          </div>
-          <div className="mt-2.5 text-3xl font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
-            0
-          </div>
-          <div className="mt-1.5 text-sm text-[#425466] dark:text-slate-400">
-            Every car can only have one trip at a time
-          </div>
+                      <td className="py-3.5 px-4 align-middle">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={thumb}
+                            alt={vehicle?.model_name || 'Car'}
+                            referrerPolicy="no-referrer"
+                            className="w-11 h-8 rounded-md object-cover bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200/70 dark:border-slate-700"
+                          />
+                          <div className="min-w-0">
+                            <div className="text-slate-900 dark:text-white font-medium truncate">
+                              {vehicle?.model_name || 'No car yet'}
+                            </div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              <span className="font-mono">{vehicle?.plate_number || '—'}</span>
+                              {' · '}
+                              <span>{driver?.name || 'No driver'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 align-middle">
+                        <div className="text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                          {formatHumanDateRange(b.start_date, b.end_date)}
+                        </div>
+                        {b.flight_number && (
+                          <div className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                            {b.flight_number}
+                            {b.flight_status === 'Delayed' && (
+                              <span className="text-red-600 dark:text-red-400 font-semibold ml-1.5">
+                                +{b.flight_delay_minutes || 35}m late
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
+                        <div className="font-mono font-semibold text-slate-900 dark:text-white">
+                          {formatRwf(b.total_rwf)}
+                        </div>
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">{b.payment_status}</div>
+                      </td>
+
+                      <td className="py-3.5 px-5 align-middle text-right whitespace-nowrap">
+                        {b.dispatch_status === 'Not Sent' && (
+                          <button
+                            type="button"
+                            onClick={() => onSelectBookingForDispatch(b.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg accent-bg hover:opacity-95 transition-opacity shadow-xs"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Send SMS</span>
+                          </button>
+                        )}
+                        {b.dispatch_status === 'Dispatched (SMS)' && (
+                          <div className="inline-flex flex-col items-end gap-1">
+                            <span className="text-xs font-medium text-amber-600 dark:text-amber-400 inline-flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              <span>SMS sent</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onAcknowledgeCheckin(b.id)}
+                              className="text-xs font-medium accent-text hover:underline"
+                            >
+                              Mark ready
+                            </button>
+                          </div>
+                        )}
+                        {b.dispatch_status === 'Acknowledged by Driver' && (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            <span>Driver ready</span>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* 5. Main Content Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Bookings Table */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
-              <Calendar className="w-5 h-5" style={{ color: activeThemeColor }} />
-              <span>Bookings ({filteredBookings.length})</span>
-            </h3>
-
-            <div className="flex items-center gap-1 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-medium">
-              <button
-                onClick={() => setFilterMode('all')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
-                  filterMode === 'all'
-                    ? 'bg-[#0a2540] text-white dark:bg-white dark:text-[#0a2540] font-semibold'
-                    : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilterMode('today')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
-                  filterMode === 'today'
-                    ? 'bg-[#0a2540] text-white dark:bg-white dark:text-[#0a2540] font-semibold'
-                    : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-                }`}
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setFilterMode('airport')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
-                  filterMode === 'airport'
-                    ? 'bg-[#0a2540] text-white dark:bg-white dark:text-[#0a2540] font-semibold'
-                    : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-                }`}
-              >
-                Airport
-              </button>
-              <button
-                onClick={() => setFilterMode('safari')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
-                  filterMode === 'safari'
-                    ? 'bg-[#0a2540] text-white dark:bg-white dark:text-[#0a2540] font-semibold'
-                    : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-                }`}
-              >
-                Safaris
-              </button>
-            </div>
+      {/* Bottom Secondary Panels: Airport Flights & Recent Updates */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Kigali airport flights
+            </h2>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Live</span>
+            </span>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden stripe-card">
-            <div className="hidden md:grid md:grid-cols-12 gap-3 px-4 py-3 bg-[#f6f9fc] dark:bg-slate-800/60 text-[#425466] dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 text-xs font-bold uppercase">
-              <div className="md:col-span-4">Guest & Place</div>
-              <div className="md:col-span-3">Car & Driver</div>
-              <div className="md:col-span-3">Dates & Price</div>
-              <div className="md:col-span-2 text-right">Driver SMS</div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm">
+            <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-slate-900 dark:text-white">RwandAir WB 402</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Entebbe to Kigali</div>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span>35m late</span>
+              </span>
             </div>
-            <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
-              {filteredBookings.map((b) => {
-                const vehicle = vehicles.find((v) => v.id === b.vehicle_id);
-                const driver = drivers.find((d) => d.id === b.driver_id);
 
-                return (
-                  <div
-                    key={b.id}
-                    className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center px-4 py-3.5 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors"
-                  >
-                    <div className="md:col-span-4 min-w-0">
-                      <div className="font-semibold text-[#0a2540] dark:text-white truncate">{b.client_name}</div>
-                      <div className="text-xs text-[#425466] dark:text-slate-400 truncate">{b.destination}</div>
-                      <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5 truncate">
-                        {b.payment_status}
-                      </div>
-                    </div>
+            <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-slate-900 dark:text-white">Kenya Airways KQ 448</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Nairobi to Kigali</div>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>On time</span>
+              </span>
+            </div>
 
-                    <div className="md:col-span-3 min-w-0">
-                      <div className="font-medium text-[#0a2540] dark:text-slate-200 truncate">
-                        {vehicle?.model_name || 'No car yet'}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs mt-0.5 flex-wrap">
-                        <span className="font-mono font-semibold whitespace-nowrap" style={{ color: activeThemeColor }}>
-                          {vehicle?.plate_number}
-                        </span>
-                        <span className="text-[#425466] dark:text-slate-400 truncate">
-                          · {driver?.name || 'No driver'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-3 min-w-0">
-                      <div className="font-mono font-semibold text-[#0a2540] dark:text-white whitespace-nowrap">
-                        {formatRwf(b.total_rwf)}
-                      </div>
-                      <div className="text-xs text-[#425466] dark:text-slate-400 font-mono mt-0.5 whitespace-nowrap">
-                        {b.start_date} → {b.end_date}
-                      </div>
-                      {b.flight_number && (
-                        <div
-                          className="flex items-center gap-1 text-xs font-mono font-semibold mt-0.5"
-                          style={{ color: activeThemeColor }}
-                        >
-                          <Plane className="w-3 h-3 shrink-0" />
-                          <span>{b.flight_number}</span>
-                          {b.flight_status === 'Delayed' && (
-                            <span className="text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950 px-1.5 py-0.5 rounded">
-                              +{b.flight_delay_minutes || 35}m
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="md:col-span-2 flex md:justify-end">
-                      {b.dispatch_status === 'Not Sent' && (
-                        <button
-                          onClick={() => onSelectBookingForDispatch(b.id)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all whitespace-nowrap active:scale-95 ${activeBtnText}`}
-                          style={{ backgroundColor: activeThemeColor }}
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Send SMS</span>
-                        </button>
-                      )}
-                      {b.dispatch_status === 'Dispatched (SMS)' && (
-                        <div className="flex flex-col md:items-end gap-1">
-                          <span className="text-xs font-semibold" style={{ color: activeThemeColor }}>
-                            SMS Sent
-                          </span>
-                          <button
-                            onClick={() => onAcknowledgeCheckin(b.id)}
-                            className="px-2.5 py-1 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 font-medium whitespace-nowrap"
-                            title="Mark driver as checked in"
-                          >
-                            Mark Ready
-                          </button>
-                        </div>
-                      )}
-                      {b.dispatch_status === 'Acknowledged by Driver' && (
-                        <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap">
-                          <CheckCircle2 className="w-4 h-4 shrink-0" />
-                          <span>Driver Ready</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-slate-900 dark:text-white">Ethiopian ET 807</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Addis Ababa to Kigali</div>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>On time</span>
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Flights & Recent Activity */}
-        <div className="space-y-5">
-          {/* Flights Card */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-3.5 stripe-card">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-base font-bold text-[#0a2540] dark:text-white">
-                <Plane className="w-4 h-4" style={{ color: activeThemeColor }} />
-                <span>Kigali Airport Flights</span>
-              </div>
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full">
-                Live
-              </span>
-            </div>
-
-            <div className="space-y-2.5 text-sm">
-              <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                <div>
-                  <div className="font-semibold text-[#0a2540] dark:text-white">RwandAir WB 402</div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400">Entebbe → Kigali</div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-xs bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold whitespace-nowrap">
-                  35m Late
-                </span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                <div>
-                  <div className="font-semibold text-[#0a2540] dark:text-white">Kenya Airways KQ 448</div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400">Nairobi → Kigali</div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-xs bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap">
-                  On Time
-                </span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                <div>
-                  <div className="font-semibold text-[#0a2540] dark:text-white">Ethiopian ET 807</div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400">Addis Ababa → Kigali</div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-xs bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap">
-                  On Time
-                </span>
-              </div>
-            </div>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Recent updates</h2>
           </div>
 
-          {/* Recent Updates */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-3.5 stripe-card">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-base font-bold text-[#0a2540] dark:text-white">
-                <Clock className="w-4 h-4 text-[#425466] dark:text-slate-400" />
-                <span>Recent Updates</span>
-              </div>
-            </div>
-
-            <div className="space-y-2.5 max-h-64 overflow-y-auto text-sm pr-1">
-              {logs.map((log) => (
-                <div key={log.id} className="p-3 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-[#0a2540] dark:text-slate-200">{log.action}</span>
-                    <span className="font-mono text-xs text-[#425466] dark:text-slate-400">{log.timestamp}</span>
-                  </div>
-                  <p className="text-xs text-[#425466] dark:text-slate-400 leading-relaxed">{log.details}</p>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/80 max-h-60 overflow-y-auto text-sm">
+            {logs.map((log) => (
+              <div key={log.id} className="px-5 py-3.5 space-y-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-slate-900 dark:text-white">{log.action}</span>
+                  <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{log.timestamp}</span>
                 </div>
-              ))}
-            </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{log.details}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -11,14 +11,14 @@ export function getStatusStyles(status: string): string {
     case 'Delivered':
     case 'Published':
     case 'Resolved':
-      return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25';
+      return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-500/20';
     case 'Trial':
     case 'In Progress':
     case 'Investigating':
     case 'Provider Accepted':
     case 'Scheduled':
     case 'Open':
-      return 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/25';
+      return 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-500/20';
     case 'Pending':
     case 'Pending Verification':
     case 'Grace Period':
@@ -29,7 +29,7 @@ export function getStatusStyles(status: string): string {
     case 'Draft':
     case 'Queued':
     case 'New':
-      return 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25';
+      return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-500/20';
     case 'Suspended':
     case 'Failed':
     case 'Disconnected':
@@ -38,12 +38,54 @@ export function getStatusStyles(status: string): string {
     case 'High':
     case 'Emergency':
     case 'Restricted':
-      return 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25';
+      return 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200/70 dark:border-rose-500/20';
     case 'Refunded':
     case 'Partially Refunded':
-      return 'bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/25';
+      return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700';
     default:
-      return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/25';
+      return 'bg-slate-100 dark:bg-slate-800/70 text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-slate-700';
+  }
+}
+
+export function getStatusDotColor(status: string): string {
+  switch (status) {
+    case 'Active':
+    case 'Successful':
+    case 'Connected':
+    case 'Completed':
+    case 'Delivered':
+    case 'Published':
+    case 'Resolved':
+      return 'bg-emerald-500 dark:bg-emerald-400';
+    case 'Trial':
+    case 'In Progress':
+    case 'Investigating':
+    case 'Provider Accepted':
+    case 'Scheduled':
+    case 'Open':
+      return 'bg-blue-500 dark:bg-blue-400';
+    case 'Pending':
+    case 'Pending Verification':
+    case 'Grace Period':
+    case 'Past Due':
+    case 'Waiting for User':
+    case 'Degraded':
+    case 'Warning':
+    case 'Draft':
+    case 'Queued':
+    case 'New':
+      return 'bg-amber-500 dark:bg-amber-400';
+    case 'Suspended':
+    case 'Failed':
+    case 'Disconnected':
+    case 'Escalated':
+    case 'Critical':
+    case 'High':
+    case 'Emergency':
+    case 'Restricted':
+      return 'bg-rose-500 dark:bg-rose-400';
+    default:
+      return 'bg-slate-400 dark:bg-slate-500';
   }
 }
 
@@ -86,7 +128,6 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
   confirmLabel,
   placeholder = 'Write why you are making this change (saved in the history log)...',
   danger = false,
-  currentTheme,
   onCancel,
   onConfirm,
 }) => {
@@ -107,22 +148,22 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+          <div className="flex items-start gap-3">
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                 danger
-                  ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-                  : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                  ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                  : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
               }`}
             >
-              {danger ? <ShieldAlert className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+              {danger ? <ShieldAlert className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#0a2540] dark:text-white">{title}</h3>
-              <p className="text-sm text-[#425466] dark:text-slate-400 mt-0.5">{description}</p>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
             </div>
           </div>
           <button
@@ -132,16 +173,16 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
               setError(null);
               onCancel();
             }}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-full"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-300 mb-1.5">
-              Reason for This Change
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Reason for this change
             </label>
             <textarea
               rows={3}
@@ -151,13 +192,13 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
                 if (error) setError(null);
               }}
               placeholder={placeholder}
-              className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-sm text-[#0a2540] dark:text-white outline-none focus:border-amber-500"
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-slate-400/20"
               required
             />
-            {error && <p className="text-sm text-rose-500 mt-1">{error}</p>}
+            {error && <p className="text-xs font-medium text-rose-600 dark:text-rose-400 mt-1">{error}</p>}
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={() => {
@@ -165,16 +206,15 @@ export const ReasonActionModal: React.FC<ReasonActionModalProps> = ({
                 setError(null);
                 onCancel();
               }}
-              className="px-4 py-2 rounded-full text-sm font-semibold text-[#425466] dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 whitespace-nowrap"
+              className="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-opacity hover:opacity-90 ${
-                danger ? 'bg-rose-600 text-white' : currentTheme.btnText
+              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-opacity hover:opacity-90 ${
+                danger ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'accent-bg'
               }`}
-              style={!danger ? { backgroundColor: currentTheme.hex } : undefined}
             >
               {confirmLabel}
             </button>

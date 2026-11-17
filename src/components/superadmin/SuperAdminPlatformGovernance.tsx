@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Activity,
   AlertTriangle,
   Database,
   Lock,
@@ -25,7 +24,9 @@ import {
 } from '../../types';
 import { ColorTheme } from '../../theme';
 import { canModifyPlatformAdmin, isSuperAdminEmail } from '../../utils/auth';
-import { ReasonActionModal, getStatusStyles } from './SuperAdminShared';
+import { useI18n } from '../../utils/i18n';
+import { ReasonActionModal, getStatusDotColor, getStatusStyles } from './SuperAdminShared';
+import { formatHumanDate, formatHumanDateTime } from '../../utils/dates';
 
 interface SuperAdminPlatformGovernanceProps {
   mode: 'integrations' | 'health' | 'security' | 'audit' | 'content' | 'settings' | 'admins';
@@ -60,12 +61,12 @@ interface SuperAdminPlatformGovernanceProps {
 }
 
 const SUB_ROLE_LABELS: Record<SuperAdminSubRole, string> = {
-  platform_owner: 'Main Owner',
-  platform_admin: 'General Admin',
-  finance_admin: 'Money Admin',
-  support_admin: 'Help Admin',
-  technical_admin: 'Tools Admin',
-  security_admin: 'Safety Admin',
+  platform_owner: 'Main owner',
+  platform_admin: 'General admin',
+  finance_admin: 'Money admin',
+  support_admin: 'Help admin',
+  technical_admin: 'Tools admin',
+  security_admin: 'Safety admin',
 };
 
 export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernanceProps> = ({
@@ -92,6 +93,7 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
   onCreateAdmin,
   onUpdateAdmin,
 }) => {
+  const { tr } = useI18n();
   const [testingId, setTestingId] = useState<string | null>(null);
   const [auditSearch, setAuditSearch] = useState('');
   const [auditEntityFilter, setAuditEntityFilter] = useState('all');
@@ -131,50 +133,49 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
     });
   }, [auditLogs, auditSearch, auditEntityFilter]);
 
-  // -------------------------------------------------------------------------
   // MODULE 13: CONNECTED TOOLS
-  // -------------------------------------------------------------------------
   if (mode === 'integrations') {
     return (
-      <div className="space-y-5">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-            Connected Tools
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {tr('Connected tools')}
           </h3>
-          <p className="text-sm text-[#425466] dark:text-slate-400">
-            Secret keys stay hidden. Test any tool below or turn it on or off with a saved reason.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Secret keys stay hidden. Test any tool below or turn it on or off with a saved reason.')}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {integrations.map((item) => (
             <div
               key={item.id}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 text-sm"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 space-y-3 text-sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-base font-bold text-[#0a2540] dark:text-white">{item.name}</div>
-                  <div className="text-sm text-[#425466] dark:text-slate-400">
+                  <div className="text-base font-semibold text-slate-900 dark:text-slate-100">{item.name}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
                     {item.category} · {item.provider}
                   </div>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles(item.status)}`}>
-                  {item.status}
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium">
+                  <span className={`w-2 h-2 rounded-full ${getStatusDotColor(item.status)}`} />
+                  <span>{item.status}</span>
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-sm space-y-1">
+              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 font-mono text-xs space-y-1 text-slate-700 dark:text-slate-300">
                 <div>Address: {item.endpoint_label}</div>
                 <div>Key: {item.masked_key}</div>
                 <div>
                   Speed: {item.latency_ms ? `${item.latency_ms}ms` : 'N/A'} · Checked:{' '}
-                  {item.last_checked_at.slice(0, 16).replace('T', ' ')}
+                  {formatHumanDateTime(item.last_checked_at)}
                 </div>
               </div>
 
               {item.recent_errors.length > 0 && (
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-800 dark:text-amber-300">
+                <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-xs text-amber-800 dark:text-amber-400">
                   Last problem: {item.recent_errors[0]}
                 </div>
               )}
@@ -187,29 +188,29 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
                     await onTestIntegration(item.id);
                     setTestingId(null);
                   }}
-                  className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold flex items-center gap-1.5"
                 >
-                  <RefreshCw className={`w-4 h-4 ${testingId === item.id ? 'animate-spin' : ''}`} />
-                  <span>{testingId === item.id ? 'Checking...' : 'Test Now'}</span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${testingId === item.id ? 'animate-spin' : ''}`} />
+                  <span>{testingId === item.id ? tr('Checking...') : tr('Test now')}</span>
                 </button>
 
                 <button
                   onClick={() =>
                     setPendingAction({
-                      title: `${item.is_enabled ? 'Turn Off' : 'Turn On'} ${item.name}`,
-                      description: `Service: ${item.provider}`,
-                      confirmLabel: item.is_enabled ? 'Turn Off' : 'Turn On',
+                      title: `${item.is_enabled ? tr('Turn off') : tr('Turn on')} ${item.name}`,
+                      description: `${tr('Service')}: ${item.provider}`,
+                      confirmLabel: item.is_enabled ? tr('Turn off') : tr('Turn on'),
                       danger: item.is_enabled,
                       execute: (reason) => onToggleIntegration(item.id, reason),
                     })
                   }
-                  className={`px-4 py-2 rounded-full font-semibold border ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                     item.is_enabled
-                      ? 'border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
-                      : 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
+                      ? 'border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10'
+                      : 'border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
                   }`}
                 >
-                  {item.is_enabled ? 'Turn Off' : 'Turn On'}
+                  {item.is_enabled ? tr('Turn off') : tr('Turn on')}
                 </button>
               </div>
             </div>
@@ -233,75 +234,71 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
     );
   }
 
-  // -------------------------------------------------------------------------
   // MODULE 14: SYSTEM HEALTH & AUTOMATIC TASKS
-  // -------------------------------------------------------------------------
   if (mode === 'health') {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-            <div className="flex items-center justify-between text-sm text-[#425466] dark:text-slate-400 font-semibold">
-              <span>Live Data Save</span>
-              <Database className="w-5 h-5" />
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+            <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span>{tr('Live data save')}</span>
+              <Database className="w-4 h-4" />
             </div>
-            <div className="mt-2.5 flex items-center gap-2">
+            <div className="mt-2.5">
               <span
-                className={`px-3 py-1 rounded-full border text-sm font-semibold ${getStatusStyles(
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold ${getStatusStyles(
                   isFirebaseConnected ? 'Connected' : 'Degraded'
                 )}`}
               >
-                {isFirebaseConnected ? 'Online' : 'Using Local Save'}
+                <span className={`w-2 h-2 rounded-full ${getStatusDotColor(isFirebaseConnected ? 'Connected' : 'Degraded')}`} />
+                {isFirebaseConnected ? tr('Online') : tr('Using local save')}
               </span>
             </div>
           </div>
 
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-            <div className="flex items-center justify-between text-sm text-[#425466] dark:text-slate-400 font-semibold">
-              <span>Stopped Tasks</span>
-              <Activity className="w-5 h-5" />
-            </div>
-            <div className="text-3xl font-bold text-[#0a2540] dark:text-white font-mono tabular-nums mt-2">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Stopped tasks')}</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums mt-1.5">
               {backgroundJobs.filter((j) => j.status === 'Failed').length} / {backgroundJobs.length}
             </div>
           </div>
 
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-            <div className="flex items-center justify-between text-sm text-[#425466] dark:text-slate-400 font-semibold">
-              <span>Open Errors</span>
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+            <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span>{tr('Open errors')}</span>
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
             </div>
-            <div className="text-3xl font-bold text-[#0a2540] dark:text-white font-mono tabular-nums mt-2">
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums mt-1.5">
               {systemErrors.filter((e) => !e.resolved).length}
             </div>
           </div>
         </div>
 
-        {/* Automatic Tasks */}
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 font-bold text-base text-[#0a2540] dark:text-white">
-            Automatic Tasks
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-hidden">
+          <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 font-semibold text-base text-slate-900 dark:text-slate-100">
+            {tr('Automatic tasks')}
           </div>
-          <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/70 text-sm">
             {backgroundJobs.map((job) => (
-              <div key={job.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div key={job.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <div className="font-bold text-[#0a2540] dark:text-white">{job.name}</div>
-                  <div className="text-sm font-mono text-[#425466] dark:text-slate-400 mt-0.5">
-                    Runs: {job.schedule} · Last run: {job.last_run_at.slice(0, 16).replace('T', ' ')} · Checked:{' '}
+                  <div className="font-semibold text-slate-900 dark:text-slate-100">{job.name}</div>
+                  <div className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+                    Runs: {job.schedule} · Last run: {formatHumanDateTime(job.last_run_at)} · Checked:{' '}
                     {job.records_processed}
                   </div>
-                  {job.error_message && <div className="text-sm text-rose-500 mt-0.5">{job.error_message}</div>}
+                  {job.error_message && <div className="text-xs text-rose-600 dark:text-rose-400 mt-0.5">{job.error_message}</div>}
                 </div>
                 <div className="flex items-center gap-2.5 shrink-0">
-                  <span className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles(job.status)}`}>
-                    {job.status}
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium">
+                    <span className={`w-2 h-2 rounded-full ${getStatusDotColor(job.status)}`} />
+                    <span>{job.status}</span>
                   </span>
                   <button
                     onClick={() => onRetryJob(job.id)}
-                    className="px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold whitespace-nowrap"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
                   >
-                    Run Again
+                    {tr('Run again')}
                   </button>
                 </div>
               </div>
@@ -309,34 +306,33 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
           </div>
         </div>
 
-        {/* System Errors */}
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 font-bold text-base text-[#0a2540] dark:text-white">
-            System Errors
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-hidden">
+          <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 font-semibold text-base text-slate-900 dark:text-slate-100">
+            {tr('System errors')}
           </div>
-          <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/70 text-sm">
             {systemErrors.map((err) => (
-              <div key={err.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div key={err.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-[#0a2540] dark:text-white">{err.service}</span>
-                    <span className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles(err.severity)}`}>
-                      {err.severity}
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">{err.service}</span>
+                    <span className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles(err.severity)}`}>
+                      {tr(err.severity)}
                     </span>
-                    <span className="font-mono text-sm text-[#425466] dark:text-slate-400">{err.correlation_id}</span>
+                    <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{err.correlation_id}</span>
                   </div>
-                  <p className="text-[#425466] dark:text-slate-300 mt-1">{err.message}</p>
+                  <p className="text-slate-600 dark:text-slate-300 mt-1 text-sm">{err.message}</p>
                 </div>
                 {err.resolved ? (
-                  <span className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles('Resolved')}`}>
-                    Fixed
+                  <span className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles('Resolved')}`}>
+                    {tr('Fixed')}
                   </span>
                 ) : (
                   <button
                     onClick={() => onResolveSystemError(err.id)}
-                    className="px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold whitespace-nowrap"
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold whitespace-nowrap"
                   >
-                    Mark Fixed
+                    {tr('Mark fixed')}
                   </button>
                 )}
               </div>
@@ -347,49 +343,47 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
     );
   }
 
-  // -------------------------------------------------------------------------
   // MODULE 15: SAFETY ALERTS
-  // -------------------------------------------------------------------------
   if (mode === 'security') {
     return (
-      <div className="space-y-5">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-            Safety Alerts
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {tr('Safety alerts')}
           </h3>
-          <p className="text-sm text-[#425466] dark:text-slate-400">
-            Shows wrong sign-in tries, blocked page tries, and password reset requests.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Shows wrong sign-in tries, blocked page tries, and password reset requests.')}
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {securityIncidents.map((inc) => (
             <div
               key={inc.id}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-3 text-sm"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 space-y-2.5 text-sm"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-base text-[#0a2540] dark:text-white">{inc.title}</span>
-                  <span className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles(inc.severity)}`}>
+                  <span className="font-semibold text-base text-slate-900 dark:text-slate-100">{inc.title}</span>
+                  <span className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles(inc.severity)}`}>
                     {inc.severity}
                   </span>
-                  <span className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles(inc.status)}`}>
+                  <span className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles(inc.status)}`}>
                     {inc.status}
                   </span>
                 </div>
-                <span className="font-mono text-sm text-[#425466] dark:text-slate-400">
-                  {inc.created_at.slice(0, 16).replace('T', ' ')}
+                <span className="font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                  {formatHumanDateTime(inc.created_at)}
                 </span>
               </div>
-              <p className="text-[#425466] dark:text-slate-300">{inc.details}</p>
-              <div className="text-sm font-mono text-[#425466] dark:text-slate-400 flex flex-wrap gap-4">
+              <p className="text-slate-600 dark:text-slate-300">{inc.details}</p>
+              <div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex flex-wrap gap-4">
                 <span>Type: {inc.category}</span>
                 {inc.target_email && <span>Email: {inc.target_email}</span>}
                 {inc.source_ip && <span>From: {inc.source_ip}</span>}
               </div>
               {inc.resolution_notes && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs">
                   How fixed: {inc.resolution_notes}
                 </div>
               )}
@@ -400,23 +394,23 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
                       onClick={() =>
                         onResolveSecurityIncident(inc.id, 'Investigating', 'Team is checking this alert.')
                       }
-                      className="px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold"
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold"
                     >
-                      Checking Now
+                      Checking now
                     </button>
                   )}
                   <button
                     onClick={() =>
                       setPendingAction({
-                        title: `Close Alert: ${inc.title}`,
+                        title: `Close alert: ${inc.title}`,
                         description: `Type: ${inc.category} · Email: ${inc.target_email || 'System'}`,
-                        confirmLabel: 'Mark Fixed',
+                        confirmLabel: 'Mark fixed',
                         execute: (notes) => onResolveSecurityIncident(inc.id, 'Resolved', notes),
                       })
                     }
-                    className="px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
                   >
-                    Mark Fixed
+                    Mark fixed
                   </button>
                 </div>
               )}
@@ -440,43 +434,41 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
     );
   }
 
-  // -------------------------------------------------------------------------
-  // MODULE 16: CHANGE HISTORY (CANNOT EDIT)
-  // -------------------------------------------------------------------------
+  // MODULE 16: CHANGE HISTORY
   if (mode === 'audit') {
     return (
-      <div className="space-y-5">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
-              <Lock className="w-5 h-5 text-emerald-500" />
-              <span>Change History (Cannot Edit)</span>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>{tr('Change history (cannot edit)')}</span>
             </h3>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
-              Safe record of every important change. Nothing can be edited or deleted here.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {tr('Safe record of every important change. Nothing can be edited or deleted here.')}
             </p>
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={auditSearch}
                 onChange={(e) => setAuditSearch(e.target.value)}
-                placeholder="Search person, code, or item..."
-                className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm rounded-xl pl-10 pr-3.5 py-2.5 outline-none"
+                placeholder={tr('Search person, code, or item...')}
+                className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-sm rounded-lg pl-9 pr-3 py-2 outline-none"
               />
             </div>
             <select
               value={auditEntityFilter}
               onChange={(e) => setAuditEntityFilter(e.target.value)}
-              className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm rounded-xl px-3.5 py-2.5 outline-none"
+              className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-sm rounded-lg px-3 py-2 outline-none"
             >
-              <option value="all">All Records ({auditLogs.length})</option>
+              <option value="all">{tr('All records')} ({auditLogs.length})</option>
               {['Company', 'User', 'Subscription', 'Plan', 'SaasPayment', 'Booking', 'SupportTicket', 'Security', 'Settings', 'PlatformAdmin'].map(
                 (t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {tr(t)}
                   </option>
                 )
               )}
@@ -484,68 +476,65 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
           </div>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider text-[#425466] dark:text-slate-400 font-semibold">
-            <div className="col-span-2">Time & Code</div>
-            <div className="col-span-2">Changed By</div>
-            <div className="col-span-3">What Changed</div>
-            <div className="col-span-2">Old → New</div>
-            <div className="col-span-3">Reason</div>
-          </div>
-          <div className="divide-y divide-slate-200 dark:divide-slate-800/70 text-sm">
-            {filteredAudits.map((log) => (
-              <div
-                key={log.id}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 px-4 py-3.5 items-center hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40"
-              >
-                <div className="lg:col-span-2 font-mono text-xs min-w-0">
-                  <div className="text-[#0a2540] dark:text-white whitespace-nowrap">
-                    {log.timestamp.slice(0, 19).replace('T', ' ')}
-                  </div>
-                  <div className="text-[#425466] dark:text-slate-400 truncate">{log.correlation_id}</div>
-                </div>
-                <div className="lg:col-span-2 min-w-0">
-                  <div className="font-semibold text-[#0a2540] dark:text-white truncate">{log.actor_name}</div>
-                  <div className="text-xs font-mono text-[#425466] dark:text-slate-400 truncate">{log.actor_email}</div>
-                </div>
-                <div className="lg:col-span-3 min-w-0">
-                  <div className="font-semibold text-[#0a2540] dark:text-white truncate">{log.action}</div>
-                  <div className="text-xs text-[#425466] dark:text-slate-400 truncate">
-                    [{log.affected_entity_type}] {log.affected_entity_label}
-                  </div>
-                </div>
-                <div className="lg:col-span-2 font-mono text-xs min-w-0">
-                  {log.before_value || log.after_value ? (
-                    <div className="truncate">
-                      {log.before_value && <span className="text-[#425466] dark:text-slate-400">{log.before_value} → </span>}
-                      <span className="text-emerald-600 dark:text-emerald-400">{log.after_value}</span>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-4">{tr('Time & code')}</th>
+                <th className="py-3 px-4">{tr('Changed by')}</th>
+                <th className="py-3 px-4">{tr('What changed')}</th>
+                <th className="py-3 px-4">{tr('Old → New')}</th>
+                <th className="py-3 px-4">{tr('Reason')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-900 dark:text-slate-100">
+              {filteredAudits.map((log) => (
+                <tr key={log.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-3 px-4 font-mono text-xs tabular-nums">
+                    <div className="whitespace-nowrap">{formatHumanDateTime(log.timestamp)}</div>
+                    <div className="text-slate-500 dark:text-slate-400">{log.correlation_id}</div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="font-semibold">{log.actor_name}</div>
+                    <div className="text-xs font-mono text-slate-500 dark:text-slate-400">{log.actor_email}</div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="font-semibold">{log.action}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      [{log.affected_entity_type}] {log.affected_entity_label}
                     </div>
-                  ) : (
-                    <span className="text-slate-400">—</span>
-                  )}
-                </div>
-                <div className="lg:col-span-3 text-[#425466] dark:text-slate-300 text-xs">{log.reason}</div>
-              </div>
-            ))}
-          </div>
+                  </td>
+                  <td className="py-3 px-4 font-mono text-xs">
+                    {log.before_value || log.after_value ? (
+                      <div>
+                        {log.before_value && <span className="text-slate-500 dark:text-slate-400">{log.before_value} → </span>}
+                        <span className="text-emerald-600 dark:text-emerald-400">{log.after_value}</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-slate-600 dark:text-slate-300 text-xs">{log.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     );
   }
 
-  // -------------------------------------------------------------------------
   // MODULE 17: NOTICES & RULES
-  // -------------------------------------------------------------------------
   if (mode === 'content') {
     return (
-      <div className="space-y-5">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-              Notices & Rules
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {tr('Notices & rules')}
             </h3>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
-              Write terms, privacy pages, help questions, and banners for everyone.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {tr('Write terms, privacy pages, help questions, and banners for everyone.')}
             </p>
           </div>
           <button
@@ -563,40 +552,40 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
                 updated_at: new Date().toISOString(),
               })
             }
-            className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold ${currentTheme.btnText}`}
-            style={{ backgroundColor: currentTheme.hex }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold accent-bg"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Notice</span>
+            <span>{tr('Add notice')}</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {contentItems.map((item) => (
             <div
               key={item.id}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-3 text-sm"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 space-y-2.5 text-sm"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className="text-sm font-mono uppercase text-[#425466] dark:text-slate-400">{item.type} · v{item.version}</span>
-                  <h4 className="text-base font-bold text-[#0a2540] dark:text-white mt-0.5">{item.title}</h4>
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                    {item.type} · v{item.version}
+                  </span>
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{item.title}</h4>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-full border text-sm font-semibold ${getStatusStyles(item.status)}`}>
+                <span className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles(item.status)}`}>
                   {item.status}
                 </span>
               </div>
-              <p className="text-[#425466] dark:text-slate-300 leading-relaxed">{item.body}</p>
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-sm text-[#425466] dark:text-slate-400">
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{item.body}</p>
+              <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span>
-                  Starts {item.effective_date} · By {item.updated_by}
+                  Starts {formatHumanDate(item.effective_date)} · By {item.updated_by}
                 </span>
                 <button
                   onClick={() => setEditingContent(item)}
-                  className="font-semibold hover:underline"
-                  style={{ color: currentTheme.hex }}
+                  className="font-semibold accent-text hover:underline text-xs"
                 >
-                  Edit / Publish
+                  Edit / publish
                 </button>
               </div>
             </div>
@@ -604,7 +593,7 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
         </div>
 
         {editingContent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -617,36 +606,40 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
                 });
                 setEditingContent(null);
               }}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-sm"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4 text-sm"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-                <h4 className="text-base font-bold text-[#0a2540] dark:text-white">Edit Notice or Rule</h4>
-                <button type="button" onClick={() => setEditingContent(null)} className="text-slate-400 p-1 rounded-full">
-                  <X className="w-5 h-5" />
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">Edit notice or rule</h4>
+                <button
+                  type="button"
+                  onClick={() => setEditingContent(null)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Type</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Type</label>
                   <select
                     value={editingContent.type}
                     onChange={(e) => setEditingContent({ ...editingContent, type: e.target.value as any })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                   >
-                    <option value="Announcement">News Notice</option>
-                    <option value="Maintenance Banner">Pause Banner</option>
-                    <option value="FAQ">Common Question</option>
-                    <option value="Terms of Service">Terms of Service</option>
-                    <option value="Privacy Policy">Privacy Rules</option>
-                    <option value="Subscription Policy">Plan Rules</option>
+                    <option value="Announcement">News notice</option>
+                    <option value="Maintenance Banner">Pause banner</option>
+                    <option value="FAQ">Common question</option>
+                    <option value="Terms of Service">Terms of service</option>
+                    <option value="Privacy Policy">Privacy rules</option>
+                    <option value="Subscription Policy">Plan rules</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Status</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Status</label>
                   <select
                     value={editingContent.status}
                     onChange={(e) => setEditingContent({ ...editingContent, status: e.target.value as any })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                   >
                     <option value="Draft">Draft</option>
                     <option value="Published">Live</option>
@@ -656,59 +649,55 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
                 </div>
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Title</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Title</label>
                 <input
                   type="text"
                   value={editingContent.title}
                   onChange={(e) => setEditingContent({ ...editingContent, title: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Version</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Version</label>
                   <input
                     type="text"
                     value={editingContent.version}
                     onChange={(e) => setEditingContent({ ...editingContent, version: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Start Date</label>
+                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Start date</label>
                   <input
                     type="date"
                     value={editingContent.effective_date}
                     onChange={(e) => setEditingContent({ ...editingContent, effective_date: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   />
                 </div>
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Words</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Words</label>
                 <textarea
                   rows={4}
                   value={editingContent.body}
                   onChange={(e) => setEditingContent({ ...editingContent, body: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingContent(null)}
-                  className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={`px-5 py-2 rounded-full font-semibold ${currentTheme.btnText}`}
-                  style={{ backgroundColor: currentTheme.hex }}
-                >
-                  Save Notice
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                  Save notice
                 </button>
               </div>
             </form>
@@ -718,9 +707,7 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
     );
   }
 
-  // -------------------------------------------------------------------------
   // MODULES 18 & 19: SYSTEM RULES & PAY SETTINGS
-  // -------------------------------------------------------------------------
   if (mode === 'settings') {
     return (
       <form
@@ -730,63 +717,62 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
           onUpdatePlatformSettings(draftSettings, settingsReason.trim());
           setSettingsReason('');
         }}
-        className="space-y-6 text-sm"
+        className="space-y-5 text-sm"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* General Rules */}
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
-              <Settings className="w-5 h-5" style={{ color: currentTheme.hex }} />
-              <span>Signup & Company Rules</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-5 space-y-4">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <Settings className="w-4 h-4 accent-text" />
+              <span>{tr('Signup & company rules')}</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">App Name</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">App name</label>
                 <input
                   type="text"
                   value={draftSettings.platform_name}
                   onChange={(e) => setDraftSettings({ ...draftSettings, platform_name: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Help Email</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Help email</label>
                 <input
                   type="email"
                   value={draftSettings.support_email}
                   onChange={(e) => setDraftSettings({ ...draftSettings, support_email: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                 />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Free Days</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Free days</label>
                 <input
                   type="number"
                   value={draftSettings.default_trial_days}
                   onChange={(e) => setDraftSettings({ ...draftSettings, default_trial_days: Number(e.target.value) })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Extra Days</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Extra days</label>
                 <input
                   type="number"
                   value={draftSettings.grace_period_days}
                   onChange={(e) => setDraftSettings({ ...draftSettings, grace_period_days: Number(e.target.value) })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Pause After</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Pause after</label>
                 <input
                   type="number"
                   value={draftSettings.auto_suspend_after_grace_days}
                   onChange={(e) =>
                     setDraftSettings({ ...draftSettings, auto_suspend_after_grace_days: Number(e.target.value) })
                   }
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                 />
               </div>
             </div>
@@ -814,95 +800,87 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
             </div>
           </div>
 
-          {/* Pay Settings & Pause Mode */}
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-              MoMo Code & Site Pause Mode
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-5 space-y-4">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-3">
+              {tr('MoMo code & site pause mode')}
             </h3>
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">MTN MoMo Pay Code</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('MTN MoMo pay code')}</label>
                 <input
                   type="text"
                   value={draftSettings.momo_merchant_code}
                   onChange={(e) => setDraftSettings({ ...draftSettings, momo_merchant_code: e.target.value })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Tax (%)</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Tax (%)')}</label>
                 <input
                   type="number"
                   value={draftSettings.vat_rate_pct}
                   onChange={(e) => setDraftSettings({ ...draftSettings, vat_rate_pct: Number(e.target.value) })}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                 />
               </div>
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Company Tax Number (TIN)</label>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Company tax number (TIN)')}</label>
               <input
                 type="text"
                 value={draftSettings.rra_saas_tin}
                 onChange={(e) => setDraftSettings({ ...draftSettings, rra_saas_tin: e.target.value })}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
               />
             </div>
 
-            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/25 space-y-2.5">
-              <label className="flex items-center gap-2.5 font-bold text-rose-600 dark:text-rose-400 cursor-pointer">
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 space-y-2">
+              <label className="flex items-center gap-2.5 font-semibold text-rose-700 dark:text-rose-400 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={draftSettings.maintenance_mode}
                   onChange={(e) => setDraftSettings({ ...draftSettings, maintenance_mode: e.target.checked })}
                 />
-                <span>Pause Website for Repairs</span>
+                <span>{tr('Pause website for repairs')}</span>
               </label>
               <input
                 type="text"
                 value={draftSettings.maintenance_message}
                 onChange={(e) => setDraftSettings({ ...draftSettings, maintenance_message: e.target.value })}
-                className="w-full bg-white dark:bg-slate-950 border border-rose-500/30 rounded-xl p-2.5"
+                className="w-full bg-white dark:bg-[#0f172a] border border-rose-200 dark:border-rose-500/30 rounded-lg p-2.5"
               />
             </div>
           </div>
         </div>
 
-        {/* Save Bar */}
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <input
             type="text"
             value={settingsReason}
             onChange={(e) => setSettingsReason(e.target.value)}
-            placeholder="Write why you changed these rules (at least 5 letters)..."
-            className="flex-1 bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+            placeholder={tr('Write why you changed these rules (at least 5 letters)...')}
+            className="flex-1 bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 outline-none"
             required
           />
-          <button
-            type="submit"
-            className={`px-6 py-3 rounded-full font-semibold whitespace-nowrap ${currentTheme.btnText}`}
-            style={{ backgroundColor: currentTheme.hex }}
-          >
-            Save Rules
+          <button type="submit" className="px-5 py-2.5 rounded-lg font-semibold whitespace-nowrap accent-bg">
+            {tr('Save rules')}
           </button>
         </div>
       </form>
     );
   }
 
-  // -------------------------------------------------------------------------
   // MODULE 20: ADMIN TEAM
-  // -------------------------------------------------------------------------
   return (
-    <div className="space-y-5">
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4">
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card p-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5" style={{ color: currentTheme.hex }} />
-            <span>Admin Team</span>
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 accent-text" />
+            <span>{tr('Admin team')}</span>
           </h3>
-          <p className="text-sm text-[#425466] dark:text-slate-400">
-            Main Owners control everything. Team helpers cannot give themselves extra power.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Main owners control everything. Team helpers cannot give themselves extra power.')}
           </p>
         </div>
         <button
@@ -910,136 +888,136 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
             setIsAddAdminOpen(true);
             setAdminFeedback(null);
           }}
-          className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap ${currentTheme.btnText}`}
-          style={{ backgroundColor: currentTheme.hex }}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap accent-bg"
         >
           <UserPlus className="w-4 h-4" />
-          <span>Add Helper</span>
+          <span>{tr('Add helper')}</span>
         </button>
       </div>
 
       {adminFeedback && (
         <div
-          className={`p-4 rounded-xl border text-sm ${
+          className={`p-3.5 rounded-xl text-sm font-medium ${
             adminFeedback.type === 'error'
-              ? 'bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400'
-              : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400'
+              ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400'
+              : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
           }`}
         >
           {adminFeedback.text}
         </div>
       )}
 
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider text-[#425466] dark:text-slate-400 font-semibold">
-          <div className="col-span-4">Name & Email</div>
-          <div className="col-span-2">Role</div>
-          <div className="col-span-2">Pages Allowed</div>
-          <div className="col-span-1 text-center">Status</div>
-          <div className="col-span-3 text-right">Actions</div>
-        </div>
-        <div className="divide-y divide-slate-200 dark:divide-slate-800/70 text-sm">
-          {platformAdmins.map((adm) => {
-            const isMasterOwner = isSuperAdminEmail(adm.email);
-            const permKeys = Object.keys(adm.permissions || {});
-            const guardCheck = canModifyPlatformAdmin(activeAdmin, adm);
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card overflow-x-auto">
+        <table className="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <th className="py-3 px-4">{tr('Name & email')}</th>
+              <th className="py-3 px-4">{tr('Role')}</th>
+              <th className="py-3 px-4">{tr('Pages allowed')}</th>
+              <th className="py-3 px-4">{tr('Status')}</th>
+              <th className="py-3 px-4 text-right">{tr('Actions')}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-900 dark:text-slate-100">
+            {platformAdmins.map((adm) => {
+              const isMasterOwner = isSuperAdminEmail(adm.email);
+              const permKeys = Object.keys(adm.permissions || {});
+              const guardCheck = canModifyPlatformAdmin(activeAdmin, adm);
 
-            return (
-              <div
-                key={adm.id}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 px-4 py-3.5 items-center hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40"
-              >
-                <div className="lg:col-span-4 min-w-0">
-                  <div className="font-bold text-[#0a2540] dark:text-white flex items-center gap-2 flex-wrap">
-                    <span className="truncate">{adm.name}</span>
-                    {isMasterOwner && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-xs whitespace-nowrap">
-                        Main Owner
-                      </span>
+              return (
+                <tr key={adm.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-3 px-4">
+                    <div className="font-semibold flex items-center gap-2 flex-wrap">
+                      <span>{adm.name}</span>
+                      {isMasterOwner && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold text-xs whitespace-nowrap">
+                          {tr('Main owner')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                      {adm.email} · {adm.phone}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 font-semibold">
+                    {tr(SUB_ROLE_LABELS[adm.sub_role] || adm.sub_role)}
+                  </td>
+                  <td className="py-3 px-4 text-xs text-slate-500 dark:text-slate-400">
+                    {adm.sub_role === 'platform_owner' ? tr('All 20 pages') : `${permKeys.length} ${tr('pages')}`}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium">
+                      <span className={`w-2 h-2 rounded-full ${getStatusDotColor(adm.status)}`} />
+                      <span>{tr(adm.status)}</span>
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {!isMasterOwner && guardCheck.allowed ? (
+                      <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+                        <select
+                          value={adm.sub_role}
+                          onChange={(e) => {
+                            const nextRole = e.target.value as SuperAdminSubRole;
+                            setPendingAction({
+                              title: `Change role for ${adm.name}`,
+                              description: `${SUB_ROLE_LABELS[adm.sub_role]} → ${SUB_ROLE_LABELS[nextRole]}`,
+                              confirmLabel: 'Update role',
+                              execute: (reason) => {
+                                const res = onUpdateAdmin(adm.id, { sub_role: nextRole }, reason);
+                                setAdminFeedback(
+                                  res.success
+                                    ? { type: 'ok', text: `Changed ${adm.name} to ${SUB_ROLE_LABELS[nextRole]}.` }
+                                    : { type: 'error', text: res.error || 'Could not update role.' }
+                                );
+                              },
+                            });
+                          }}
+                          className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"
+                        >
+                          <option value="platform_admin">{tr('General admin')}</option>
+                          <option value="finance_admin">{tr('Money admin')}</option>
+                          <option value="support_admin">{tr('Help admin')}</option>
+                          <option value="technical_admin">{tr('Tools admin')}</option>
+                          <option value="security_admin">{tr('Safety admin')}</option>
+                          <option value="platform_owner">{tr('Main owner')}</option>
+                        </select>
+
+                        <button
+                          onClick={() =>
+                            setPendingAction({
+                              title: `${adm.status === 'Active' ? tr('Pause') : tr('Turn on')} ${tr('admin')} ${adm.name}`,
+                              description: adm.email,
+                              confirmLabel: adm.status === 'Active' ? tr('Pause admin') : tr('Turn on admin'),
+                              danger: adm.status === 'Active',
+                              execute: (reason) => {
+                                const nextStatus = adm.status === 'Active' ? 'Suspended' : 'Active';
+                                const res = onUpdateAdmin(adm.id, { status: nextStatus }, reason);
+                                setAdminFeedback(
+                                  res.success
+                                    ? { type: 'ok', text: `${adm.name} set to ${nextStatus}.` }
+                                    : { type: 'error', text: res.error || tr('Could not change status.') }
+                                );
+                              },
+                            })
+                          }
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold whitespace-nowrap"
+                        >
+                          {adm.status === 'Active' ? tr('Pause') : tr('Turn on')}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{tr('Protected owner')}</span>
                     )}
-                  </div>
-                  <div className="text-xs font-mono text-[#425466] dark:text-slate-400 truncate">
-                    {adm.email} · {adm.phone}
-                  </div>
-                </div>
-                <div className="lg:col-span-2 font-semibold text-[#0a2540] dark:text-white truncate">
-                  {SUB_ROLE_LABELS[adm.sub_role] || adm.sub_role}
-                </div>
-                <div className="lg:col-span-2 text-xs text-[#425466] dark:text-slate-400">
-                  {adm.sub_role === 'platform_owner' ? 'All 20 Pages' : `${permKeys.length} pages`}
-                </div>
-                <div className="lg:col-span-1 lg:text-center">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full border text-xs font-semibold whitespace-nowrap ${getStatusStyles(adm.status)}`}>
-                    {adm.status}
-                  </span>
-                </div>
-                <div className="lg:col-span-3 flex items-center lg:justify-end gap-1.5 flex-wrap">
-                  {!isMasterOwner && guardCheck.allowed ? (
-                    <>
-                      <select
-                        value={adm.sub_role}
-                        onChange={(e) => {
-                          const nextRole = e.target.value as SuperAdminSubRole;
-                          setPendingAction({
-                            title: `Change Role for ${adm.name}`,
-                            description: `${SUB_ROLE_LABELS[adm.sub_role]} → ${SUB_ROLE_LABELS[nextRole]}`,
-                            confirmLabel: 'Update Role',
-                            execute: (reason) => {
-                              const res = onUpdateAdmin(adm.id, { sub_role: nextRole }, reason);
-                              setAdminFeedback(
-                                res.success
-                                  ? { type: 'ok', text: `Changed ${adm.name} to ${SUB_ROLE_LABELS[nextRole]}.` }
-                                  : { type: 'error', text: res.error || 'Could not update role.' }
-                              );
-                            },
-                          });
-                        }}
-                        className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-3 py-1.5 text-xs"
-                      >
-                        <option value="platform_admin">General Admin</option>
-                        <option value="finance_admin">Money Admin</option>
-                        <option value="support_admin">Help Admin</option>
-                        <option value="technical_admin">Tools Admin</option>
-                        <option value="security_admin">Safety Admin</option>
-                        <option value="platform_owner">Main Owner</option>
-                      </select>
-
-                      <button
-                        onClick={() =>
-                          setPendingAction({
-                            title: `${adm.status === 'Active' ? 'Pause' : 'Turn On'} Admin ${adm.name}`,
-                            description: adm.email,
-                            confirmLabel: adm.status === 'Active' ? 'Pause Admin' : 'Turn On Admin',
-                            danger: adm.status === 'Active',
-                            execute: (reason) => {
-                              const nextStatus = adm.status === 'Active' ? 'Suspended' : 'Active';
-                              const res = onUpdateAdmin(adm.id, { status: nextStatus }, reason);
-                              setAdminFeedback(
-                                res.success
-                                  ? { type: 'ok', text: `${adm.name} set to ${nextStatus}.` }
-                                  : { type: 'error', text: res.error || 'Could not change status.' }
-                              );
-                            },
-                          })
-                        }
-                        className="px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-semibold whitespace-nowrap"
-                      >
-                        {adm.status === 'Active' ? 'Pause' : 'Turn On'}
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-xs text-[#425466] dark:text-slate-400 font-mono">Protected Owner</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Add Helper Modal */}
       {isAddAdminOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -1059,88 +1037,88 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
                 setNewAdminEmail('');
                 setNewAdminReason('');
               } else {
-                setAdminFeedback({ type: 'error', text: res.error || 'Could not add helper.' });
+                setAdminFeedback({ type: 'error', text: res.error || tr('Could not add helper.') });
               }
             }}
-            className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-sm"
+            className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
           >
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h4 className="text-base font-bold text-[#0a2540] dark:text-white">Add Admin Helper</h4>
-              <button type="button" onClick={() => setIsAddAdminOpen(false)} className="text-slate-400 p-1 rounded-full">
-                <X className="w-5 h-5" />
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+              <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">{tr('Add admin helper')}</h4>
+              <button
+                type="button"
+                onClick={() => setIsAddAdminOpen(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Full Name</label>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Full name')}</label>
               <input
                 type="text"
                 value={newAdminName}
                 onChange={(e) => setNewAdminName(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Email</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Email')}</label>
                 <input
                   type="email"
                   value={newAdminEmail}
                   onChange={(e) => setNewAdminEmail(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   required
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Phone</label>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Phone')}</label>
                 <input
                   type="text"
                   value={newAdminPhone}
                   onChange={(e) => setNewAdminPhone(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono"
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Role</label>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Role')}</label>
               <select
                 value={newAdminRole}
                 onChange={(e) => setNewAdminRole(e.target.value as SuperAdminSubRole)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
               >
-                <option value="platform_admin">General Admin</option>
-                <option value="finance_admin">Money Admin</option>
-                <option value="support_admin">Help Admin</option>
-                <option value="technical_admin">Tools Admin</option>
-                <option value="security_admin">Safety Admin</option>
+                <option value="platform_admin">{tr('General admin')}</option>
+                <option value="finance_admin">{tr('Money admin')}</option>
+                <option value="support_admin">{tr('Help admin')}</option>
+                <option value="technical_admin">{tr('Tools admin')}</option>
+                <option value="security_admin">{tr('Safety admin')}</option>
               </select>
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[#0a2540] dark:text-slate-300">Reason</label>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Reason')}</label>
               <input
                 type="text"
                 value={newAdminReason}
                 onChange={(e) => setNewAdminReason(e.target.value)}
-                placeholder="e.g. Helping check payments and support."
-                className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5"
+                placeholder={tr('e.g. Helping check payments and support.')}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
                 required
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsAddAdminOpen(false)}
-                className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold"
+                className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
               >
-                Cancel
+                {tr('Cancel')}
               </button>
-              <button
-                type="submit"
-                className={`px-5 py-2 rounded-full font-semibold ${currentTheme.btnText}`}
-                style={{ backgroundColor: currentTheme.hex }}
-              >
-                Add Helper
+              <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                {tr('Add helper')}
               </button>
             </div>
           </form>

@@ -2,8 +2,12 @@ export interface ColorTheme {
   id: string;
   name: string;
   hex: string;
+  darkHex: string;
   badge: string;
-  // Precomputed Tailwind classes for consistent styling
+  barBg: string;
+  barInk: string;
+  accentRule: string;
+  // Precomputed Tailwind classes for consistent light & dark styling
   primaryBg: string;
   primaryHoverBg: string;
   primaryText: string;
@@ -11,183 +15,120 @@ export interface ColorTheme {
   primaryLightBg: string;
   primaryLightBorder: string;
   primaryFocusRing: string;
-  // Button text color for optimal contrast (dark on bright yellow/amber, light on deep tones)
   btnText: string;
 }
 
 export const COLOR_THEMES: ColorTheme[] = [
   {
-    id: 'amber',
-    name: 'Kigali Amber (Gold)',
-    hex: '#f59e0b',
-    badge: 'Rwanda Sun',
-    primaryBg: 'bg-amber-400',
-    primaryHoverBg: 'hover:bg-amber-300',
-    primaryText: 'text-amber-500 dark:text-amber-400',
-    primaryBorder: 'border-amber-400',
-    primaryLightBg: 'bg-amber-500/15',
-    primaryLightBorder: 'border-amber-500/30',
-    primaryFocusRing: 'focus:ring-amber-400 focus:border-amber-400',
-    btnText: 'text-slate-950',
+    id: 'lake-kivu',
+    name: 'Lake Kivu',
+    hex: '#0b6e8a',
+    darkHex: '#6cc4dd',
+    badge: 'Calm teal-blue',
+    barBg: '#e6f2f5',
+    barInk: '#14181f',
+    accentRule: '#0b6e8a',
+    primaryBg: 'bg-[#0b6e8a] dark:bg-[#6cc4dd]',
+    primaryHoverBg: 'hover:bg-[#095a71] dark:hover:bg-[#8cd2e6]',
+    primaryText: 'text-[#0b6e8a] dark:text-[#6cc4dd]',
+    primaryBorder: 'border-[#0b6e8a] dark:border-[#6cc4dd]',
+    primaryLightBg: 'bg-[#e6f2f5] dark:bg-[#0b6e8a]/20',
+    primaryLightBorder: 'border-[#0b6e8a]/30 dark:border-[#6cc4dd]/35',
+    primaryFocusRing: 'focus:ring-[#0b6e8a] focus:border-[#0b6e8a]',
+    btnText: 'text-white dark:text-[#0f141d]',
   },
   {
-    id: 'emerald',
-    name: 'Volcanoes Emerald',
-    hex: '#10b981',
-    badge: 'Virunga Rainforest',
-    primaryBg: 'bg-emerald-500',
-    primaryHoverBg: 'hover:bg-emerald-400',
-    primaryText: 'text-emerald-600 dark:text-emerald-400',
-    primaryBorder: 'border-emerald-500',
-    primaryLightBg: 'bg-emerald-500/15',
-    primaryLightBorder: 'border-emerald-500/30',
-    primaryFocusRing: 'focus:ring-emerald-400 focus:border-emerald-400',
-    btnText: 'text-white',
+    id: 'rwanda-sky',
+    name: 'Rwanda Sky',
+    hex: '#0a6fb3',
+    darkHex: '#60b6f5',
+    badge: 'Clear blue',
+    barBg: '#e8f3fb',
+    barInk: '#0b1f2e',
+    accentRule: '#0a6fb3',
+    primaryBg: 'bg-[#0a6fb3] dark:bg-[#60b6f5]',
+    primaryHoverBg: 'hover:bg-[#085c94] dark:hover:bg-[#7fc5f8]',
+    primaryText: 'text-[#0a6fb3] dark:text-[#60b6f5]',
+    primaryBorder: 'border-[#0a6fb3] dark:border-[#60b6f5]',
+    primaryLightBg: 'bg-[#e8f3fb] dark:bg-[#0a6fb3]/20',
+    primaryLightBorder: 'border-[#0a6fb3]/30 dark:border-[#60b6f5]/35',
+    primaryFocusRing: 'focus:ring-[#0a6fb3] focus:border-[#0a6fb3]',
+    btnText: 'text-white dark:text-[#0f141d]',
   },
   {
-    id: 'sky',
-    name: 'Rwanda Sky Blue',
-    hex: '#0284c7',
-    badge: 'National Flag Blue',
-    primaryBg: 'bg-sky-500',
-    primaryHoverBg: 'hover:bg-sky-400',
-    primaryText: 'text-sky-600 dark:text-sky-400',
-    primaryBorder: 'border-sky-500',
-    primaryLightBg: 'bg-sky-500/15',
-    primaryLightBorder: 'border-sky-500/30',
-    primaryFocusRing: 'focus:ring-sky-400 focus:border-sky-400',
-    btnText: 'text-white',
+    id: 'imigongo',
+    name: 'Imigongo Black',
+    hex: '#1a1a1a',
+    darkHex: '#e8ecf3',
+    badge: 'Flat black & rust',
+    barBg: '#ffffff',
+    barInk: '#1a1a1a',
+    accentRule: '#9c5a2b',
+    primaryBg: 'bg-[#1a1a1a] dark:bg-[#e8ecf3]',
+    primaryHoverBg: 'hover:bg-[#2c313a] dark:hover:bg-white',
+    primaryText: 'text-[#14181f] dark:text-[#e8ecf3]',
+    primaryBorder: 'border-[#1a1a1a] dark:border-[#e8ecf3]',
+    primaryLightBg: 'bg-slate-100 dark:bg-slate-800/60',
+    primaryLightBorder: 'border-slate-200 dark:border-slate-700',
+    primaryFocusRing: 'focus:ring-[#1a1a1a] focus:border-[#1a1a1a] dark:focus:ring-[#e8ecf3]',
+    btnText: 'text-white dark:text-[#14181f]',
   },
   {
-    id: 'teal',
-    name: 'Lake Kivu Teal',
-    hex: '#14b8a6',
-    badge: 'Lake Waters',
-    primaryBg: 'bg-teal-500',
-    primaryHoverBg: 'hover:bg-teal-400',
-    primaryText: 'text-teal-600 dark:text-teal-400',
-    primaryBorder: 'border-teal-500',
-    primaryLightBg: 'bg-teal-500/15',
-    primaryLightBorder: 'border-teal-500/30',
-    primaryFocusRing: 'focus:ring-teal-400 focus:border-teal-400',
-    btnText: 'text-slate-950',
+    id: 'jacaranda',
+    name: 'Jacaranda',
+    hex: '#5b3fa0',
+    darkHex: '#b49df2',
+    badge: 'Kigali blossom',
+    barBg: '#efeaf8',
+    barInk: '#14181f',
+    accentRule: '#5b3fa0',
+    primaryBg: 'bg-[#5b3fa0] dark:bg-[#b49df2]',
+    primaryHoverBg: 'hover:bg-[#4a3285] dark:hover:bg-[#c7b5f7]',
+    primaryText: 'text-[#5b3fa0] dark:text-[#b49df2]',
+    primaryBorder: 'border-[#5b3fa0] dark:border-[#b49df2]',
+    primaryLightBg: 'bg-[#efeaf8] dark:bg-[#5b3fa0]/20',
+    primaryLightBorder: 'border-[#5b3fa0]/30 dark:border-[#b49df2]/35',
+    primaryFocusRing: 'focus:ring-[#5b3fa0] focus:border-[#5b3fa0]',
+    btnText: 'text-white dark:text-[#0f141d]',
   },
   {
-    id: 'ochre',
-    name: 'Akagera Safari Ochre',
-    hex: '#d97706',
-    badge: 'Savannah Bronze',
-    primaryBg: 'bg-amber-600',
-    primaryHoverBg: 'hover:bg-amber-500',
-    primaryText: 'text-amber-600 dark:text-amber-500',
-    primaryBorder: 'border-amber-600',
-    primaryLightBg: 'bg-amber-600/15',
-    primaryLightBorder: 'border-amber-600/30',
-    primaryFocusRing: 'focus:ring-amber-500 focus:border-amber-500',
-    btnText: 'text-white',
-  },
-  {
-    id: 'purple',
-    name: 'Royal Umushanana',
-    hex: '#8b5cf6',
-    badge: 'Highland Royalty',
-    primaryBg: 'bg-purple-500',
-    primaryHoverBg: 'hover:bg-purple-400',
-    primaryText: 'text-purple-600 dark:text-purple-400',
-    primaryBorder: 'border-purple-500',
-    primaryLightBg: 'bg-purple-500/15',
-    primaryLightBorder: 'border-purple-500/30',
-    primaryFocusRing: 'focus:ring-purple-400 focus:border-purple-400',
-    btnText: 'text-white',
-  },
-  {
-    id: 'indigo',
-    name: 'KCC Convention Indigo',
-    hex: '#6366f1',
-    badge: 'Summit Illumination',
-    primaryBg: 'bg-indigo-500',
-    primaryHoverBg: 'hover:bg-indigo-400',
-    primaryText: 'text-indigo-600 dark:text-indigo-400',
-    primaryBorder: 'border-indigo-500',
-    primaryLightBg: 'bg-indigo-500/15',
-    primaryLightBorder: 'border-indigo-500/30',
-    primaryFocusRing: 'focus:ring-indigo-400 focus:border-indigo-400',
-    btnText: 'text-white',
-  },
-  {
-    id: 'rose',
-    name: 'Kigali Sunset Rose',
-    hex: '#f43f5e',
-    badge: 'Dusk Coral',
-    primaryBg: 'bg-rose-500',
-    primaryHoverBg: 'hover:bg-rose-400',
-    primaryText: 'text-rose-600 dark:text-rose-400',
-    primaryBorder: 'border-rose-500',
-    primaryLightBg: 'bg-rose-500/15',
-    primaryLightBorder: 'border-rose-500/30',
-    primaryFocusRing: 'focus:ring-rose-400 focus:border-rose-400',
-    btnText: 'text-white',
-  },
-  {
-    id: 'ruby',
-    name: 'Inyambo Ruby',
-    hex: '#be123c',
-    badge: 'Sacred Heritage',
-    primaryBg: 'bg-rose-700',
-    primaryHoverBg: 'hover:bg-rose-600',
-    primaryText: 'text-rose-700 dark:text-rose-400',
-    primaryBorder: 'border-rose-700',
-    primaryLightBg: 'bg-rose-700/15',
-    primaryLightBorder: 'border-rose-700/30',
-    primaryFocusRing: 'focus:ring-rose-600 focus:border-rose-600',
-    btnText: 'text-white',
-  },
-  {
-    id: 'forest',
-    name: 'Nyungwe Highland Pine',
-    hex: '#059669',
-    badge: 'Canopy Forest',
-    primaryBg: 'bg-emerald-600',
-    primaryHoverBg: 'hover:bg-emerald-500',
-    primaryText: 'text-emerald-700 dark:text-emerald-400',
-    primaryBorder: 'border-emerald-600',
-    primaryLightBg: 'bg-emerald-600/15',
-    primaryLightBorder: 'border-emerald-600/30',
-    primaryFocusRing: 'focus:ring-emerald-500 focus:border-emerald-500',
-    btnText: 'text-white',
-  },
-  {
-    id: 'orange',
-    name: 'Bugesera Dawn Orange',
-    hex: '#ea580c',
-    badge: 'Airport Valley Dawn',
-    primaryBg: 'bg-orange-500',
-    primaryHoverBg: 'hover:bg-orange-400',
-    primaryText: 'text-orange-600 dark:text-orange-400',
-    primaryBorder: 'border-orange-500',
-    primaryLightBg: 'bg-orange-500/15',
-    primaryLightBorder: 'border-orange-500/30',
-    primaryFocusRing: 'focus:ring-orange-400 focus:border-orange-400',
-    btnText: 'text-white',
-  },
-  {
-    id: 'slate',
-    name: 'Monochrome Titanium',
-    hex: '#64748b',
-    badge: 'Minimalist Executive',
-    primaryBg: 'bg-slate-500',
-    primaryHoverBg: 'hover:bg-slate-400',
-    primaryText: 'text-slate-600 dark:text-slate-300',
-    primaryBorder: 'border-slate-500',
-    primaryLightBg: 'bg-slate-500/15',
-    primaryLightBorder: 'border-slate-500/30',
-    primaryFocusRing: 'focus:ring-slate-400 focus:border-slate-400',
-    btnText: 'text-white',
+    id: 'kigali-amber',
+    name: 'Kigali Amber',
+    hex: '#9a4e00',
+    darkHex: '#f59e0b',
+    badge: 'Burnt ochre',
+    barBg: '#fff3d6',
+    barInk: '#14181f',
+    accentRule: '#9a4e00',
+    primaryBg: 'bg-[#9a4e00] dark:bg-[#f59e0b]',
+    primaryHoverBg: 'hover:bg-[#7d3f00] dark:hover:bg-[#fbbf24]',
+    primaryText: 'text-[#8a4b00] dark:text-[#f59e0b]',
+    primaryBorder: 'border-[#9a4e00] dark:border-[#f59e0b]',
+    primaryLightBg: 'bg-[#fff3d6] dark:bg-[#9a4e00]/25',
+    primaryLightBorder: 'border-[#9a4e00]/30 dark:border-[#f59e0b]/35',
+    primaryFocusRing: 'focus:ring-[#9a4e00] focus:border-[#9a4e00]',
+    btnText: 'text-white dark:text-[#14181f]',
   },
 ];
 
+const LEGACY_THEME_MAP: Record<string, string> = {
+  teal: 'lake-kivu',
+  emerald: 'lake-kivu',
+  forest: 'lake-kivu',
+  sky: 'rwanda-sky',
+  slate: 'imigongo',
+  ruby: 'imigongo',
+  rose: 'imigongo',
+  purple: 'jacaranda',
+  indigo: 'jacaranda',
+  amber: 'kigali-amber',
+  ochre: 'kigali-amber',
+  orange: 'kigali-amber',
+};
+
 export function getThemeById(themeId: string): ColorTheme {
-  return COLOR_THEMES.find((t) => t.id === themeId) || COLOR_THEMES[0];
+  const mappedId = LEGACY_THEME_MAP[themeId] || themeId;
+  return COLOR_THEMES.find((t) => t.id === mappedId) || COLOR_THEMES[0];
 }
 
 export function hexToRgb(hex: string): string {
@@ -199,9 +140,17 @@ export function hexToRgb(hex: string): string {
   return `${r}, ${g}, ${b}`;
 }
 
-export function applyThemeCssVariables(theme: ColorTheme) {
+export function applyThemeCssVariables(theme: ColorTheme, mode?: 'dark' | 'light') {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  root.style.setProperty('--color-primary', theme.hex);
-  root.style.setProperty('--color-primary-rgb', hexToRgb(theme.hex));
+  const isDark = mode ? mode === 'dark' : root.classList.contains('dark');
+  const activeHex = isDark ? theme.darkHex : theme.hex;
+  const btnInk = isDark ? '#0f141d' : '#ffffff';
+
+  root.style.setProperty('--color-primary', activeHex);
+  root.style.setProperty('--color-primary-text', activeHex);
+  root.style.setProperty('--color-primary-btn-bg', activeHex);
+  root.style.setProperty('--color-primary-btn-ink', btnInk);
+  root.style.setProperty('--color-primary-rule', theme.accentRule);
+  root.style.setProperty('--color-primary-rgb', hexToRgb(activeHex));
 }

@@ -1,18 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { PaymentRecord, PaymentMethod, PaymentRecordStatus, Booking, Customer } from '../types';
-import { formatRwf } from '../utils/collision';
 import {
-  Receipt,
-  Building2,
-  Phone,
   Search,
   Download,
   Plus,
-  CheckCircle,
   Printer,
   X,
+  Wallet,
+  Smartphone,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { useI18n } from '../utils/i18n';
+import { formatHumanDate } from '../utils/dates';
 
 interface PaymentsViewProps {
   payments: PaymentRecord[];
@@ -31,32 +32,32 @@ export function getMethodBadge(method: PaymentMethod) {
     case 'MTN Mobile Money':
       return {
         label: 'MTN MoMo',
-        bg: 'bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
+        bg: 'text-amber-700 dark:text-amber-400',
         dot: 'bg-amber-500',
       };
     case 'Airtel Money':
       return {
         label: 'Airtel Money',
-        bg: 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30',
+        bg: 'text-rose-700 dark:text-rose-400',
         dot: 'bg-rose-500',
       };
     case 'Bank Transfer':
       return {
-        label: 'Bank Transfer',
-        bg: 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30',
+        label: 'Bank transfer',
+        bg: 'text-blue-700 dark:text-blue-400',
         dot: 'bg-blue-500',
       };
     case 'Credit Card':
       return {
-        label: 'Bank Card',
-        bg: 'bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/30',
-        dot: 'bg-purple-500',
+        label: 'Bank card',
+        bg: 'text-slate-900 dark:text-white',
+        dot: 'bg-slate-500',
       };
     default:
       return {
         label: 'Cash',
-        bg: 'bg-slate-100 dark:bg-slate-700/40 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600',
-        dot: 'bg-slate-500',
+        bg: 'text-slate-600 dark:text-slate-400',
+        dot: 'bg-slate-400',
       };
   }
 }
@@ -64,15 +65,15 @@ export function getMethodBadge(method: PaymentMethod) {
 export function getStatusBadge(status: PaymentRecordStatus) {
   switch (status) {
     case 'Paid':
-      return 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30';
+      return 'text-emerald-700 dark:text-emerald-400';
     case 'Partially Paid':
-      return 'bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30';
+      return 'text-amber-700 dark:text-amber-400';
     case 'Pending':
-      return 'bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30';
+      return 'text-blue-700 dark:text-blue-400';
     case 'Overdue':
-      return 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30';
+      return 'text-rose-700 dark:text-rose-400';
     default:
-      return 'bg-slate-100 dark:bg-slate-700/40 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600';
+      return 'text-slate-600 dark:text-slate-400';
   }
 }
 
@@ -81,7 +82,7 @@ function getFriendlyStatus(status: PaymentRecordStatus): string {
     case 'Paid':
       return 'Paid';
     case 'Partially Paid':
-      return 'Partly Paid';
+      return 'Partly paid';
     case 'Pending':
       return 'Waiting';
     case 'Overdue':
@@ -94,14 +95,12 @@ function getFriendlyStatus(status: PaymentRecordStatus): string {
 export const PaymentsView: React.FC<PaymentsViewProps> = ({
   payments,
   bookings,
-  currentTheme,
   currentCompany,
   onAddPayment,
   onUpdatePaymentStatus,
   onGenerateEBM,
 }) => {
-  const activeThemeColor = currentTheme?.hex || '#635bff';
-  const activeBtnText = currentTheme?.btnText || 'text-white';
+  const { currency, formatMoney, tr } = useI18n();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('All');
@@ -130,18 +129,20 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
     let totalCollected = 0;
     let totalUnpaid = 0;
     let momoTotal = 0;
+    let paidCount = 0;
 
     payments.forEach((p) => {
       totalCollected += p.amount_rwf || 0;
       const unpaid = (p.expected_amount_rwf || 0) - (p.amount_rwf || 0);
       if (unpaid > 0) totalUnpaid += unpaid;
+      if (p.status === 'Paid') paidCount += 1;
 
       if (p.payment_method === 'MTN Mobile Money' || p.payment_method === 'Airtel Money') {
         momoTotal += p.amount_rwf || 0;
       }
     });
 
-    return { totalCollected, totalUnpaid, momoTotal };
+    return { totalCollected, totalUnpaid, momoTotal, paidCount };
   }, [payments]);
 
   const filteredPayments = useMemo(() => {
@@ -211,7 +212,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
     setMomoNotice('Sending payment request to phone (*182*8*1#)...');
     setTimeout(() => {
       onUpdatePaymentStatus(momoModalPayment.id, 'Paid', momoModalPayment.expected_amount_rwf);
-      setMomoNotice('Paid! Received ' + formatRwf(momoModalPayment.expected_amount_rwf) + ' via MTN MoMo.');
+      setMomoNotice('Paid! Received ' + formatMoney(momoModalPayment.expected_amount_rwf) + ' via MTN MoMo.');
       setTimeout(() => {
         setMomoModalPayment(null);
         setMomoNotice(null);
@@ -219,281 +220,322 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
     }, 700);
   };
 
+  const methodTabs = [
+    { id: 'All', label: 'All ways' },
+    { id: 'MTN Mobile Money', label: 'MTN MoMo' },
+    { id: 'Bank Transfer', label: 'Bank transfer' },
+    { id: 'Credit Card', label: 'Bank card' },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold text-[#0a2540] dark:text-white tracking-tight">
-              Payments & Money
-            </h1>
-            <p className="text-base text-[#425466] dark:text-slate-300 mt-1 max-w-2xl">
-              See all money paid by guests, send MTN MoMo payment requests, and print receipts.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5">
-              <span className="text-xs font-semibold text-[#425466] dark:text-slate-400 block">
-                Money Received
-              </span>
-              <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
-                {formatRwf(totals.totalCollected)}
-              </span>
-            </div>
-
-            <div className="bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5">
-              <span className="text-xs font-semibold text-[#425466] dark:text-slate-400 block">
-                Mobile Money
-              </span>
-              <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono tabular-nums">
-                {formatRwf(totals.momoTotal)}
-              </span>
-            </div>
-
-            {totals.totalUnpaid > 0 && (
-              <div className="bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-700 rounded-xl px-4 py-2.5">
-                <span className="text-xs font-semibold text-rose-700 dark:text-rose-300 block">
-                  Still Unpaid
-                </span>
-                <span className="text-lg font-extrabold text-rose-700 dark:text-rose-300 font-mono tabular-nums">
-                  {formatRwf(totals.totalUnpaid)}
-                </span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={handleDownloadList}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-full text-sm font-semibold transition-colors"
-              >
-                <Download className="w-4 h-4 text-[#425466] dark:text-slate-300" />
-                <span>Download List</span>
-              </button>
-
-              <button
-                onClick={() => setIsAddPaymentOpen(true)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold shadow-sm transition-opacity hover:opacity-95 ${activeBtnText}`}
-                style={{ backgroundColor: activeThemeColor }}
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Payment</span>
-              </button>
-            </div>
-          </div>
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {tr('Payments & Money')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('See all money paid by guests, send MTN MoMo payment requests, and print receipts.')}
+          </p>
         </div>
 
-        {/* Search & Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <div className="relative w-full md:flex-1 md:max-w-md min-w-0">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search guest name, booking #, or receipt..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-9 py-2.5 text-sm text-[#0a2540] dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleDownloadList}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download list</span>
+          </button>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { id: 'All', label: 'All Ways' },
-              { id: 'MTN Mobile Money', label: 'MTN MoMo' },
-              { id: 'Bank Transfer', label: 'Bank Transfer' },
-              { id: 'Credit Card', label: 'Bank Card' },
-            ].map((meth) => {
-              const isSelected = methodFilter === meth.id;
+          <button
+            type="button"
+            onClick={() => setIsAddPaymentOpen(true)}
+            className="accent-bg inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:opacity-95 shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add payment</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4-Card KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Money received')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Wallet className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 mt-2 font-mono tabular-nums">
+            {formatMoney(totals.totalCollected)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Cleared payments recorded
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Mobile money')}</span>
+            <span className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Smartphone className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 font-mono tabular-nums">
+            {formatMoney(totals.momoTotal)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            MTN MoMo & Airtel Money
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Still unpaid')}</span>
+            <span
+              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                totals.totalUnpaid > 0
+                  ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                  : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+            </span>
+          </div>
+          <div
+            className={`text-2xl font-semibold mt-2 font-mono tabular-nums ${
+              totals.totalUnpaid > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+            }`}
+          >
+            {formatMoney(totals.totalUnpaid)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Remaining open balances
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Paid receipts</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {totals.paidCount} <span className="text-sm font-normal text-slate-400">/ {payments.length}</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Settled in full
+          </p>
+        </div>
+      </div>
+
+      {/* Main Payments Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg overflow-x-auto">
+            {methodTabs.map((meth) => {
+              const active = methodFilter === meth.id;
               return (
                 <button
                   key={meth.id}
+                  type="button"
                   onClick={() => setMethodFilter(meth.id)}
-                  className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-all ${
-                    isSelected
-                      ? `${activeBtnText} shadow-xs`
-                      : 'bg-[#f6f9fc] dark:bg-slate-800 text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white border border-slate-200 dark:border-slate-700'
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
-                  style={isSelected ? { backgroundColor: activeThemeColor } : undefined}
                 >
                   {meth.label}
                 </button>
               );
             })}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search guest, booking # or receipt"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg pl-9 pr-8 py-1.5 w-64 outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500 font-semibold"
+              className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg px-3 py-1.5 outline-none cursor-pointer"
             >
-              <option value="All">All Statuses</option>
+              <option value="All">All statuses</option>
               <option value="Paid">Paid</option>
-              <option value="Partially Paid">Partly Paid</option>
+              <option value="Partially Paid">Partly paid</option>
               <option value="Pending">Waiting</option>
               <option value="Overdue">Late</option>
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Main Payments Horizontal Grid */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-[#425466] dark:text-slate-400 uppercase tracking-wide">
-          <div className="lg:col-span-2">Receipt & Date</div>
-          <div className="lg:col-span-3">Guest</div>
-          <div className="lg:col-span-2">Paid By</div>
-          <div className="lg:col-span-2 text-right">Amount</div>
-          <div className="lg:col-span-1 text-center">Status</div>
-          <div className="lg:col-span-2 text-right">Receipt & Actions</div>
-        </div>
+        {/* Payments Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm min-w-[900px]">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-4">Receipt & date</th>
+                <th className="py-3 px-4">Guest</th>
+                <th className="py-3 px-4">Paid by</th>
+                <th className="py-3 px-4 text-right">Amount</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">Receipt & actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+              {filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 px-4 text-center text-slate-500 dark:text-slate-400">
+                    No payments match your search.
+                  </td>
+                </tr>
+              ) : (
+                filteredPayments.map((p) => {
+                  const methodBadge = getMethodBadge(p.payment_method);
+                  const isUnpaid = (p.expected_amount_rwf || 0) > (p.amount_rwf || 0);
 
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
-          {filteredPayments.length === 0 ? (
-            <div className="text-center py-12 text-[#425466] dark:text-slate-400">
-              No payments match your search.
-            </div>
-          ) : (
-            filteredPayments.map((p) => {
-              const methodBadge = getMethodBadge(p.payment_method);
-              const isUnpaid = (p.expected_amount_rwf || 0) > (p.amount_rwf || 0);
-
-              return (
-                <div
-                  key={p.id}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-4 py-3.5 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors"
-                >
-                  <div className="lg:col-span-2 min-w-0">
-                    <div className="font-mono font-bold text-[#0a2540] dark:text-white truncate">{p.id}</div>
-                    <div className="text-xs text-[#425466] dark:text-slate-400 font-mono mt-0.5 whitespace-nowrap">
-                      #{p.booking_id} · {p.date}
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-3 min-w-0">
-                    <div className="font-bold text-[#0a2540] dark:text-white truncate">{p.customer_name}</div>
-                    {p.organization ? (
-                      <div className="text-xs text-[#425466] dark:text-slate-400 flex items-center gap-1 mt-0.5 min-w-0">
-                        <Building2 className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{p.organization}</span>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-[#425466] dark:text-slate-400 font-mono whitespace-nowrap">
-                        {p.customer_phone || 'Walk-in Guest'}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="lg:col-span-2 min-w-0">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${methodBadge.bg}`}
+                  return (
+                    <tr
+                      key={p.id}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors"
                     >
-                      <span className={`w-2 h-2 rounded-full ${methodBadge.dot}`}></span>
-                      <span>{methodBadge.label}</span>
-                    </span>
-                    {p.momo_tx_id && (
-                      <div className="text-xs text-[#425466] dark:text-slate-400 font-mono mt-1 truncate">
-                        Code: {p.momo_tx_id}
-                      </div>
-                    )}
-                  </div>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="font-mono font-medium text-slate-900 dark:text-white">{p.id}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+                          #{p.booking_id} · {formatHumanDate(p.date)}
+                        </div>
+                      </td>
 
-                  <div className="lg:col-span-2 lg:text-right min-w-0">
-                    <div className="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums whitespace-nowrap">
-                      {formatRwf(p.amount_rwf)}
-                    </div>
-                    {isUnpaid && (
-                      <div className="text-xs text-rose-600 dark:text-rose-400 font-mono font-semibold whitespace-nowrap">
-                        Left: {formatRwf(p.expected_amount_rwf - p.amount_rwf)}
-                      </div>
-                    )}
-                  </div>
+                      <td className="py-3.5 px-4">
+                        <div className="font-medium text-slate-900 dark:text-white">{p.customer_name}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {p.organization || p.customer_phone || 'Walk-in guest'}
+                        </div>
+                      </td>
 
-                  <div className="lg:col-span-1 flex lg:justify-center">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${getStatusBadge(
-                        p.status
-                      )}`}
-                    >
-                      {getFriendlyStatus(p.status)}
-                    </span>
-                  </div>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className={`font-medium text-xs ${methodBadge.bg}`}>
+                          {methodBadge.label}
+                        </span>
+                        {p.momo_tx_id && (
+                          <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                            {p.momo_tx_id}
+                          </div>
+                        )}
+                      </td>
 
-                  <div className="lg:col-span-2 flex items-center lg:justify-end gap-2 flex-wrap">
-                    {p.ebm_receipt_number ? (
-                      <button
-                        onClick={() => setSelectedReceipt(p)}
-                        className="inline-flex items-center gap-1.5 text-xs font-mono text-blue-700 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-500/15 hover:bg-blue-100 dark:hover:bg-blue-500/25 px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-500/30 transition-colors whitespace-nowrap"
-                      >
-                        <Receipt className="w-3.5 h-3.5" />
-                        <span>{p.ebm_receipt_number}</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => onGenerateEBM(p.id)}
-                        className="text-xs font-semibold text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white underline whitespace-nowrap"
-                      >
-                        + Make Receipt
-                      </button>
-                    )}
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <div className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                          {formatMoney(p.amount_rwf)}
+                        </div>
+                        {isUnpaid && (
+                          <div className="text-xs text-rose-600 dark:text-rose-400 font-mono tabular-nums mt-0.5">
+                            Left: {formatMoney(p.expected_amount_rwf - p.amount_rwf)}
+                          </div>
+                        )}
+                      </td>
 
-                    {p.ebm_receipt_number && (
-                      <button
-                        onClick={() => setSelectedReceipt(p)}
-                        className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 text-[#0a2540] dark:text-slate-200 hover:text-white rounded-full transition-colors"
-                        title="Print Receipt"
-                      >
-                        <Printer className="w-4 h-4" />
-                      </button>
-                    )}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className={`font-medium text-xs ${getStatusBadge(p.status)}`}>
+                          {getFriendlyStatus(p.status)}
+                        </span>
+                      </td>
 
-                    {isUnpaid && (
-                      <button
-                        onClick={() => handleOpenMoMoPrompt(p)}
-                        className="px-3 py-1.5 bg-amber-100 dark:bg-amber-500/20 hover:bg-amber-500 text-amber-900 dark:text-amber-300 hover:text-slate-950 rounded-full transition-colors font-bold text-xs flex items-center gap-1.5 whitespace-nowrap"
-                        title="Send MTN MoMo Request"
-                      >
-                        <Phone className="w-3.5 h-3.5" />
-                        <span>Ask MoMo</span>
-                      </button>
-                    )}
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {p.ebm_receipt_number ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedReceipt(p)}
+                              className="font-mono text-xs font-medium accent-text hover:underline"
+                            >
+                              {p.ebm_receipt_number}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onGenerateEBM(p.id)}
+                              className="accent-text text-xs font-medium hover:underline"
+                            >
+                              + Make receipt
+                            </button>
+                          )}
 
-                    {p.status !== 'Paid' && (
-                      <button
-                        onClick={() => onUpdatePaymentStatus(p.id, 'Paid', p.expected_amount_rwf)}
-                        className="p-2 bg-emerald-100 dark:bg-emerald-600/20 hover:bg-emerald-600 text-emerald-700 dark:text-emerald-300 hover:text-white rounded-full transition-colors"
-                        title="Mark as Paid"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
+                          {p.ebm_receipt_number && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedReceipt(p)}
+                              className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            >
+                              Print
+                            </button>
+                          )}
+
+                          {isUnpaid && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMoMoPrompt(p)}
+                              className="px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-500/10 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20"
+                            >
+                              Ask MoMo
+                            </button>
+                          )}
+
+                          {p.status !== 'Paid' && (
+                            <button
+                              type="button"
+                              onClick={() => onUpdatePaymentStatus(p.id, 'Paid', p.expected_amount_rwf)}
+                              className="accent-bg px-2.5 py-1 rounded-md text-xs font-medium hover:opacity-95"
+                            >
+                              Mark paid
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Receipt Modal */}
       {selectedReceipt && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Payment Receipt</h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto kf-modal">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Payment receipt</h3>
               <button
+                type="button"
                 onClick={() => setSelectedReceipt(null)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -501,57 +543,73 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
             <div
               id="printable-ebm-receipt"
-              className="bg-white text-slate-950 p-5 rounded-xl border border-slate-300 font-mono text-xs space-y-3 shadow-inner"
+              className="bg-slate-50 text-slate-900 p-5 rounded-xl border border-slate-200 font-mono text-xs space-y-3"
             >
-              <div className="text-center border-b border-dashed border-slate-400 pb-2.5">
-                <div className="font-extrabold text-sm uppercase text-slate-900">
+              <div className="text-center border-b border-dashed border-slate-300 pb-2.5">
+                <div className="font-semibold text-sm text-slate-900">
                   {currentCompany?.name || 'KIGALI EXPEDITION TOURS & FLEET LTD'}
                 </div>
-                <div className="text-xs text-slate-600">
+                <div className="text-xs text-slate-500 mt-0.5">
                   TIN: {currentCompany?.tin_number || '102938475'} · {currentCompany?.phone || '+250 788 123 456'}
                 </div>
-                <div className="font-bold text-slate-900 mt-1 uppercase text-xs">
-                  OFFICIAL TAX RECEIPT (RRA EBM)
+                <div className="font-semibold text-slate-900 mt-1 text-xs">
+                  Official tax receipt (RRA EBM)
                 </div>
               </div>
 
-              <div className="space-y-1 text-xs border-b border-dashed border-slate-400 pb-2.5">
-                <div>Receipt #: <strong>{selectedReceipt.ebm_receipt_number || 'EBM-2026-00482'}</strong></div>
-                <div>Date: <strong>{selectedReceipt.date}</strong></div>
-                <div>Guest: <strong>{selectedReceipt.customer_name}</strong></div>
-                {selectedReceipt.organization && <div>Company: <strong>{selectedReceipt.organization}</strong></div>}
-                <div>Paid By: <strong>{selectedReceipt.payment_method}</strong></div>
-                {selectedReceipt.momo_tx_id && <div>MoMo Code: <strong>{selectedReceipt.momo_tx_id}</strong></div>}
+              <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-2.5">
+                <div>
+                  Receipt #: <strong className="font-semibold">{selectedReceipt.ebm_receipt_number || 'EBM-2026-00482'}</strong>
+                </div>
+                <div>
+                  Date: <strong className="font-semibold">{formatHumanDate(selectedReceipt.date)}</strong>
+                </div>
+                <div>
+                  Guest: <strong className="font-semibold">{selectedReceipt.customer_name}</strong>
+                </div>
+                {selectedReceipt.organization && (
+                  <div>
+                    Company: <strong className="font-semibold">{selectedReceipt.organization}</strong>
+                  </div>
+                )}
+                <div>
+                  Paid by: <strong className="font-semibold">{selectedReceipt.payment_method}</strong>
+                </div>
+                {selectedReceipt.momo_tx_id && (
+                  <div>
+                    MoMo code: <strong className="font-semibold">{selectedReceipt.momo_tx_id}</strong>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-1 border-b border-dashed border-slate-400 pb-2.5">
-                <div className="flex justify-between font-bold text-slate-900">
+              <div className="space-y-1 border-b border-dashed border-slate-300 pb-2.5">
+                <div className="flex justify-between font-semibold text-slate-900">
                   <span>Item</span>
                   <span>Total</span>
                 </div>
-                <div className="flex justify-between text-slate-800">
-                  <span>Car Rental (#{selectedReceipt.booking_id})</span>
-                  <span>{formatRwf(selectedReceipt.amount_rwf)}</span>
+                <div className="flex justify-between text-slate-900">
+                  <span>Car rental (#{selectedReceipt.booking_id})</span>
+                  <span>{formatMoney(selectedReceipt.amount_rwf)}</span>
                 </div>
               </div>
 
-              <div className="space-y-1 text-xs border-b border-dashed border-slate-400 pb-2.5">
-                <div className="flex justify-between text-slate-600">
-                  <span>Before Tax:</span>
-                  <span>{formatRwf(Math.round((selectedReceipt.amount_rwf * 100) / 118))}</span>
+              <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-2.5">
+                <div className="flex justify-between text-slate-500">
+                  <span>Before tax:</span>
+                  <span>{formatMoney(Math.round((selectedReceipt.amount_rwf * 100) / 118))}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-slate-500">
                   <span>Tax (18% VAT):</span>
-                  <span>{formatRwf(Math.round((selectedReceipt.amount_rwf * 18) / 118))}</span>
+                  <span>{formatMoney(Math.round((selectedReceipt.amount_rwf * 18) / 118))}</span>
                 </div>
-                <div className="flex justify-between font-black text-sm text-slate-950 pt-1">
-                  <span>Total Paid:</span>
-                  <span>{formatRwf(selectedReceipt.amount_rwf)}</span>
+                <div className="flex justify-between font-semibold text-sm text-slate-900 pt-1">
+                  <span>Total paid:</span>
+                  <span>{formatMoney(selectedReceipt.amount_rwf)}</span>
                 </div>
               </div>
 
-              <div className="text-center pt-1 text-xs font-bold text-slate-700">
-                MURAKOZE CYANE / THANK YOU
+              <div className="text-center pt-1 text-xs font-semibold text-slate-500">
+                Murakoze cyane / Thank you
               </div>
             </div>
 
@@ -559,17 +617,16 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
               <button
                 type="button"
                 onClick={() => window.print()}
-                className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-sm ${activeBtnText}`}
-                style={{ backgroundColor: activeThemeColor }}
+                className="accent-bg px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 shadow-xs"
               >
                 <Printer className="w-4 h-4" />
-                <span>Print Receipt</span>
+                <span>Print receipt</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSelectedReceipt(null)}
-                className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-sm font-semibold"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Close
               </button>
@@ -580,40 +637,53 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
       {/* MTN MoMo Request Modal */}
       {momoModalPayment && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-amber-500" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">MTN MoMo Payment</h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-sm w-full p-6 space-y-4 kf-modal">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">MTN MoMo payment</h3>
               <button
+                type="button"
                 onClick={() => setMomoModalPayment(null)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {momoNotice && (
-              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-300 p-3 rounded-xl text-sm font-medium">
+              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 p-3 rounded-lg text-sm font-medium">
                 {momoNotice}
               </div>
             )}
 
-            <div className="bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 p-4 rounded-xl text-sm text-[#425466] dark:text-slate-300 space-y-1.5">
-              <div>Pay To: <strong className="text-[#0a2540] dark:text-white">KigaliFleet (Code: 049281)</strong></div>
-              <div>Guest: <strong className="text-[#0a2540] dark:text-white">{momoModalPayment.customer_name}</strong></div>
-              <div>Phone: <strong className="text-[#0a2540] dark:text-white font-mono">{momoModalPayment.customer_phone || '+250 788 123 456'}</strong></div>
-              <div>Amount: <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-base">{formatRwf(momoModalPayment.expected_amount_rwf)}</strong></div>
+            <div className="bg-slate-50/90 dark:bg-slate-800/40 p-4 rounded-xl text-sm text-slate-600 dark:text-slate-400 space-y-1.5">
+              <div>
+                Pay to: <strong className="font-semibold text-slate-900 dark:text-white">KigaliFleet (Code: 049281)</strong>
+              </div>
+              <div>
+                Guest: <strong className="font-semibold text-slate-900 dark:text-white">{momoModalPayment.customer_name}</strong>
+              </div>
+              <div>
+                Phone:{' '}
+                <strong className="font-semibold text-slate-900 dark:text-white font-mono">
+                  {momoModalPayment.customer_phone || '+250 788 123 456'}
+                </strong>
+              </div>
+              <div>
+                Amount:{' '}
+                <strong className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+                  {formatMoney(momoModalPayment.expected_amount_rwf)}
+                </strong>
+              </div>
             </div>
 
-            <div className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center space-y-2.5">
-              <span className="text-xs text-[#425466] dark:text-slate-400 block font-semibold">
+            <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl p-4 text-center space-y-2.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">
                 Message sent to guest phone:
               </span>
-              <span className="text-sm text-[#0a2540] dark:text-white font-bold block">
-                "Kwemera kwishyura {formatRwf(momoModalPayment.expected_amount_rwf)} kuri KigaliFleet?"
+              <span className="text-sm text-slate-900 dark:text-white font-semibold block">
+                &ldquo;Kwemera kwishyura {formatMoney(momoModalPayment.expected_amount_rwf)} kuri KigaliFleet?&rdquo;
               </span>
               <input
                 type="password"
@@ -621,25 +691,24 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
                 placeholder="PIN (e.g. 1234)"
                 value={momoPinInput}
                 onChange={(e) => setMomoPinInput(e.target.value)}
-                className="w-36 mx-auto text-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 font-mono tracking-widest text-sm focus:border-amber-500 outline-none"
+                className="w-36 mx-auto text-center bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 font-mono tracking-widest text-sm outline-none focus:border-slate-400"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setMomoModalPayment(null)}
-                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmMoMoPayment}
-                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-full text-sm font-bold shadow-sm flex items-center gap-1.5"
+                className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
               >
-                <CheckCircle className="w-4 h-4" />
-                <span>Mark as Paid</span>
+                Mark as paid
               </button>
             </div>
           </div>
@@ -648,24 +717,23 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
       {/* Add Payment Modal */}
       {isAddPaymentOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Add Payment</h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 kf-modal">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Add payment</h3>
               <button
+                type="button"
                 onClick={() => setIsAddPaymentOpen(false)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitNewPayment} className="space-y-4 text-sm">
-              <div className="space-y-1.5">
-                <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Which Booking?</label>
+            <form onSubmit={handleSubmitNewPayment} className="space-y-3.5 text-sm">
+              <div>
+                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Which booking?</label>
                 <select
                   value={formData.booking_id}
                   onChange={(e) => {
@@ -679,109 +747,115 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
                       expected_amount_rwf: bk?.total_rwf || formData.expected_amount_rwf,
                     });
                   }}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
                 >
                   {bookings.map((b) => (
                     <option key={b.id} value={b.id}>
-                      #{b.id} · {b.client_name} ({formatRwf(b.total_rwf)})
+                      #{b.id} · {b.client_name} ({formatMoney(b.total_rwf)})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Guest Name *</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Guest name *</label>
                   <input
                     type="text"
                     required
                     value={formData.customer_name}
                     onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Company (Optional)</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Company (optional)</label>
                   <input
                     type="text"
                     placeholder="e.g. Bank of Kigali"
                     value={formData.organization}
                     onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Paid By *</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Paid by *</label>
                   <select
                     value={formData.payment_method}
                     onChange={(e) => setFormData({ ...formData, payment_method: e.target.value as PaymentMethod })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none font-medium"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
                   >
                     <option value="MTN Mobile Money">MTN Mobile Money</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Credit Card">Bank Card</option>
+                    <option value="Bank Transfer">Bank transfer</option>
+                    <option value="Credit Card">Bank card</option>
                     <option value="Airtel Money">Airtel Money</option>
                     <option value="Cash on Delivery">Cash</option>
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Money Paid (RWF) *</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">
+                    {tr('Money Paid (RWF)')} *
+                  </label>
                   <input
                     type="number"
                     required
                     min="1000"
                     value={formData.amount_rwf}
                     onChange={(e) => setFormData({ ...formData, amount_rwf: Number(e.target.value) })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none font-mono font-bold"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
                   />
+                  {currency === 'USD' && (
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
+                      ≈ {formatMoney(formData.amount_rwf)}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Status *</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Status *</label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as PaymentRecordStatus })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
                   >
-                    <option value="Paid">Paid in Full</option>
-                    <option value="Partially Paid">Partly Paid</option>
+                    <option value="Paid">Paid in full</option>
+                    <option value="Partially Paid">Partly paid</option>
                     <option value="Pending">Waiting</option>
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[#0a2540] dark:text-slate-200 font-semibold block">Payment Code</label>
+                <div>
+                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Payment code</label>
                   <input
                     type="text"
                     placeholder="e.g. MOMO-992819"
                     value={formData.momo_tx_id}
                     onChange={(e) => setFormData({ ...formData, momo_tx_id: e.target.value })}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none font-mono"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddPaymentOpen(false)}
-                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className={`px-5 py-2.5 rounded-full text-sm font-bold shadow-sm ${activeBtnText}`}
-                  style={{ backgroundColor: activeThemeColor }}
+                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
                 >
-                  Save Payment
+                  Save payment
                 </button>
               </div>
             </form>

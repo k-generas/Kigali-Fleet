@@ -4,6 +4,7 @@ export type VehicleStatus = 'Available' | 'Booked' | 'Maintenance';
 
 export interface Vehicle {
   id: string;
+  company_id?: string;
   category: VehicleCategory;
   model_name: string;
   plate_number: string;
@@ -15,6 +16,9 @@ export interface Vehicle {
   current_odometer_km: number;
   location: string;
   image_url?: string;
+  gallery_urls?: string[]; // Additional / ordered car photos (max 6)
+  description?: string; // Customer-facing description written by car owner
+  features?: string[]; // Key highlights (4WD, AC, Wi-Fi, Pop-up Roof, etc.)
   year?: number;
   assigned_driver_id?: string;
   assigned_driver_name?: string;
@@ -39,6 +43,7 @@ export type ServiceType =
 
 export interface MaintenanceRecord {
   id: string;
+  company_id?: string;
   vehicle_id: string;
   vehicle_plate: string;
   vehicle_model: string;
@@ -66,6 +71,7 @@ export type DriverStatus = 'Available' | 'On Trip' | 'Off Duty' | 'On Leave' | '
 
 export interface Driver {
   id: string;
+  company_id?: string;
   name: string;
   phone: string;
   email?: string;
@@ -104,6 +110,7 @@ export type PaymentRecordStatus = 'Paid' | 'Partially Paid' | 'Pending' | 'Overd
 
 export interface PaymentRecord {
   id: string;
+  company_id?: string;
   booking_id: string;
   customer_name: string;
   customer_phone?: string;
@@ -121,6 +128,7 @@ export interface PaymentRecord {
 
 export interface Booking {
   id: string;
+  company_id?: string;
   client_name: string;
   client_email: string;
   client_phone: string;
@@ -150,6 +158,7 @@ export type VehicleCleanliness = 'Clean' | 'Moderate' | 'Dirty';
 
 export interface VehicleHandoverInspection {
   id: string;
+  company_id?: string;
   booking_id: string;
   vehicle_id: string;
   vehicle_plate: string;
@@ -196,6 +205,7 @@ export type ExpenseStatus = 'Pending' | 'Approved' | 'Paid' | 'Rejected';
 
 export interface ExpenseRecord {
   id: string;
+  company_id?: string;
   title: string;
   category: ExpenseCategory;
   amount_rwf: number;
@@ -217,6 +227,7 @@ export type TaskStatus = 'Open' | 'In Progress' | 'Completed' | 'Cancelled';
 
 export interface OperationalTask {
   id: string;
+  company_id?: string;
   title: string;
   description?: string;
   assigned_to_name: string;
@@ -238,6 +249,7 @@ export type CustomerCategory =
 
 export interface Customer {
   id: string;
+  company_id?: string;
   name: string;
   phone: string;
   email: string;
@@ -256,6 +268,7 @@ export interface Customer {
 
 export interface ActivityLog {
   id: string;
+  company_id?: string;
   timestamp: string;
   action: string;
   details: string;
@@ -300,6 +313,7 @@ export interface User {
 }
 
 export interface CompanySettings {
+  company_id?: string;
   turnaround_buffer_hours: number;
   maintenance_auto_lock: boolean;
   controle_technique_alert_days: number;

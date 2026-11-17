@@ -8,17 +8,10 @@ import {
   VehicleCleanliness,
 } from '../types';
 import { ColorTheme } from '../theme';
-import { formatRwf, calculateDays } from '../utils/collision';
-import {
-  ClipboardCheck,
-  Plus,
-  Fuel,
-  Gauge,
-  CheckCircle2,
-  Search,
-  FileText,
-  X,
-} from 'lucide-react';
+import { calculateDays } from '../utils/collision';
+import { formatHumanDateRange, formatHumanDateTime } from '../utils/dates';
+import { useI18n } from '../utils/i18n';
+import { Plus, Search, X, ClipboardCheck, ArrowUpRight, ArrowDownLeft, ShieldCheck } from 'lucide-react';
 
 interface HandoversViewProps {
   handovers: VehicleHandoverInspection[];
@@ -32,16 +25,18 @@ interface HandoversViewProps {
   onOpenAgreement: (booking: Booking, vehicle: Vehicle) => void;
 }
 
+const inputCls =
+  'w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-slate-400 dark:focus:border-slate-500 transition-colors';
+
 export const HandoversView: React.FC<HandoversViewProps> = ({
   handovers,
   bookings,
   vehicles,
   currentUser,
-  currentTheme,
   onAddHandover,
   onOpenAgreement,
 }) => {
-  const activeColor = currentTheme?.hex || '#635bff';
+  const { formatMoney, tr } = useI18n();
   const [filterType, setFilterType] = useState<'all' | 'pickup' | 'return'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewInspectionOpen, setIsNewInspectionOpen] = useState(false);
@@ -171,115 +166,148 @@ export const HandoversView: React.FC<HandoversViewProps> = ({
   const totalPickups = handovers.filter((h) => h.inspection_type === 'pickup').length;
   const totalReturns = handovers.filter((h) => h.inspection_type === 'return').length;
 
+  const handlePrintSheet = (insp: VehicleHandoverInspection) => {
+    const matchedBooking =
+      bookings.find((b) => b.id === insp.booking_id) || activeFormBooking;
+    const matchedVehicle =
+      vehicles.find((v) => v.id === insp.vehicle_id) || activeFormVehicle;
+    if (matchedBooking && matchedVehicle) {
+      onOpenAgreement(matchedBooking, matchedVehicle);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="stripe-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl">
-        <div className="flex items-start gap-3.5">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0"
-            style={{ backgroundColor: activeColor }}
-          >
-            <ClipboardCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0a2540] dark:text-white">
-              Car Check-Out & Return
-            </h1>
-            <p className="text-base text-[#425466] dark:text-slate-300 mt-1">
-              Check fuel, km, and scratches before giving out a car and when it comes back.
-            </p>
-          </div>
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {tr('Car checks')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Check fuel, km, and scratches before giving out a car and when it comes back.')}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
+            type="button"
             onClick={() => {
               if (activeFormBooking && activeFormVehicle) {
                 onOpenAgreement(activeFormBooking, activeFormVehicle);
               }
             }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-[#f6f9fc] dark:bg-slate-800 text-sm font-bold text-[#0a2540] dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111827] text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs"
           >
-            <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>Car Paper</span>
+            {tr('Car paper')}
           </button>
 
           <button
+            type="button"
             onClick={() => setIsNewInspectionOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold shadow-sm hover:opacity-95 transition-opacity"
-            style={{ backgroundColor: activeColor }}
+            className="accent-bg inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:opacity-95 shadow-xs"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>New Car Check</span>
+            <Plus className="w-4 h-4" />
+            <span>{tr('New car check')}</span>
           </button>
         </div>
       </div>
 
-      {/* 4 Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">All Checks</span>
-          <div className="text-3xl font-extrabold text-[#0a2540] dark:text-white font-mono">{handovers.length}</div>
-          <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Saved digitally</span>
+      {/* 4-Card KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('All checks')}</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <ClipboardCheck className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {handovers.length}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Signed inspection records</p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Cars Given Out</span>
-          <div className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">{totalPickups}</div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Signed by guest</span>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Cars given out')}</span>
+            <span className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <ArrowUpRight className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400 mt-2 tabular-nums">
+            {totalPickups}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Pickup inspections</p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Cars Returned</span>
-          <div className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">{totalReturns}</div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Fuel & km checked</span>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Cars returned')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <ArrowDownLeft className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 mt-2 tabular-nums">
+            {totalReturns}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Return condition checks</p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Safety Kits</span>
-          <div className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 font-mono">100%</div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Ready in all cars</span>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Safety kits')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            100%
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">9-point check verified</p>
         </div>
       </div>
 
-      {/* Filter & Search */}
-      <div className="stripe-card flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+      {/* Filter Toolbar */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 kf-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg overflow-x-auto">
           {[
-            { value: 'all', label: `All (${handovers.length})` },
-            { value: 'pickup', label: 'Car Going Out' },
-            { value: 'return', label: 'Car Coming Back' },
-          ].map((btn) => (
-            <button
-              key={btn.value}
-              onClick={() => setFilterType(btn.value as 'all' | 'pickup' | 'return')}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
-                filterType === btn.value
-                  ? 'text-white border-transparent'
-                  : 'bg-[#f6f9fc] dark:bg-slate-950 text-[#425466] dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-              style={filterType === btn.value ? { backgroundColor: activeColor } : undefined}
-            >
-              {btn.label}
-            </button>
-          ))}
+            { value: 'all', label: `${tr('All')} (${handovers.length})` },
+            { value: 'pickup', label: tr('Car going out') },
+            { value: 'return', label: tr('Car coming back') },
+          ].map((tab) => {
+            const active = filterType === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setFilterType(tab.value as 'all' | 'pickup' | 'return')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                  active
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search plate, guest, or staff..."
-            className="w-full pl-10 pr-3 py-2.5 bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-[#0a2540] dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500"
+            placeholder={tr('Search plate, guest, or staff...')}
+            className="w-full sm:w-68 pl-9 pr-3 py-1.5 bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
           />
         </div>
       </div>
 
-      {/* Checks Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Modern Handover Inspection Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {filteredHandovers.map((insp) => {
           const isPickup = insp.inspection_type === 'pickup';
           const passCount = Object.values(insp.condition_checklist).filter(Boolean).length;
@@ -288,130 +316,121 @@ export const HandoversView: React.FC<HandoversViewProps> = ({
           return (
             <div
               key={insp.id}
-              className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4"
+              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card flex flex-col justify-between p-5 space-y-4"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-3 py-0.5 rounded-full text-sm font-bold border ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
                         isPickup
-                          ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30'
+                          ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                          : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                       }`}
                     >
-                      {isPickup ? 'Going Out' : 'Coming Back'}
+                      {isPickup ? tr('Going out') : tr('Coming back')}
                     </span>
-                    <span className="text-sm font-mono text-[#425466] dark:text-slate-400">#{insp.id}</span>
+                    <span className="font-mono text-xs text-slate-400 dark:text-slate-500">#{insp.id}</span>
                   </div>
-                  <h3 className="text-base font-bold text-[#0a2540] dark:text-white pt-1">{insp.vehicle_model}</h3>
-                  <span className="font-mono text-sm font-bold text-amber-700 dark:text-amber-400">
-                    {insp.vehicle_plate}
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {formatHumanDateTime(insp.created_at)}
                   </span>
                 </div>
 
-                <div className="text-right space-y-1.5">
-                  <span className="text-sm text-[#425466] dark:text-slate-400 block">
-                    {new Date(insp.created_at).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                  <span
-                    className={`inline-block px-2.5 py-0.5 rounded-full text-sm font-semibold ${
-                      insp.cleanliness === 'Clean'
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                        : 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
-                    }`}
-                  >
-                    {insp.cleanliness}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 p-3.5 bg-[#f6f9fc] dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-[#425466] dark:text-slate-400 text-sm">
-                    <Gauge className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    <span>Km Reading</span>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                      {insp.vehicle_model}
+                    </h3>
+                    <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300">
+                      {insp.vehicle_plate}
+                    </span>
                   </div>
-                  <div className="font-mono text-base font-bold text-[#0a2540] dark:text-white">
-                    {insp.odometer_km.toLocaleString()} km
-                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Guest: <strong className="font-medium text-slate-800 dark:text-slate-200">{insp.client_name}</strong> · Checked by {insp.inspector_name}
+                  </p>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-[#425466] dark:text-slate-400 text-sm">
-                    <Fuel className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    <span>Fuel Tank</span>
+                {/* Soft Tonal Spec Well */}
+                <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-lg p-3.5 grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 dark:text-slate-500 block">{tr('Km reading')}</span>
+                    <span className="font-mono font-semibold text-slate-900 dark:text-white tabular-nums mt-0.5 block">
+                      {insp.odometer_km.toLocaleString()} km
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-0.5 bg-slate-200 dark:bg-slate-800 p-1 rounded-md">
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((bar) => (
-                        <div
-                          key={bar}
-                          className={`w-2 h-3.5 rounded-xs ${
-                            bar <= insp.fuel_level_eighths ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'
-                          }`}
-                        />
-                      ))}
+                  <div>
+                    <span className="text-slate-400 dark:text-slate-500 block">{tr('Condition')}</span>
+                    <span
+                      className={`font-semibold mt-0.5 block ${
+                        insp.cleanliness === 'Clean'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : insp.cleanliness === 'Moderate'
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-rose-600 dark:text-rose-400'
+                      }`}
+                    >
+                      {tr(insp.cleanliness === 'Moderate' ? 'Okay' : insp.cleanliness)} ({passCount}/{totalChecks} checks)
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-400 dark:text-slate-500 block mb-1">{tr('Fuel')}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex gap-1">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((bar) => (
+                          <span
+                            key={bar}
+                            className={`inline-block w-3 h-2.5 rounded-xs ${
+                              bar <= insp.fuel_level_eighths
+                                ? 'accent-bg'
+                                : 'bg-slate-200 dark:bg-slate-700'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
+                        {insp.fuel_level_eighths}/8
+                      </span>
                     </div>
-                    <span className="font-mono text-sm font-bold text-[#0a2540] dark:text-slate-200">
-                      {insp.fuel_level_eighths}/8
-                    </span>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between text-[#425466] dark:text-slate-300">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>
-                      Checks passed: <strong>{passCount}/{totalChecks}</strong>
-                    </span>
-                  </div>
-                  {insp.client_signature_confirmed && (
-                    <span className="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Guest Signed</span>
-                  )}
+                <div className="text-xs text-slate-600 dark:text-slate-300">
+                  <span className="text-slate-400 dark:text-slate-500">{tr('Notes')}: </span>
+                  {insp.damage_notes || tr('No scratches or issues noted.')}
                 </div>
-
-                {insp.damage_notes && (
-                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200 text-sm">
-                    <strong>Notes:</strong> {insp.damage_notes}
-                  </div>
-                )}
 
                 {insp.additional_charges_rwf ? (
-                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-800 dark:text-rose-200 text-sm flex items-center justify-between">
-                    <span>
-                      Extra Fee: <strong>{insp.additional_charges_reason}</strong>
-                    </span>
-                    <strong className="font-mono">+{formatRwf(insp.additional_charges_rwf)}</strong>
+                  <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between gap-2">
+                    <span>{insp.additional_charges_reason}</span>
+                    <span className="font-mono font-semibold shrink-0">+{formatMoney(insp.additional_charges_rwf)}</span>
                   </div>
                 ) : null}
               </div>
 
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-sm text-[#425466] dark:text-slate-400">
-                <div>
-                  Guest: <strong className="text-[#0a2540] dark:text-white">{insp.client_name}</strong>
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                <div className="signature-line text-base text-slate-700 dark:text-slate-200">
+                  {insp.client_name}
                 </div>
-                <div>
-                  Checked by: <span className="font-semibold text-[#0a2540] dark:text-slate-200">{insp.inspector_name}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePrintSheet(insp)}
+                  className="accent-text font-medium hover:underline"
+                >
+                  {tr('Print car paper')}
+                </button>
               </div>
             </div>
           );
         })}
 
         {filteredHandovers.length === 0 && (
-          <div className="col-span-full text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
-            <ClipboardCheck className="w-10 h-10 text-slate-400 mx-auto" />
-            <h3 className="text-base font-bold text-[#0a2540] dark:text-white">No Car Checks Yet</h3>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
-              Tap "New Car Check" before giving keys to a guest.
+          <div className="col-span-full text-center py-12 bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-card space-y-1">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+              {tr('No car checks yet')}
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {tr('Select "New car check" before giving keys to a guest.')}
             </p>
           </div>
         )}
@@ -419,67 +438,70 @@ export const HandoversView: React.FC<HandoversViewProps> = ({
 
       {/* Modal: New Car Check */}
       {isNewInspectionOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8">
-            <div className="flex items-center justify-between p-5 bg-[#f6f9fc] dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2.5">
-                <ClipboardCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <div>
-                  <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">New Car Check</h2>
-                  <span className="text-sm text-[#425466] dark:text-slate-400">
-                    Record fuel, km, and condition
-                  </span>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px] overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal overflow-hidden my-8">
+            <div className="flex items-center justify-between px-6 py-4 bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {tr('New car check')}
+                </h2>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {tr('Record fuel, km, and condition')}
+                </span>
               </div>
               <button
+                type="button"
                 onClick={() => setIsNewInspectionOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitNewInspection} className="p-6 space-y-5 text-sm max-h-[80vh] overflow-y-auto">
+            <form onSubmit={handleSubmitNewInspection} className="p-6 space-y-4 text-sm max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setInspectionType('pickup')}
-                  className={`p-3.5 rounded-xl border text-left transition-all ${
+                  className={`p-3.5 rounded-xl border text-left transition-colors ${
                     inspectionType === 'pickup'
-                      ? 'bg-amber-50 dark:bg-amber-500/15 border-amber-500 text-amber-900 dark:text-amber-300'
-                      : 'border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-400'
+                      ? 'accent-border accent-tint text-slate-900 dark:text-white'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <strong className="block text-sm">Car Going Out</strong>
-                  <span className="text-sm block opacity-80">Giving car to guest</span>
+                  <strong className="block font-semibold text-sm">{tr('Car going out')}</strong>
+                  <span className="text-xs block mt-0.5">{tr('Giving car to guest')}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setInspectionType('return')}
-                  className={`p-3.5 rounded-xl border text-left transition-all ${
+                  className={`p-3.5 rounded-xl border text-left transition-colors ${
                     inspectionType === 'return'
-                      ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-500 text-emerald-900 dark:text-emerald-300'
-                      : 'border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-400'
+                      ? 'accent-border accent-tint text-slate-900 dark:text-white'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <strong className="block text-sm">Car Coming Back</strong>
-                  <span className="text-sm block opacity-80">Guest returning car</span>
+                  <strong className="block font-semibold text-sm">{tr('Car coming back')}</strong>
+                  <span className="text-xs block mt-0.5">{tr('Guest returning car')}</span>
                 </button>
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Pick a Trip</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                  {tr('Pick a trip')}
+                </label>
                 <select
                   value={selectedBookingId}
                   onChange={(e) => handleSelectBooking(e.target.value)}
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-medium"
+                  className={inputCls}
                 >
                   {bookings.map((b) => {
                     const veh = vehicles.find((v) => v.id === b.vehicle_id);
                     return (
                       <option key={b.id} value={b.id}>
-                        {b.client_name} — {veh ? veh.model_name : 'Car'} ({b.start_date} to {b.end_date})
+                        {b.client_name} — {veh ? veh.model_name : tr('Car')} ({formatHumanDateRange(b.start_date, b.end_date)})
                       </option>
                     );
                   })}
@@ -488,50 +510,53 @@ export const HandoversView: React.FC<HandoversViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Km Reading</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                    {tr('Km reading')}
+                  </label>
                   <input
                     type="number"
                     required
                     value={odometerKm}
                     onChange={(e) => setOdometerKm(parseInt(e.target.value, 10) || 0)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-mono font-bold"
+                    className={`${inputCls} font-mono`}
                   />
                   {activeFormVehicle && (
-                    <span className="text-sm text-[#425466] dark:text-slate-400 mt-1 block">
-                      Before: {activeFormVehicle.current_odometer_km.toLocaleString()} km
+                    <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
+                      {tr('Before')}: {activeFormVehicle.current_odometer_km.toLocaleString()} km
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">How Clean Is It?</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                    {tr('How clean is it?')}
+                  </label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['Clean', 'Moderate', 'Dirty'] as VehicleCleanliness[]).map((c) => (
                       <button
                         key={c}
                         type="button"
                         onClick={() => setCleanliness(c)}
-                        className={`py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                        className={`py-2 rounded-lg text-xs font-medium border transition-colors ${
                           cleanliness === c
-                            ? 'text-white border-transparent'
-                            : 'border-slate-200 dark:border-slate-700 text-[#425466] dark:text-slate-300'
+                            ? 'accent-bg border-transparent'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                         }`}
-                        style={cleanliness === c ? { backgroundColor: activeColor } : undefined}
                       >
-                        {c === 'Moderate' ? 'Okay' : c}
+                        {tr(c === 'Moderate' ? 'Okay' : c)}
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold">
-                    Fuel Level ({fuelLevel}/8)
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                    {tr('Fuel level')} ({fuelLevel}/8)
                   </label>
-                  <span className="text-sm font-mono text-amber-700 dark:text-amber-400 font-semibold">
-                    {fuelLevel === 8 ? 'Full Tank' : fuelLevel === 4 ? 'Half Tank' : `${fuelLevel}/8 Tank`}
+                  <span className="text-xs font-mono text-slate-900 dark:text-white font-semibold">
+                    {fuelLevel === 8 ? tr('Full tank') : fuelLevel === 4 ? tr('Half tank') : `${fuelLevel}/8 ${tr('tank')}`}
                   </span>
                 </div>
                 <div className="grid grid-cols-8 gap-1.5">
@@ -540,10 +565,10 @@ export const HandoversView: React.FC<HandoversViewProps> = ({
                       key={lvl}
                       type="button"
                       onClick={() => setFuelLevel(lvl)}
-                      className={`py-2 rounded-lg font-mono font-bold text-sm transition-colors ${
+                      className={`py-2 rounded-md font-mono font-semibold text-xs border transition-colors ${
                         fuelLevel >= lvl
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'bg-[#f6f9fc] dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700'
+                          ? 'accent-bg border-transparent'
+                          : 'bg-white dark:bg-[#0f172a] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       }`}
                     >
                       {lvl}/8
@@ -552,9 +577,11 @@ export const HandoversView: React.FC<HandoversViewProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-[#0a2540] dark:text-slate-200 font-bold">9-Point Car Check</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-[#f6f9fc] dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  {tr('9-point car check')}
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-lg">
                   {[
                     { key: 'body_scratches_dents', label: 'Body & paint look good' },
                     { key: 'windshield_windows', label: 'Glass has no cracks' },
@@ -568,79 +595,80 @@ export const HandoversView: React.FC<HandoversViewProps> = ({
                   ].map((item) => (
                     <label
                       key={item.key}
-                      className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-900 cursor-pointer text-sm text-[#0a2540] dark:text-slate-200"
+                      className="flex items-center gap-2.5 p-1.5 cursor-pointer text-xs text-slate-800 dark:text-slate-200"
                     >
                       <input
                         type="checkbox"
                         checked={checklist[item.key as keyof typeof checklist]}
                         onChange={() => handleToggleChecklist(item.key as keyof typeof checklist)}
-                        className="rounded accent-amber-500 w-4 h-4"
+                        className="w-4 h-4 rounded"
                       />
-                      <span>{item.label}</span>
+                      <span>{tr(item.label)}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Scratches or Notes</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                  {tr('Scratches or notes')}
+                </label>
                 <textarea
                   rows={2}
                   value={damageNotes}
                   onChange={(e) => setDamageNotes(e.target.value)}
-                  placeholder="Write down any scratches, dents, or missing items..."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                  placeholder={tr('Write down any scratches, dents, or missing items...')}
+                  className={inputCls}
                 />
               </div>
 
               {inspectionType === 'return' && returnCalculation.total > 0 && (
-                <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl space-y-1.5 text-rose-800 dark:text-rose-200">
-                  <div className="font-bold flex items-center justify-between">
-                    <span>Extra Fee (Km or Fuel):</span>
-                    <span className="font-mono text-base">+{formatRwf(returnCalculation.total)}</span>
+                <div className="p-3.5 bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 rounded-lg space-y-1 text-rose-700 dark:text-rose-300 text-xs">
+                  <div className="font-semibold flex items-center justify-between">
+                    <span>{tr('Extra fee (km or fuel)')}:</span>
+                    <span className="font-mono text-sm">+{formatMoney(returnCalculation.total)}</span>
                   </div>
-                  <div className="text-sm space-y-0.5">
+                  <div className="space-y-0.5">
                     {returnCalculation.excessKm > 0 && (
                       <p>
-                        • Extra distance: {returnCalculation.excessKm} km = {formatRwf(returnCalculation.excessKmCharge)}
+                        • {tr('Extra distance')}: {returnCalculation.excessKm} km = {formatMoney(returnCalculation.excessKmCharge)}
                       </p>
                     )}
                     {returnCalculation.fuelCharge > 0 && (
                       <p>
-                        • Missing fuel: ~{returnCalculation.fuelDeficitLiters} L = {formatRwf(returnCalculation.fuelCharge)}
+                        • {tr('Missing fuel')}: ~{returnCalculation.fuelDeficitLiters} L = {formatMoney(returnCalculation.fuelCharge)}
                       </p>
                     )}
                   </div>
                 </div>
               )}
 
-              <label className="flex items-center gap-2.5 p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer">
+              <label className="flex items-center gap-2.5 p-3.5 bg-slate-50/90 dark:bg-slate-800/40 rounded-lg cursor-pointer">
                 <input
                   type="checkbox"
                   required
                   checked={signatureConfirmed}
                   onChange={(e) => setSignatureConfirmed(e.target.checked)}
-                  className="rounded accent-amber-500 w-4 h-4"
+                  className="w-4 h-4 rounded"
                 />
-                <span className="text-[#0a2540] dark:text-slate-200 font-medium text-sm">
-                  The guest checked the car and agrees with the fuel, km, and notes above.
+                <span className="text-slate-800 dark:text-slate-200 text-xs">
+                  {tr('The guest checked the car and agrees with the fuel, km, and notes above.')}
                 </span>
               </label>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsNewInspectionOpen(false)}
-                  className="px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-300 font-semibold"
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Cancel
+                  {tr('Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-full text-white font-bold shadow-sm"
-                  style={{ backgroundColor: activeColor }}
+                  className="accent-bg px-5 py-2 rounded-lg font-medium hover:opacity-95"
                 >
-                  Save Car Check
+                  {tr('Save car check')}
                 </button>
               </div>
             </form>

@@ -1,25 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, Driver, Vehicle, BookingStatus } from '../types';
+import { generateDriverSMS, checkDriverCollision } from '../utils/collision';
+import { formatHumanDate, formatHumanDateRange } from '../utils/dates';
+import { useI18n } from '../utils/i18n';
 import {
-  formatRwf,
-  generateDriverSMS,
-  checkDriverCollision,
-} from '../utils/collision';
-import {
-  Radio,
   Send,
   Phone,
   Plane,
   User,
   CheckCircle,
-  AlertTriangle,
-  FileText,
   Printer,
   Search,
-  ShieldCheck,
   X,
-  MapPin,
-  CheckCircle2,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 
@@ -45,11 +37,13 @@ interface DispatchViewProps {
   onUpdateBookingStatus?: (bookingId: string, status: BookingStatus) => void;
 }
 
+const inputCls =
+  'w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-slate-400 dark:focus:border-slate-500 transition-colors';
+
 export const DispatchView: React.FC<DispatchViewProps> = ({
   bookings,
   drivers,
   vehicles,
-  currentTheme,
   currentUser,
   currentCompany,
   onDispatchSMS,
@@ -58,16 +52,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   onAssignDriver,
   onCompleteTrip,
 }) => {
-  const activeThemeColor = currentTheme?.hex || '#635bff';
-  const activeBtnText = currentTheme?.btnText || 'text-white';
+  const { language, formatMoney, tr } = useI18n();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('All');
 
   const [selectedTicketBooking, setSelectedTicketBooking] = useState<Booking | null>(null);
   const [selectedSMSBooking, setSelectedSMSBooking] = useState<Booking | null>(null);
-  const [smsLanguage, setSmsLanguage] = useState<'RW' | 'EN'>('RW');
+  const [smsLanguage, setSmsLanguage] = useState<'RW' | 'EN'>(language === 'EN' ? 'EN' : 'RW');
   const [smsSendNotice, setSmsSendNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (language === 'EN' || language === 'RW') {
+      setSmsLanguage(language);
+    }
+  }, [language]);
+
   const [isUSSDSimulatorOpen, setIsUSSDSimulatorOpen] = useState(false);
   const [ussdActiveBookingId, setUssdActiveBookingId] = useState<string>(bookings[0]?.id || '');
   const [ussdScreenText, setUssdScreenText] = useState<string>('');
@@ -79,7 +79,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   const [flightModalBooking, setFlightModalBooking] = useState<Booking | null>(null);
   const [delayMinutes, setDelayMinutes] = useState<number>(45);
 
-  const kanbanColumns = useMemo(() => {
+  const groupedTrips = useMemo(() => {
     const filtered = bookings.filter((b) => {
       if (filterCategory !== 'All') {
         const veh = vehicles.find((v) => v.id === b.vehicle_id);
@@ -126,17 +126,23 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
     );
     const completed = filtered.filter((b) => b.status === 'Completed');
 
-    return { unassigned, dispatched, atTerminal, active, completed };
+    const needsAction = [
+      ...unassigned.map((b) => ({ booking: b, stage: 'unassigned' as const })),
+      ...dispatched.map((b) => ({ booking: b, stage: 'dispatched' as const })),
+      ...atTerminal.map((b) => ({ booking: b, stage: 'atTerminal' as const })),
+    ];
+
+    return { unassigned, dispatched, atTerminal, needsAction, active, completed };
   }, [bookings, drivers, vehicles, filterCategory, searchQuery]);
 
   const metrics = useMemo(() => {
     const totalActive = bookings.filter((b) => b.status !== 'Cancelled' && b.status !== 'Completed').length;
     const driversOnTrip = drivers.filter((d) => d.status === 'On Trip').length;
     const driversAvailable = drivers.filter((d) => d.status === 'Available').length;
-    const unassignedCount = kanbanColumns.unassigned.length;
+    const unassignedCount = groupedTrips.unassigned.length;
 
     return { totalActive, driversOnTrip, driversAvailable, unassignedCount };
-  }, [bookings, drivers, kanbanColumns]);
+  }, [bookings, drivers, groupedTrips]);
 
   const handleTriggerSMS = (booking: Booking) => {
     setSelectedSMSBooking(booking);
@@ -247,576 +253,449 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold text-[#0a2540] dark:text-white tracking-tight">
-              Driver Trips & Live Updates
-            </h1>
-            <p className="text-base text-[#425466] dark:text-slate-300 mt-1 max-w-2xl">
-              Follow every trip from start to finish, text drivers on any phone, and print trip papers.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5">
-              <span className="text-xs font-semibold text-[#425466] dark:text-slate-400 block">Active Trips</span>
-              <span className="text-lg font-extrabold text-[#0a2540] dark:text-white">{metrics.totalActive}</span>
-            </div>
-
-            <div className="bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5">
-              <span className="text-xs font-semibold text-[#425466] dark:text-slate-400 block">Drivers</span>
-              <div className="flex items-center gap-2 text-sm font-bold mt-0.5">
-                <span className="text-emerald-600 dark:text-emerald-400">{metrics.driversAvailable} Free</span>
-                <span className="text-slate-300 dark:text-slate-600">/</span>
-                <span className="text-amber-600 dark:text-amber-400">{metrics.driversOnTrip} Driving</span>
-              </div>
-            </div>
-
-            {metrics.unassignedCount > 0 ? (
-              <div className="bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-700 rounded-xl px-4 py-2.5">
-                <span className="text-xs font-semibold text-rose-700 dark:text-rose-300 block">Needs Driver</span>
-                <span className="text-lg font-extrabold text-rose-700 dark:text-rose-300">
-                  {metrics.unassignedCount} Trips
-                </span>
-              </div>
-            ) : (
-              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-700 rounded-xl px-4 py-2.5 text-emerald-700 dark:text-emerald-300">
-                <span className="text-xs font-semibold block">Drivers</span>
-                <span className="text-sm font-bold flex items-center gap-1.5 mt-0.5">
-                  <ShieldCheck className="w-4 h-4" /> All Covered
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Airport & Phone Bar */}
-        <div className="bg-[#f6f9fc] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-sm">
-          <div className="flex items-center gap-2.5">
-            <Plane className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span className="font-bold text-[#0a2540] dark:text-slate-200">Kigali Airport Flights:</span>
-            <span className="text-[#425466] dark:text-slate-400 hidden sm:inline">
-              RwandAir WB402, Ethiopian ET807, Qatar QR1371, KLM KL535
-            </span>
-          </div>
-
-          <button
-            onClick={() => setIsUSSDSimulatorOpen(true)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm shadow-sm transition-opacity hover:opacity-95 ${activeBtnText}`}
-            style={{ backgroundColor: activeThemeColor }}
-          >
-            <Phone className="w-4 h-4" />
-            <span>Open Driver Phone (*134#)</span>
-          </button>
-        </div>
-
-        {/* Search & Filter */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <div className="relative w-full md:flex-1 md:max-w-md min-w-0">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search guest, driver, place, or plate..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full pl-10 pr-4 py-2 text-sm text-[#0a2540] dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-[#425466] dark:text-slate-400 font-semibold">Car Type:</span>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500 font-semibold"
-            >
-              <option value="All">All Cars</option>
-              <option value="LandCruiser">Land Cruiser 4x4</option>
-              <option value="RAV4">RAV4</option>
-              <option value="Coaster">Coaster Bus</option>
-              <option value="Safari Van">Safari Van</option>
-              <option value="Luxury Sedan">VIP Car</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       {smsSendNotice && !selectedSMSBooking && (
-        <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 p-4 rounded-2xl text-sm font-semibold flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 shrink-0" />
+        <div className="bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 shrink-0" />
           <span>{smsSendNotice}</span>
         </div>
       )}
 
-      {/* 5-Step Trip Board */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 items-start">
-        {/* Step 1: Needs Driver */}
-        <div className="bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-3 min-h-[420px] min-w-0">
-          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
-              <h3 className="text-sm font-bold text-[#0a2540] dark:text-white">
-                1. Needs Driver ({kanbanColumns.unassigned.length})
-              </h3>
-            </div>
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Send drivers
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {groupedTrips.needsAction.length} booking{groupedTrips.needsAction.length === 1 ? '' : 's'} need action ·{' '}
+            {metrics.driversAvailable} free drivers, {metrics.driversOnTrip} on trip
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsUSSDSimulatorOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium accent-bg hover:opacity-95 shadow-xs"
+        >
+          <Phone className="w-4 h-4" />
+          <span>{tr('Open Driver Phone (*134#)')}</span>
+        </button>
+      </div>
+
+      {/* Main Dispatch Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        {/* Airport Summary + Search / Type Filter */}
+        <div className="px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{tr('Kigali Airport')}:</span>{' '}
+            RwandAir WB 402 · Ethiopian ET 807 · Qatar QR 1371 · KLM KL 535
           </div>
 
-          <div className="space-y-3">
-            {kanbanColumns.unassigned.length === 0 ? (
-              <div className="text-center py-10 text-[#425466] dark:text-slate-400 text-sm">
-                <CheckCircle2 className="w-7 h-7 mx-auto mb-2 text-emerald-500" />
-                Every trip has a driver!
-              </div>
-            ) : (
-              kanbanColumns.unassigned.map((bk) => {
-                const veh = vehicles.find((v) => v.id === bk.vehicle_id);
-                return (
-                  <div
-                    key={bk.id}
-                    className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-2.5"
-                  >
-                    <div className="flex items-start justify-between">
-                      <span className="font-mono text-xs text-[#425466] dark:text-slate-400 font-bold">#{bk.id}</span>
-                      <span className="text-xs bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 px-2.5 py-0.5 rounded-full font-bold">
-                        No Driver
-                      </span>
-                    </div>
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder={tr('Search guest, driver, place, or plate...')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-sm text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+              />
+            </div>
 
-                    <div>
-                      <div className="text-sm font-bold text-[#0a2540] dark:text-white">{bk.client_name}</div>
-                      <div className="text-xs text-[#425466] dark:text-slate-400 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{bk.destination}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-xs text-[#425466] dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="font-mono">{bk.start_date}</span>
-                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                        {formatRwf(bk.total_rwf)}
-                      </span>
-                    </div>
-
-                    <div className="bg-[#f6f9fc] dark:bg-slate-800/70 p-2.5 rounded-lg text-xs">
-                      <span className="font-bold text-[#0a2540] dark:text-white truncate block">
-                        {veh?.model_name || 'Car'}
-                      </span>
-                      <span className="font-mono text-[#425466] dark:text-amber-300 font-semibold">
-                        {veh?.plate_number}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => handleOpenAssignModal(bk)}
-                      className={`w-full py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs ${activeBtnText}`}
-                      style={{ backgroundColor: activeThemeColor }}
-                    >
-                      <User className="w-3.5 h-3.5" />
-                      <span>Pick Driver</span>
-                    </button>
-                  </div>
-                );
-              })
-            )}
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-lg px-3 py-2 text-xs font-medium outline-none"
+            >
+              <option value="All">{tr('All Cars')}</option>
+              <option value="LandCruiser">Land Cruiser 4x4</option>
+              <option value="RAV4">RAV4</option>
+              <option value="Coaster">Coaster Bus</option>
+              <option value="Safari Van">Safari Van</option>
+              <option value="Luxury Sedan">{tr('VIP Car')}</option>
+            </select>
           </div>
         </div>
 
-        {/* Step 2: Text Sent */}
-        <div className="bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-3 min-h-[420px] min-w-0">
-          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></div>
-              <h3 className="text-sm font-bold text-[#0a2540] dark:text-white truncate">
-                2. Text Sent ({kanbanColumns.dispatched.length})
-              </h3>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {kanbanColumns.dispatched.length === 0 ? (
-              <div className="text-center py-10 text-[#425466] dark:text-slate-400 text-sm">
-                No drivers waiting to reply.
-              </div>
-            ) : (
-              kanbanColumns.dispatched.map((bk) => {
-                const drv = drivers.find((d) => d.id === bk.driver_id);
-                return (
-                  <div
-                    key={bk.id}
-                    className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-2.5 min-w-0"
-                  >
-                    <div className="flex items-start justify-between gap-1.5 min-w-0">
-                      <span className="font-mono text-xs text-[#425466] dark:text-slate-400 font-bold truncate">#{bk.id}</span>
-                      <span className="text-xs bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0">
-                        Waiting Reply
-                      </span>
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-[#0a2540] dark:text-white truncate">{bk.client_name}</div>
-                      <div className="text-xs text-[#425466] dark:text-slate-400 truncate">{bk.destination}</div>
-                    </div>
-
-                    <div className="bg-[#f6f9fc] dark:bg-slate-800/70 p-2.5 rounded-lg text-xs space-y-0.5 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[#425466] dark:text-slate-400">Driver:</span>
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{drv?.language}</span>
-                      </div>
-                      <div className="font-bold text-[#0a2540] dark:text-white text-sm truncate">{drv?.name}</div>
-                      <div className="text-[#425466] dark:text-slate-400 font-mono truncate">{drv?.phone}</div>
-                    </div>
-
-                    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-1.5 pt-1">
-                      <button
-                        onClick={() => handleTriggerSMS(bk)}
-                        className="py-2 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap"
-                      >
-                        <Send className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                        <span>Send SMS</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleOpenUSSDForBooking(bk.id)}
-                        className="py-2 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap"
-                      >
-                        <Radio className="w-3.5 h-3.5 shrink-0" />
-                        <span>Phone *134#</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-800 text-xs">
-                      <button
-                        onClick={() => onAdvanceCheckin(bk.id, 'Acknowledged by Driver')}
-                        className="text-[#425466] dark:text-slate-300 hover:underline font-semibold"
-                      >
-                        Mark Ready
-                      </button>
-
-                      <button
-                        onClick={() => handleAutoRedispatch(bk)}
-                        className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1 hover:underline"
-                      >
-                        <AlertTriangle className="w-3 h-3" />
-                        <span>Switch Driver</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+        {/* Section 1: Needs Action */}
+        <div className="px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800">
+          Needs action ({groupedTrips.needsAction.length})
         </div>
 
-        {/* Step 3: Driver Waiting */}
-        <div className="bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 space-y-3 min-h-[460px]">
-          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-              <h3 className="text-sm font-bold text-[#0a2540] dark:text-white">
-                3. Driver Waiting ({kanbanColumns.atTerminal.length})
-              </h3>
-            </div>
+        {groupedTrips.needsAction.length === 0 ? (
+          <div className="px-5 py-5 border-b border-slate-100 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
+            No trips waiting for dispatch action.
           </div>
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {groupedTrips.needsAction.map(({ booking: bk, stage }) => {
+              const drv = drivers.find((d) => d.id === bk.driver_id);
+              const veh = vehicles.find((v) => v.id === bk.vehicle_id);
 
-          <div className="space-y-3">
-            {kanbanColumns.atTerminal.length === 0 ? (
-              <div className="text-center py-10 text-[#425466] dark:text-slate-400 text-sm">
-                No drivers waiting at pickup.
-              </div>
-            ) : (
-              kanbanColumns.atTerminal.map((bk) => {
-                const drv = drivers.find((d) => d.id === bk.driver_id);
-                const veh = vehicles.find((v) => v.id === bk.vehicle_id);
+              const statusDot =
+                stage === 'unassigned'
+                  ? 'bg-rose-500'
+                  : stage === 'dispatched'
+                  ? 'bg-amber-500'
+                  : 'bg-emerald-500';
+              const statusBadge =
+                stage === 'unassigned'
+                  ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400'
+                  : stage === 'dispatched'
+                  ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                  : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400';
+              const statusLabel =
+                stage === 'unassigned'
+                  ? tr('No driver')
+                  : stage === 'dispatched'
+                  ? tr('Waiting for reply')
+                  : tr('Driver at pickup');
 
-                return (
-                  <div
-                    key={bk.id}
-                    className="stripe-card bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-600/40 rounded-xl p-3.5 space-y-2.5"
-                  >
-                    <div className="flex items-start justify-between">
-                      <span className="font-mono text-xs text-[#425466] dark:text-slate-400 font-bold">#{bk.id}</span>
-                      <span className="text-xs bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-full font-bold">
-                        At Pickup
-                      </span>
+              return (
+                <div
+                  key={bk.id}
+                  className="px-5 py-4 grid grid-cols-1 lg:grid-cols-[175px_1.2fr_1.2fr_auto] gap-3 lg:gap-4 items-start text-sm hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                >
+                  <div>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${statusBadge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
+                      <span>{statusLabel}</span>
+                    </span>
+                    <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-1.5">#{bk.id}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {formatHumanDate(bk.start_date)}
                     </div>
+                  </div>
 
-                    <div>
-                      <div className="text-sm font-bold text-[#0a2540] dark:text-white">{bk.client_name}</div>
-                      <div className="text-xs text-[#425466] dark:text-slate-400 truncate">{bk.destination}</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">{bk.client_name}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{bk.destination}</div>
+                    <div className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 tabular-nums">
+                      {formatMoney(bk.total_rwf)}
+                    </div>
+                  </div>
+
+                  <div className="space-y-0.5 text-xs">
+                    {drv ? (
+                      <div>
+                        <span className="text-slate-900 dark:text-white font-semibold text-sm">{drv.name}</span>{' '}
+                        <span className="text-slate-500 dark:text-slate-400">({drv.language})</span>
+                        <div className="font-mono text-slate-500 dark:text-slate-400">{drv.phone}</div>
+                      </div>
+                    ) : (
+                      <div className="text-slate-500 dark:text-slate-400">No driver picked yet</div>
+                    )}
+
+                    <div className="text-slate-500 dark:text-slate-400">
+                      {veh?.model_name || 'Car'}{' '}
+                      {veh?.plate_number && (
+                        <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
+                          {veh.plate_number}
+                        </span>
+                      )}
                     </div>
 
                     {bk.flight_number && (
-                      <div className="bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 p-2 rounded-lg text-xs flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 font-bold">
-                          <Plane className="w-3.5 h-3.5" />
-                          <span className="font-mono">{bk.flight_number}</span>
-                        </div>
+                      <div className="pt-0.5">
                         <button
+                          type="button"
                           onClick={() => setFlightModalBooking(bk)}
-                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                            bk.flight_status === 'Delayed'
-                              ? 'bg-rose-600 text-white'
-                              : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                          }`}
+                          className="text-xs font-medium hover:underline inline-flex items-center gap-1"
                         >
-                          {bk.flight_status === 'Delayed' ? `Late +${bk.flight_delay_minutes}m` : 'On Time'}
+                          <span>Flight {bk.flight_number}:</span>
+                          {bk.flight_status === 'Delayed' ? (
+                            <span className="text-rose-600 dark:text-rose-400">
+                              +{bk.flight_delay_minutes || 35}m late
+                            </span>
+                          ) : (
+                            <span className="text-emerald-600 dark:text-emerald-400">on time</span>
+                          )}
                         </button>
                       </div>
                     )}
-
-                    <div className="text-xs flex items-center justify-between bg-[#f6f9fc] dark:bg-slate-800/70 p-2.5 rounded-lg">
-                      <div className="truncate">
-                        <span className="font-bold text-[#0a2540] dark:text-white block text-sm">{drv?.name}</span>
-                        <span className="text-[#425466] dark:text-slate-400 font-mono">{veh?.plate_number}</span>
-                      </div>
-                      <a
-                        href={`tel:${drv?.phone}`}
-                        className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-emerald-600 dark:text-emerald-400"
-                        title="Call Driver"
-                      >
-                        <Phone className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-
-                    <button
-                      onClick={() => onAdvanceCheckin(bk.id, 'Client Onboard')}
-                      className="w-full py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span>Guest Is Inside Car</span>
-                    </button>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </div>
 
-        {/* Step 4: On the Road */}
-        <div className="bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-3 min-h-[420px] min-w-0">
-          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></div>
-              <h3 className="text-sm font-bold text-[#0a2540] dark:text-white truncate">
-                4. On the Road ({kanbanColumns.active.length})
-              </h3>
+                  <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+                    {stage === 'unassigned' && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAssignModal(bk)}
+                        className="px-3.5 py-2 rounded-lg text-xs font-medium accent-bg hover:opacity-95 whitespace-nowrap"
+                      >
+                        {tr('Pick Driver')}
+                      </button>
+                    )}
+
+                    {stage === 'dispatched' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenUSSDForBooking(bk.id)}
+                          className="text-xs font-medium accent-text hover:underline whitespace-nowrap"
+                        >
+                          Phone *134#
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAutoRedispatch(bk)}
+                          className="text-xs font-medium text-rose-600 dark:text-rose-400 hover:underline whitespace-nowrap"
+                        >
+                          Switch driver
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onAdvanceCheckin(bk.id, 'Acknowledged by Driver')}
+                          className="text-xs font-medium text-slate-600 dark:text-slate-300 hover:underline whitespace-nowrap"
+                        >
+                          Mark ready
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerSMS(bk)}
+                          className="px-3.5 py-2 rounded-lg text-xs font-medium accent-bg hover:opacity-95 whitespace-nowrap"
+                        >
+                          Send SMS again
+                        </button>
+                      </>
+                    )}
+
+                    {stage === 'atTerminal' && (
+                      <>
+                        {drv?.phone && (
+                          <a
+                            href={`tel:${drv.phone}`}
+                            className="text-xs font-medium accent-text hover:underline whitespace-nowrap"
+                          >
+                            Call driver
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTicketBooking(bk)}
+                          className="text-xs font-medium text-slate-600 dark:text-slate-300 hover:underline whitespace-nowrap"
+                        >
+                          Trip paper
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onAdvanceCheckin(bk.id, 'Client Onboard')}
+                          className="px-3.5 py-2 rounded-lg text-xs font-medium accent-bg hover:opacity-95 whitespace-nowrap"
+                        >
+                          Guest is in the car
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Section 2: On the Road */}
+        {groupedTrips.active.length > 0 && (
+          <>
+            <div className="px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-800/40 border-y border-slate-200/80 dark:border-slate-800">
+              On the road ({groupedTrips.active.length})
             </div>
-          </div>
-
-          <div className="space-y-3">
-            {kanbanColumns.active.length === 0 ? (
-              <div className="text-center py-10 text-[#425466] dark:text-slate-400 text-sm">
-                No cars on the road right now.
-              </div>
-            ) : (
-              kanbanColumns.active.map((bk) => {
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {groupedTrips.active.map((bk) => {
                 const drv = drivers.find((d) => d.id === bk.driver_id);
                 const veh = vehicles.find((v) => v.id === bk.vehicle_id);
-
                 return (
                   <div
                     key={bk.id}
-                    className="stripe-card bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-600/40 rounded-xl p-3 space-y-2.5 min-w-0"
+                    className="px-5 py-4 grid grid-cols-1 lg:grid-cols-[175px_1.2fr_1.2fr_auto] gap-3 lg:gap-4 items-start text-sm"
                   >
-                    <div className="flex items-start justify-between gap-1.5 min-w-0">
-                      <span className="font-mono text-xs text-[#425466] dark:text-slate-400 font-bold truncate">#{bk.id}</span>
-                      <span className="text-xs bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0">
-                        Driving Now
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>Driving now</span>
                       </span>
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-[#0a2540] dark:text-white truncate">{bk.client_name}</div>
-                      <div className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1 mt-0.5 min-w-0">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{bk.destination}</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#f6f9fc] dark:bg-slate-800/70 p-2.5 rounded-lg text-xs space-y-0.5 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[#425466] dark:text-slate-400">Car:</span>
-                        <span className="font-mono text-[#0a2540] dark:text-amber-300 font-bold whitespace-nowrap">{veh?.plate_number}</span>
-                      </div>
-                      <div className="font-bold text-[#0a2540] dark:text-white text-sm truncate">{drv?.name}</div>
-                    </div>
-
-                    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-1.5 pt-1">
-                      <button
-                        onClick={() => setSelectedTicketBooking(bk)}
-                        className="py-2 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                        <span>Trip Paper</span>
-                      </button>
-
-                      <button
-                        onClick={() => onCompleteTrip(bk.id)}
-                        className="py-2 px-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold flex items-center justify-center gap-1 shadow-xs whitespace-nowrap"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>Finish Trip</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Step 5: Trip Done */}
-        <div className="bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-3 min-h-[420px] min-w-0">
-          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-slate-500 shrink-0"></div>
-              <h3 className="text-sm font-bold text-[#0a2540] dark:text-white truncate">
-                5. Trip Done ({kanbanColumns.completed.length})
-              </h3>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {kanbanColumns.completed.length === 0 ? (
-              <div className="text-center py-10 text-[#425466] dark:text-slate-400 text-sm">
-                No finished trips yet.
-              </div>
-            ) : (
-              kanbanColumns.completed.slice(0, 8).map((bk) => {
-                const drv = drivers.find((d) => d.id === bk.driver_id);
-
-                return (
-                  <div
-                    key={bk.id}
-                    className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-2"
-                  >
-                    <div className="flex items-start justify-between">
-                      <span className="font-mono text-xs text-[#425466] dark:text-slate-400">#{bk.id}</span>
-                      <span className="text-xs bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300 px-2.5 py-0.5 rounded-full font-semibold">
-                        {bk.payment_status}
-                      </span>
+                      <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-1.5">#{bk.id}</div>
                     </div>
 
                     <div>
-                      <div className="text-sm font-bold text-[#0a2540] dark:text-white">{bk.client_name}</div>
-                      <div className="text-xs text-[#425466] dark:text-slate-400 truncate">{bk.destination}</div>
+                      <div className="font-semibold text-slate-900 dark:text-white">{bk.client_name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{bk.destination}</div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800 text-[#425466] dark:text-slate-400">
-                      <span>{drv?.name.split(' ')[0] || 'Driver'}</span>
-                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                        {formatRwf(bk.total_rwf)}
-                      </span>
+                    <div>
+                      <div className="font-semibold text-slate-900 dark:text-white">{drv?.name || 'Driver'}</div>
+                      <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        {veh?.plate_number} · {veh?.model_name}
+                      </div>
                     </div>
 
-                    <button
-                      onClick={() => setSelectedTicketBooking(bk)}
-                      className="w-full py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center justify-center gap-1"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>Print Trip Paper</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTicketBooking(bk)}
+                        className="text-xs font-medium accent-text hover:underline whitespace-nowrap"
+                      >
+                        Trip paper
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onCompleteTrip(bk.id)}
+                        className="px-3.5 py-2 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap"
+                      >
+                        Finish trip
+                      </button>
+                    </div>
                   </div>
                 );
-              })
-            )}
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Section 3: Finished Today */}
+        {groupedTrips.completed.length > 0 && (
+          <>
+            <div className="px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-800/40 border-y border-slate-200/80 dark:border-slate-800">
+              Finished ({groupedTrips.completed.length})
+            </div>
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {groupedTrips.completed.slice(0, 8).map((bk) => {
+                const drv = drivers.find((d) => d.id === bk.driver_id);
+                return (
+                  <div
+                    key={bk.id}
+                    className="px-5 py-3.5 grid grid-cols-1 lg:grid-cols-[175px_1.2fr_1.2fr_auto] gap-3 lg:gap-4 items-center text-sm"
+                  >
+                    <div>
+                      <span className="font-mono text-xs text-slate-500 dark:text-slate-400">#{bk.id}</span>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{bk.payment_status}</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900 dark:text-white">{bk.client_name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{bk.destination}</div>
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {drv?.name || 'Driver'} ·{' '}
+                      <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                        {formatMoney(bk.total_rwf)}
+                      </span>
+                    </div>
+                    <div className="lg:text-right">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTicketBooking(bk)}
+                        className="text-xs font-medium accent-text hover:underline"
+                      >
+                        Print trip paper
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {(groupedTrips.active.length === 0 || groupedTrips.completed.length === 0) && (
+          <div className="px-5 py-3 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/30">
+            {groupedTrips.active.length === 0 && 'On the road: none. '}
+            {groupedTrips.completed.length === 0 && 'Finished today: none.'}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Trip Paper Modal */}
+      {/* Trip Paper Modal (Bon de Mission) */}
       {selectedTicketBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <div>
-                  <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Trip Paper (Bon de Mission)</h3>
-                  <span className="text-xs text-[#425466] dark:text-slate-400">
-                    For police road checks across Rwanda
-                  </span>
-                </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3.5">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {tr('Trip Paper (Bon de Mission)')}
+                </h3>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {tr('For police road checks across Rwanda')}
+                </span>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedTicketBooking(null)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div id="printable-bon-de-mission" className="bg-white text-slate-950 p-6 rounded-xl border border-slate-300 space-y-4 font-sans text-sm">
-              <div className="text-center border-b border-slate-300 pb-3">
-                <div className="text-xs uppercase tracking-wider text-slate-600 font-bold">
-                  REPUBLIC OF RWANDA · CITY OF KIGALI
-                </div>
-                <h2 className="text-xl font-black tracking-tight text-slate-900 mt-0.5">
+            <div
+              id="printable-bon-de-mission"
+              className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 space-y-4 text-sm"
+            >
+              <div className="text-center border-b border-slate-200 pb-3">
+                <div className="text-xs font-medium text-slate-500">Republic of Rwanda · City of Kigali</div>
+                <h2 className="text-xl font-semibold text-slate-900 mt-0.5">
                   {currentCompany?.name || 'KIGALI EXPEDITION TOURS & FLEET LTD'}
                 </h2>
-                <div className="text-xs text-slate-600">TIN: 102938475 · MINITRANS/TR/2026/089</div>
-                <div className="inline-block mt-2 px-3 py-1 bg-slate-900 text-white font-bold text-xs uppercase rounded">
-                  OFFICIAL TRIP PAPER · BON DE MISSION
+                <div className="text-xs text-slate-500 font-mono">TIN: 102938475 · MINITRANS/TR/2026/089</div>
+                <div className="inline-block mt-2 px-3 py-1 bg-slate-900 text-white font-medium text-xs rounded-md">
+                  Official Trip Paper · Bon de Mission
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-slate-300 pb-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-slate-200 pb-3">
                 <div>
-                  <h4 className="font-bold text-slate-900 uppercase mb-1">1. Driver</h4>
+                  <h4 className="font-semibold text-slate-900 mb-1">1. Driver</h4>
                   {(() => {
                     const drv = drivers.find((d) => d.id === selectedTicketBooking.driver_id);
                     return (
-                      <div className="space-y-0.5">
-                        <div><strong>Name:</strong> {drv?.name || 'Assigned Driver'}</div>
-                        <div><strong>National ID:</strong> {drv?.national_id || '1 1990 8 0029384 1 20'}</div>
-                        <div><strong>License:</strong> {drv?.license_number || 'RW-B-2018-092'}</div>
-                        <div><strong>Phone:</strong> {drv?.phone || '+250 788 123 456'}</div>
+                      <div className="space-y-0.5 text-xs text-slate-700">
+                        <div>Name: {drv?.name || 'Assigned driver'}</div>
+                        <div className="font-mono">National ID: {drv?.national_id || '1 1990 8 0029384 1 20'}</div>
+                        <div className="font-mono">License: {drv?.license_number || 'RW-B-2018-092'}</div>
+                        <div className="font-mono">Phone: {drv?.phone || '+250 788 123 456'}</div>
                       </div>
                     );
                   })()}
                 </div>
 
                 <div>
-                  <h4 className="font-bold text-slate-900 uppercase mb-1">2. Car</h4>
+                  <h4 className="font-semibold text-slate-900 mb-1">2. Car</h4>
                   {(() => {
                     const veh = vehicles.find((v) => v.id === selectedTicketBooking.vehicle_id);
                     return (
-                      <div className="space-y-0.5">
-                        <div><strong>Car:</strong> {veh?.model_name || 'Vehicle'}</div>
+                      <div className="space-y-0.5 text-xs text-slate-700">
+                        <div>Car: {veh?.model_name || 'Car'}</div>
                         <div>
-                          <strong>Plate:</strong>{' '}
-                          <span className="font-mono font-bold bg-amber-100 px-1.5 py-0.5 rounded">{veh?.plate_number}</span>
+                          Plate: <span className="font-mono font-semibold">{veh?.plate_number}</span>
                         </div>
-                        <div><strong>Safety Check:</strong> Valid until {veh?.controle_technique_expiry || '2027-01-30'}</div>
-                        <div><strong>Insurance:</strong> Valid</div>
+                        <div>
+                          Safety check: valid until {formatHumanDate(veh?.controle_technique_expiry || '2027-01-30')}
+                        </div>
+                        <div>Insurance: valid</div>
                       </div>
                     );
                   })()}
                 </div>
               </div>
 
-              <div className="space-y-1.5 border-b border-slate-300 pb-3 text-xs">
-                <h4 className="font-bold text-slate-900 uppercase">3. Guest & Trip</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div><strong>Guest:</strong> {selectedTicketBooking.client_name}</div>
-                  <div><strong>Phone:</strong> {selectedTicketBooking.client_phone}</div>
-                  <div><strong>Dates:</strong> {selectedTicketBooking.start_date} to {selectedTicketBooking.end_date}</div>
-                  <div><strong>Place:</strong> {selectedTicketBooking.destination}</div>
+              <div className="space-y-1 border-b border-slate-200 pb-3">
+                <h4 className="font-semibold text-slate-900">3. Guest and trip</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
+                  <div>Guest: {selectedTicketBooking.client_name}</div>
+                  <div className="font-mono">Phone: {selectedTicketBooking.client_phone}</div>
+                  <div>Dates: {formatHumanDateRange(selectedTicketBooking.start_date, selectedTicketBooking.end_date, { includeYear: true })}</div>
+                  <div>Route: {selectedTicketBooking.destination}</div>
                 </div>
               </div>
 
-              <div className="flex justify-between items-end pt-2 text-xs">
+              <div className="flex justify-between items-end pt-2">
                 <div>
-                  <div className="text-slate-500">Manager:</div>
-                  <div className="font-bold mt-4 border-t border-slate-400 pt-0.5">
+                  <div className="text-xs text-slate-500">Manager</div>
+                  <div className="signature-line text-lg mt-2 border-b border-slate-400 pr-6">
                     {currentUser?.name || 'Office Desk'}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-slate-500">Driver Signature:</div>
-                  <div className="font-bold mt-4 border-t border-slate-400 pt-0.5">__________________</div>
+                  <div className="text-xs text-slate-500">Driver signature</div>
+                  <div className="mt-6 border-b border-slate-400 w-36" />
                 </div>
               </div>
             </div>
@@ -825,19 +704,18 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <button
                 type="button"
                 onClick={() => window.print()}
-                className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-sm ${activeBtnText}`}
-                style={{ backgroundColor: activeThemeColor }}
+                className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 accent-bg hover:opacity-95"
               >
                 <Printer className="w-4 h-4" />
-                <span>Print Trip Paper</span>
+                <span>{tr('Print Trip Paper')}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSelectedTicketBooking(null)}
-                className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full text-sm font-semibold"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Close
+                {tr('Close')}
               </button>
             </div>
           </div>
@@ -846,36 +724,38 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
       {/* Send SMS Modal */}
       {selectedSMSBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Radio className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Send SMS to Driver</h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {tr('Send SMS to Driver')}
+              </h3>
               <button
+                type="button"
                 onClick={() => setSelectedSMSBooking(null)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {smsSendNotice && (
-              <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 p-3 rounded-xl text-sm font-medium flex items-center gap-2">
+              <div className="bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 shrink-0" />
                 <span>{smsSendNotice}</span>
               </div>
             )}
 
-            <div className="flex items-center justify-between bg-[#f6f9fc] dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
-              <span className="text-[#425466] dark:text-slate-300 font-semibold">Language:</span>
-              <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-full p-1 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between bg-slate-50/90 dark:bg-slate-800/40 p-3 rounded-lg text-xs">
+              <span className="text-slate-600 dark:text-slate-300 font-medium">{tr('Language')}:</span>
+              <div className="inline-flex bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg gap-1">
                 <button
                   type="button"
                   onClick={() => setSmsLanguage('RW')}
-                  className={`px-3.5 py-1 rounded-full text-xs font-bold ${
-                    smsLanguage === 'RW' ? 'bg-emerald-600 text-white' : 'text-[#425466] dark:text-slate-400'
+                  className={`px-3 py-1 rounded-md text-xs font-medium ${
+                    smsLanguage === 'RW'
+                      ? 'accent-bg'
+                      : 'text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   Kinyarwanda
@@ -883,8 +763,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setSmsLanguage('EN')}
-                  className={`px-3.5 py-1 rounded-full text-xs font-bold ${
-                    smsLanguage === 'EN' ? 'bg-blue-600 text-white' : 'text-[#425466] dark:text-slate-400'
+                  className={`px-3 py-1 rounded-md text-xs font-medium ${
+                    smsLanguage === 'EN'
+                      ? 'accent-bg'
+                      : 'text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   English
@@ -898,40 +780,43 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               const smsData =
                 drv && veh
                   ? generateDriverSMS({
+                      booking: selectedSMSBooking,
                       driver: drv,
                       vehicle: veh,
-                      booking: selectedSMSBooking,
                       language: smsLanguage,
                     })
                   : null;
 
               return (
                 <div className="space-y-2">
-                  <div className="text-sm text-[#425466] dark:text-slate-300">
-                    Sending to: <strong className="text-[#0a2540] dark:text-white">{drv?.name} ({drv?.phone})</strong>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    {tr('Sending to')}:{' '}
+                    <strong className="font-semibold text-slate-900 dark:text-white">
+                      {drv?.name} ({drv?.phone})
+                    </strong>
                   </div>
-                  <div className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl font-mono text-xs text-[#0a2540] dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                    {smsData?.messageText || 'Making message...'}
+                  <div className="bg-slate-50/90 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 p-3.5 rounded-lg font-mono text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                    {smsData?.messageText || tr('Making message...')}
                   </div>
                 </div>
               );
             })()}
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setSelectedSMSBooking(null)}
-                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Cancel
+                {tr('Cancel')}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmSendSMS}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-sm font-bold flex items-center gap-1.5 shadow-sm"
+                className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 accent-bg hover:opacity-95"
               >
                 <Send className="w-4 h-4" />
-                <span>Send Text Now</span>
+                <span>{tr('Send Text Now')}</span>
               </button>
             </div>
           </div>
@@ -940,31 +825,31 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
       {/* Driver Phone View (*134#) */}
       {isUSSDSimulatorOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Driver Phone (*134#)</h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-sm w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {tr('Driver Phone (*134#)')}
+              </h3>
               <button
+                type="button"
                 onClick={() => setIsUSSDSimulatorOpen(false)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-sm text-[#425466] dark:text-slate-300">
-              Works on any small button phone with no internet. Driver dials <strong>*134#</strong>.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {tr('Works on any small button phone with no internet. Driver dials *134#.')}
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-[#425466] dark:text-slate-400 font-semibold block">Pick a Trip:</label>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('Pick a Trip')}</label>
               <select
                 value={ussdActiveBookingId}
                 onChange={(e) => handleOpenUSSDForBooking(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-2.5 text-sm"
+                className={inputCls}
               >
                 {bookings.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -974,42 +859,47 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               </select>
             </div>
 
-            <div className="bg-emerald-950 border-2 border-emerald-600 rounded-2xl p-4 font-mono text-xs text-emerald-200 min-h-[150px] whitespace-pre-wrap leading-relaxed">
-              {ussdScreenText || 'Dialing *134#...'}
+            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-300 min-h-[140px] whitespace-pre-wrap leading-relaxed">
+              {ussdScreenText || tr('Dialing *134#...')}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <button
+                type="button"
                 onClick={() => handleSendUSSDCode('1')}
-                className="p-2.5 bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700"
+                className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
               >
-                1. Accept Trip
+                {tr('1. Accept Trip')}
               </button>
               <button
+                type="button"
                 onClick={() => handleSendUSSDCode('2')}
-                className="p-2.5 bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700"
+                className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
               >
-                2. At Airport
+                {tr('2. At Airport')}
               </button>
               <button
+                type="button"
                 onClick={() => handleSendUSSDCode('3')}
-                className="p-2.5 bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700"
+                className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
               >
-                3. Guest in Car
+                {tr('3. Guest in Car')}
               </button>
               <button
+                type="button"
                 onClick={() => handleSendUSSDCode('4')}
-                className="p-2.5 bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-[#0a2540] dark:text-white border border-slate-200 dark:border-slate-700"
+                className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
               >
-                4. Trip Done
+                {tr('4. Trip Done')}
               </button>
             </div>
 
             <button
+              type="button"
               onClick={() => setIsUSSDSimulatorOpen(false)}
-              className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+              className="w-full py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
             >
-              Close
+              {tr('Close')}
             </button>
           </div>
         </div>
@@ -1017,18 +907,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
       {/* Pick Driver Modal */}
       {assignModalBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">
-                  Pick Driver for #{assignModalBooking.id}
+                <User className="w-5 h-5 accent-text" />
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {tr('Pick Driver')} #{assignModalBooking.id}
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setAssignModalBooking(null)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1036,33 +927,42 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
             {assignmentNotice && (
               <div
-                className={`p-3 rounded-xl text-sm font-medium ${
+                className={`p-3 rounded-lg text-xs font-medium ${
                   assignmentNotice.type === 'success'
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300'
-                    : 'bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-300'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300'
                 }`}
               >
                 {assignmentNotice.message}
               </div>
             )}
 
-            <div className="text-sm text-[#425466] dark:text-slate-300 space-y-1 bg-[#f6f9fc] dark:bg-slate-800/70 p-3.5 rounded-xl">
-              <div>Guest: <strong className="text-[#0a2540] dark:text-white">{assignModalBooking.client_name}</strong></div>
-              <div>Place: <strong className="text-[#0a2540] dark:text-white">{assignModalBooking.destination}</strong></div>
-              <div>Dates: <strong className="text-emerald-600 dark:text-emerald-400">{assignModalBooking.start_date} → {assignModalBooking.end_date}</strong></div>
+            <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1 bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-lg">
+              <div>
+                {tr('Guest')}: <strong className="font-semibold text-slate-900 dark:text-white">{assignModalBooking.client_name}</strong>
+              </div>
+              <div>
+                {tr('Place')}: <strong className="font-semibold text-slate-900 dark:text-white">{assignModalBooking.destination}</strong>
+              </div>
+              <div>
+                {tr('Dates')}:{' '}
+                <strong className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  {formatHumanDateRange(assignModalBooking.start_date, assignModalBooking.end_date)}
+                </strong>
+              </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">
-                Choose a Free Driver
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">
+                {tr('Choose a Free Driver')}
               </label>
 
               <select
                 value={selectedDriverToAssign}
                 onChange={(e) => setSelectedDriverToAssign(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-white rounded-xl p-3 text-sm outline-none focus:border-blue-500"
+                className={inputCls}
               >
-                <option value="">-- Choose Driver --</option>
+                <option value="">-- {tr('Choose Driver')} --</option>
                 {drivers.map((drv) => {
                   const collision = checkDriverCollision(
                     drv.id,
@@ -1076,30 +976,29 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                     <option key={drv.id} value={drv.id} disabled={collision.hasCollision}>
                       {drv.name} ({drv.phone}) · {drv.language}
                       {collision.hasCollision
-                        ? ` [Busy: ${collision.conflictingBooking?.client_name || 'Booked'}]`
-                        : ' [Free]'}
+                        ? ` [${tr('Busy')}: ${collision.conflictingBooking?.client_name || tr('Booked')}]`
+                        : ` [${tr('Free')}]`}
                     </option>
                   );
                 })}
               </select>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setAssignModalBooking(null)}
-                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Cancel
+                {tr('Cancel')}
               </button>
               <button
                 type="button"
                 disabled={!selectedDriverToAssign}
                 onClick={handleConfirmAssignDriver}
-                className={`px-5 py-2.5 disabled:opacity-40 rounded-full text-sm font-bold shadow-sm ${activeBtnText}`}
-                style={{ backgroundColor: activeThemeColor }}
+                className="px-5 py-2 disabled:opacity-40 rounded-lg text-sm font-medium accent-bg hover:opacity-95"
               >
-                Save Driver
+                {tr('Save Driver')}
               </button>
             </div>
           </div>
@@ -1108,37 +1007,39 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
       {/* Flight Delay Modal */}
       {flightModalBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <Plane className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-lg font-bold text-[#0a2540] dark:text-white">Flight Late?</h3>
+                <Plane className="w-5 h-5 accent-text" />
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{tr('Flight Late?')}</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setFlightModalBooking(null)}
-                className="text-slate-400 hover:text-[#0a2540] dark:hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-sm text-[#425466] dark:text-slate-300">
-              Flight <strong>{flightModalBooking.flight_number}</strong> is arriving late at Kigali Airport. Tell the driver the new wait time.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {tr('Flight')} <strong className="text-slate-900 dark:text-white">{flightModalBooking.flight_number}</strong> —{' '}
+              {tr('Tell the driver the new wait time at Kigali Airport.')}
             </p>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-[#0a2540] dark:text-slate-200 block">How Many Minutes Late?</label>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('How Many Minutes Late?')}</label>
               <div className="grid grid-cols-4 gap-2">
                 {[15, 30, 45, 60].map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => setDelayMinutes(m)}
-                    className={`py-2.5 rounded-full text-sm font-bold border transition-all ${
+                    className={`py-2 rounded-lg text-xs font-semibold border transition-colors ${
                       delayMinutes === m
-                        ? 'bg-rose-600 text-white border-rose-500 shadow-xs'
-                        : 'bg-[#f6f9fc] dark:bg-slate-800 text-[#0a2540] dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        ? 'bg-rose-600 text-white border-rose-600'
+                        : 'bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     +{m}m
@@ -1147,20 +1048,20 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200/80 dark:border-slate-800">
               <button
                 type="button"
                 onClick={handleClearFlightDelay}
-                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-300 rounded-full text-sm font-semibold"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                On Time Again
+                {tr('On Time Again')}
               </button>
               <button
                 type="button"
                 onClick={handleApplyFlightDelay}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-full text-sm font-bold shadow-sm"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium"
               >
-                Tell Driver (+{delayMinutes}m)
+                {tr('Tell Driver')} (+{delayMinutes}m)
               </button>
             </div>
           </div>

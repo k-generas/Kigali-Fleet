@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Palette, Sun, Moon, Check, X } from 'lucide-react';
 import { ColorTheme, COLOR_THEMES } from '../theme';
+import { useI18n } from '../utils/i18n';
 
 interface ThemeAppearanceMenuProps {
   currentTheme: ColorTheme;
@@ -22,6 +23,7 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
   align = 'right',
   className = '',
 }) => {
+  const { tr } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{
@@ -103,7 +105,7 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
   const popoverContent = (
     <div data-theme-popover="true" className="contents">
       <div
-        className="fixed inset-0 z-[9998] bg-slate-900/50 backdrop-blur-2xs transition-opacity"
+        className="fixed inset-0 z-[9998] bg-slate-950/45 backdrop-blur-[1px]"
         onClick={() => setIsOpen(false)}
         aria-hidden="true"
       />
@@ -111,8 +113,8 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
       <div
         className={
           isMobile
-            ? 'fixed inset-x-0 bottom-0 z-[9999] max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4'
-            : 'fixed z-[9999] w-[340px] max-h-[88vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4'
+            ? 'fixed inset-x-0 bottom-0 z-[9999] max-h-[85vh] overflow-y-auto rounded-t-xl bg-white dark:bg-[#111827] border-t border-slate-200 dark:border-slate-800 kf-modal p-5 space-y-4'
+            : 'fixed z-[9999] w-[340px] max-h-[88vh] overflow-y-auto rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 kf-modal p-5 space-y-4'
         }
         style={
           !isMobile
@@ -124,30 +126,19 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
             : undefined
         }
       >
-        {isMobile && (
-          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-1 mb-2" />
-        )}
-
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-xs"
-              style={{ backgroundColor: currentTheme.hex }}
-            >
-              <Palette className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[#0a2540] dark:text-white">
-                Screen & Colors
-              </h4>
-              <p className="text-sm text-[#425466] dark:text-slate-400">
-                Pick light or dark and your favorite color
-              </p>
-            </div>
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <h4 className="text-base font-semibold text-slate-900 dark:text-white">
+              {tr('Screen & Colors')}
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {tr('Light or dark mode and accent color')}
+            </p>
           </div>
           <button
+            type="button"
             onClick={() => setIsOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -155,25 +146,24 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
         </div>
 
         {/* Light vs Dark */}
-        <div className="space-y-1.5">
-          <span className="text-sm font-bold text-[#0a2540] dark:text-slate-200">
-            Screen Mode
+        <div className="space-y-2">
+          <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+            {tr('Screen Mode')}
           </span>
-          <div className="grid grid-cols-2 gap-2 bg-[#f6f9fc] dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => {
                 if (themeMode !== 'light') onToggleThemeMode();
               }}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-bold transition-all ${
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
                 themeMode === 'light'
-                  ? 'bg-white text-[#0a2540] shadow-xs border border-slate-200'
-                  : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
+                  ? 'bg-slate-900 text-white border-slate-900'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              <Sun className="w-4 h-4 text-amber-500" />
-              <span>Light</span>
-              {themeMode === 'light' && <Check className="w-3.5 h-3.5 text-emerald-600 ml-auto" />}
+              <Sun className="w-4 h-4" />
+              <span>{tr('Light')}</span>
             </button>
 
             <button
@@ -181,80 +171,62 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
               onClick={() => {
                 if (themeMode !== 'dark') onToggleThemeMode();
               }}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-bold transition-all ${
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
                 themeMode === 'dark'
-                  ? 'bg-slate-900 text-white shadow-xs border border-slate-700'
-                  : 'text-[#425466] hover:text-[#0a2540] dark:hover:text-white'
+                  ? 'bg-white text-slate-900 border-white'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              <Moon className="w-4 h-4 text-amber-400" />
-              <span>Dark</span>
-              {themeMode === 'dark' && <Check className="w-3.5 h-3.5 text-emerald-400 ml-auto" />}
+              <Moon className="w-4 h-4" />
+              <span>{tr('Dark')}</span>
             </button>
           </div>
         </div>
 
-        {/* Colors */}
+        {/* 5 Curated Colors */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-[#0a2540] dark:text-slate-200">
-              Pick a Color
-            </span>
-            <span
-              className="text-sm px-2 py-0.5 rounded-full font-semibold truncate max-w-[150px]"
-              style={{
-                backgroundColor: `${currentTheme.hex}20`,
-                color: currentTheme.hex,
-              }}
-            >
-              {currentTheme.name}
-            </span>
-          </div>
+          <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+            {tr('Accent color')}
+          </span>
 
-          <div className="grid grid-cols-2 gap-1.5 max-h-56 sm:max-h-48 overflow-y-auto pr-1">
+          <div className="border border-slate-200/80 dark:border-slate-800 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
             {COLOR_THEMES.map((t) => {
-              const isSelected = t.id === accentColorId;
+              const isSelected = t.id === currentTheme.id;
               return (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => onSelectAccentColor(t.id)}
-                  className={`flex items-center gap-2 p-2 rounded-xl text-left transition-all border ${
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${
                     isSelected
-                      ? 'bg-[#f6f9fc] dark:bg-slate-800 border-slate-300 dark:border-slate-600 shadow-xs'
-                      : 'border-transparent hover:bg-[#f6f9fc] dark:hover:bg-slate-800/50'
+                      ? 'bg-slate-50 dark:bg-slate-800/80 font-medium text-slate-900 dark:text-white'
+                      : 'bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <span
-                    className="w-5 h-5 rounded-lg shrink-0 flex items-center justify-center shadow-xs"
-                    style={{ backgroundColor: t.hex }}
-                  >
-                    {isSelected && (
-                      <Check
-                        className={`w-3 h-3 stroke-[3] ${
-                          t.btnText === 'text-white' ? 'text-white' : 'text-slate-950'
-                        }`}
-                      />
-                    )}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold text-[#0a2540] dark:text-slate-200 truncate">
-                      {t.name}
-                    </div>
-                  </div>
+                    className="w-[18px] h-[18px] rounded-full shrink-0 border border-black/15 dark:border-white/20"
+                    style={{ backgroundColor: themeMode === 'dark' ? t.darkHex : t.hex }}
+                  />
+                  <span className="flex-1">{t.name}</span>
+                  {isSelected && (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium accent-text">
+                      <Check className="w-3.5 h-3.5" />
+                      {tr('Selected')}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="pt-2 flex justify-end">
+        <div className="pt-1 flex justify-end">
           <button
+            type="button"
             onClick={() => setIsOpen(false)}
-            className="px-5 py-2 rounded-full text-sm font-bold text-white shadow-xs transition-opacity hover:opacity-95"
-            style={{ backgroundColor: currentTheme.hex }}
+            className="px-4 py-2 rounded-lg text-sm font-medium accent-bg hover:opacity-95 transition-opacity"
           >
-            Done
+            {tr('Done')}
           </button>
         </div>
       </div>
@@ -272,27 +244,17 @@ export const ThemeAppearanceMenu: React.FC<ThemeAppearanceMenuProps> = ({
           }
           setIsOpen(!isOpen);
         }}
-        className="relative flex items-center justify-center p-2.5 rounded-full bg-[#f6f9fc] dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 transition-all shadow-xs group cursor-pointer"
-        title={`Colors & Screen: ${currentTheme.name} · ${themeMode === 'dark' ? 'Dark' : 'Light'}`}
+        className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+        title={`${tr('Screen & Colors')}: ${currentTheme.name} · ${themeMode === 'dark' ? tr('Dark') : tr('Light')}`}
         aria-label="Screen and color settings"
         aria-expanded={isOpen}
       >
-        <div className="relative flex items-center justify-center">
-          <Palette
-            className="w-4 h-4 transition-transform group-hover:scale-110"
-            style={{ color: currentTheme.hex }}
-          />
-          <span
-            className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full flex items-center justify-center border border-white dark:border-slate-900 shadow-xs"
-            style={{ backgroundColor: themeMode === 'dark' ? '#0f172a' : '#fef08a' }}
-          >
-            {themeMode === 'dark' ? (
-              <Moon className="w-1.5 h-1.5 text-amber-400" />
-            ) : (
-              <Sun className="w-1.5 h-1.5 text-amber-600" />
-            )}
-          </span>
-        </div>
+        <span
+          className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/15 dark:border-white/20"
+          style={{ backgroundColor: themeMode === 'dark' ? currentTheme.darkHex : currentTheme.hex }}
+        />
+        <Palette className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+        <span className="hidden xl:inline">{themeMode === 'dark' ? tr('Dark') : tr('Light')}</span>
       </button>
 
       {isOpen && typeof document !== 'undefined' && createPortal(popoverContent, document.body)}

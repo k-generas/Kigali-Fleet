@@ -22,8 +22,9 @@ import {
   ClipboardCheck,
   CheckSquare,
 } from 'lucide-react';
-import { ColorTheme, COLOR_THEMES } from '../theme';
+import { ColorTheme } from '../theme';
 import { Vehicle, Driver, Booking, User, Company, Customer } from '../types';
+import { useI18n } from '../utils/i18n';
 
 interface SidebarProps {
   currentTab: string;
@@ -64,10 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenNewBooking,
   onOpenStorefront,
   currentTheme,
-  accentColorId,
-  onSelectAccentColor,
   themeMode,
-  onToggleThemeMode,
   onResetDemoData,
   isOpenMobile,
   onCloseMobile,
@@ -78,6 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   currentCompany,
 }) => {
+  const { tr } = useI18n();
   const userRole = currentUser?.role || 'owner';
   const carsInRepair = vehicles.filter((v) => v.status === 'Maintenance').length;
 
@@ -260,35 +259,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const activeThemeObj = COLOR_THEMES.find((t) => t.id === accentColorId) || currentTheme;
+  const activeHex = themeMode === 'dark' ? currentTheme.darkHex : currentTheme.hex;
 
   return (
     <>
       {isOpenMobile && (
         <div
-          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40"
+          className="fixed inset-0 bg-slate-950/50 backdrop-blur-[1px] z-40 lg:hidden"
           onClick={onCloseMobile}
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 flex flex-col bg-white dark:bg-[#0d1424] border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-in-out ${
-          isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        className={`fixed lg:sticky top-0 bottom-0 left-0 z-50 lg:z-20 w-64 lg:h-screen flex flex-col bg-white dark:bg-[#0f172a] border-r border-slate-200/80 dark:border-slate-800 shrink-0 transition-transform duration-200 ${
+          isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Brand Header */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm shadow-xs transition-colors shrink-0 ${activeThemeObj.btnText}`}
-              style={{ backgroundColor: activeThemeObj.hex }}
-            >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center font-semibold text-sm shrink-0 accent-bg shadow-xs">
               KF
             </div>
             <div className="min-w-0">
               <div
-                className="text-base font-bold tracking-tight text-[#0a2540] dark:text-white truncate"
+                className="text-sm font-semibold text-slate-900 dark:text-white truncate"
                 title={currentCompany?.name || 'KigaliFleet'}
               >
                 {isSuperAdminMode
@@ -297,105 +293,90 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ? currentCompany.name.split(' ')[0] + ' Fleet'
                   : 'KigaliFleet'}
               </div>
-              <p className="text-sm text-[#425466] dark:text-slate-400 truncate">
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                 {currentUser
-                  ? `${currentUser.name.split(' ')[0]} · ${PLAIN_ROLE_LABELS[currentUser.role] || currentUser.role}`
-                  : 'Car Rental App'}
+                  ? `${currentUser.name.split(' ')[0]} · ${tr(PLAIN_ROLE_LABELS[currentUser.role] || currentUser.role)}`
+                  : tr('Car Rental App')}
               </p>
             </div>
           </div>
 
           <button
             onClick={onCloseMobile}
-            className="p-2 rounded-lg text-slate-500 hover:text-[#0a2540] dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
             aria-label="Close menu"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Primary Action */}
         {!isSuperAdminMode && (
-          <div className="px-4 py-3.5 border-b border-slate-200/80 dark:border-slate-800/80">
+          <div className="px-3.5 pt-3.5 pb-2">
             <button
               onClick={() => {
                 onOpenNewBooking();
                 if (isOpenMobile) onCloseMobile();
               }}
-              className={`w-full py-2.5 px-4 rounded-full font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] ${activeThemeObj.btnText}`}
-              style={{ backgroundColor: activeThemeObj.hex }}
+              className="w-full py-2 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 accent-bg hover:opacity-95 transition-opacity cursor-pointer shadow-xs"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>New Booking</span>
+              <Plus className="w-4 h-4" />
+              <span>{tr('New Booking')}</span>
             </button>
           </div>
         )}
 
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-1">
-          <div className="px-3 pb-2 text-xs font-semibold text-[#425466] dark:text-slate-400">
-            {isSuperAdminMode ? 'Main Admin' : 'Menu'}
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+          <div className="px-2.5 py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500">
+            {tr(isSuperAdminMode ? 'Main Admin' : 'Menu')}
           </div>
 
-          {superAdminPrimaryNav.map((item) => {
-            const isActive = currentTab === item.id;
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[15px] transition-all ${
-                  isActive
-                    ? 'font-semibold'
-                    : 'font-medium text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/70'
-                }`}
-                style={
-                  isActive
-                    ? {
-                        backgroundColor: `${activeThemeObj.hex}18`,
-                        color: activeThemeObj.hex,
-                      }
-                    : undefined
-                }
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Icon
-                    className="w-[18px] h-[18px] shrink-0"
-                    style={isActive ? { color: activeThemeObj.hex } : undefined}
-                  />
-                  <span className="truncate">{item.label}</span>
-                </div>
+          <div className="space-y-0.5">
+            {superAdminPrimaryNav.map((item) => {
+              const isActive = currentTab === item.id;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors text-left ${
+                    isActive
+                      ? 'font-medium accent-tint accent-text'
+                      : 'font-normal text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon
+                      className="w-4 h-4 shrink-0"
+                      style={isActive ? { color: activeHex } : undefined}
+                    />
+                    <span className="truncate">{tr(item.label)}</span>
+                  </div>
 
-                {item.badge && (
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-mono font-semibold shrink-0 ${
-                      isActive
-                        ? ''
-                        : 'bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300'
-                    }`}
-                    style={
-                      isActive
-                        ? {
-                            backgroundColor: activeThemeObj.hex,
-                            color: activeThemeObj.btnText === 'text-white' ? '#ffffff' : '#0a2540',
-                          }
-                        : undefined
-                    }
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                  {item.badge && (
+                    <span
+                      className={`text-xs font-mono tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
+                        isActive
+                          ? 'bg-white/80 dark:bg-slate-900/60 accent-text font-semibold'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
           {isSuperAdminMode && superAdminTenantNav.length > 0 && (
-            <details className="pt-4 group" open={currentTab !== 'super-admin' && currentTab !== 'landing'}>
-              <summary className="px-3 py-2 text-xs font-semibold text-[#425466] dark:text-slate-400 cursor-pointer list-none flex items-center justify-between hover:text-[#0a2540] dark:hover:text-white">
-                <span>Company View ({currentCompany?.name?.split(' ')[0] || 'Active'})</span>
-                <span className="text-sm font-mono">+</span>
+            <details className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 group" open={currentTab !== 'super-admin' && currentTab !== 'landing'}>
+              <summary className="px-2.5 py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 cursor-pointer list-none flex items-center justify-between hover:text-slate-900 dark:hover:text-white">
+                <span>{currentCompany?.name?.split(' ')[0] || 'Active'}</span>
+                <span className="text-xs font-mono">+</span>
               </summary>
-              <div className="mt-1 space-y-1">
+              <div className="mt-1 space-y-0.5">
                 {superAdminTenantNav.map((item) => {
                   const isActive = currentTab === item.id;
                   const Icon = item.icon;
@@ -403,15 +384,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       key={item.id}
                       onClick={() => handleNavClick(item.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-all ${
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors text-left ${
                         isActive
-                          ? 'font-semibold bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-white'
-                          : 'font-medium text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/70'
+                          ? 'font-medium accent-tint accent-text'
+                          : 'font-normal text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/60'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <Icon className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate">{tr(item.label)}</span>
                       </div>
                     </button>
                   );
@@ -420,35 +401,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </details>
           )}
 
-          <div className="pt-3">
+          <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800">
             <button
               onClick={() => {
                 onOpenStorefront();
                 if (isOpenMobile) onCloseMobile();
               }}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors border border-dashed border-slate-300 dark:border-slate-700"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 transition-colors"
             >
-              <div className="flex items-center gap-3">
-                <Share2 className="w-4 h-4 text-[#425466] dark:text-slate-400" />
-                <span>Share Booking Link</span>
-              </div>
+              <Share2 className="w-4 h-4 shrink-0" style={{ color: activeHex }} />
+              <span className="truncate">{tr('Share Booking Link')}</span>
             </button>
           </div>
         </div>
 
         {/* Footer Controls */}
-        <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-[#f6f9fc] dark:bg-[#0a0f1c] flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-[#425466] dark:text-slate-400 truncate">
-            Kigali, Rwanda
+        <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 flex items-center justify-between gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            {tr('Kigali, Rwanda')}
           </span>
 
           <button
             onClick={onResetDemoData}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-[#425466] hover:text-[#0a2540] dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
             title="Restore sample cars, drivers, and bookings"
           >
-            <RotateCcw className="w-4 h-4" />
-            <span>Start Over</span>
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{tr('Start Over')}</span>
           </button>
         </div>
       </aside>

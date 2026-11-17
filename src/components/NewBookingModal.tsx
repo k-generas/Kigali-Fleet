@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Vehicle, Driver, Booking, MaintenanceRecord } from '../types';
 import { checkBookingCollision, calculateDays, formatRwf, datesOverlap } from '../utils/collision';
-import { X, ShieldAlert, ShieldCheck, Plane, AlertCircle, Compass, Receipt, Wrench } from 'lucide-react';
+import { formatHumanDate } from '../utils/dates';
+import { X, ShieldAlert, ShieldCheck, AlertCircle, Wrench } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { useI18n } from '../utils/i18n';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -20,6 +22,9 @@ interface NewBookingModalProps {
   currentTheme?: ColorTheme;
 }
 
+const inputCls =
+  'w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-slate-400 dark:focus:border-slate-500 transition-colors';
+
 export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   isOpen,
   onClose,
@@ -30,8 +35,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   onSubmitBooking,
   initialVehicleId,
   initialDate,
-  currentTheme,
 }) => {
+  const { formatMoney, tr } = useI18n();
   const defaultStartDate = initialDate || '2026-11-04';
   const defaultEndDate = initialDate || '2026-11-07';
 
@@ -96,9 +101,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     maintenance
   );
 
-  const activeThemeColor = currentTheme?.hex || '#635bff';
-  const activeBtnText = currentTheme?.btnText || 'text-white';
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmissionError(null);
@@ -149,106 +151,105 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const flightPresets = ['WB 402', 'QR 1387', 'ET 807', 'SN 465'];
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 sm:p-7 space-y-5 my-8 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold text-[#0a2540] dark:text-white">Book a Car</h2>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
-              Checks automatically so two people never book the same car on the same day.
+    <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+      >
+        {/* Pinned Top Bar */}
+        <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+              {tr('New Booking')}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {tr('Checks automatically so two people never book the same car on the same day.')}
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-white inline-flex items-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Availability Banner */}
-        {collisionResult.hasCollision ? (
-          <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-700 text-rose-900 dark:text-rose-200 flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-            <div className="text-sm space-y-1">
-              <div className="font-bold">Car Already Booked</div>
-              <p className="leading-relaxed">{collisionResult.conflictReason}</p>
-              <p className="text-rose-700 dark:text-rose-300 text-xs">
-                Pick another car or change the dates above.
-              </p>
+        {/* Scrollable Form Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-sm">
+          {/* Availability Banner */}
+          {collisionResult.hasCollision ? (
+            <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-200 flex items-start gap-2.5">
+              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <div className="font-semibold">Car already booked</div>
+                <p className="text-xs">{collisionResult.conflictReason}</p>
+                <p className="text-xs opacity-90">Pick another car or change the dates below.</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 flex items-center gap-3 text-sm">
-            <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>
-              <strong>Car is Free:</strong> {selectedVehicle?.model_name} is open from {startDate} to {endDate}.
-            </span>
-          </div>
-        )}
+          ) : (
+            <div className="p-3.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-200 flex items-center gap-2.5 text-xs">
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span>
+                <strong className="font-semibold">Car is free:</strong> {selectedVehicle?.model_name} is open{' '}
+                {formatHumanDate(startDate)} to {formatHumanDate(endDate)}.
+              </span>
+            </div>
+          )}
 
-        {submissionError && (
-          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 text-sm flex items-center gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{submissionError}</span>
-          </div>
-        )}
+          {submissionError && (
+            <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-200 flex items-center gap-2 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{submissionError}</span>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-          {/* Dates & Price Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {/* Dates & Car */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">Pickup Date</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                {tr('Pickup Date')}
+              </label>
               <input
                 type="date"
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-mono outline-none focus:border-indigo-500"
+                className={`${inputCls} font-mono`}
               />
             </div>
 
             <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">Return Date</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                {tr('Return Date')} ({tr(`${days} ${days === 1 ? 'day' : 'days'}`)})
+              </label>
               <input
                 type="date"
                 required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-mono outline-none focus:border-indigo-500"
+                className={`${inputCls} font-mono`}
               />
-            </div>
-
-            <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">Days & Total</label>
-              <div className="h-[44px] bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 flex items-center justify-between font-mono text-[#0a2540] dark:text-white">
-                <span className="font-bold" style={{ color: activeThemeColor }}>
-                  {days} {days === 1 ? 'Day' : 'Days'}
-                </span>
-                <span className="font-bold tabular-nums">{formatRwf(totalRwf)}</span>
-              </div>
             </div>
           </div>
 
-          {/* Car */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold">
-                Choose Car ({vehicles.length})
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Choose car ({vehicles.length})
               </label>
               {selectedVehicle?.status === 'Maintenance' && (
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
                   <Wrench className="w-3.5 h-3.5" />
-                  <span>In Repair</span>
+                  <span>In repair</span>
                 </span>
               )}
             </div>
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white outline-none focus:border-indigo-500 font-medium"
+              className={inputCls}
             >
               {vehicles.map((v) => {
                 const isGrounded =
@@ -261,23 +262,22 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                   );
                 return (
                   <option key={v.id} value={v.id}>
-                    {v.model_name} ({v.plate_number}) — {formatRwf(v.daily_rate_rwf)}/day
-                    {isGrounded ? ' [In Repair]' : ''}
+                    {v.model_name}, {v.plate_number} — {formatRwf(v.daily_rate_rwf)}/day
+                    {isGrounded ? ' [In repair]' : ''}
                   </option>
                 );
               })}
             </select>
           </div>
 
-          {/* Driver */}
           <div>
-            <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">
-              Choose Driver ({drivers.length})
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+              Choose driver ({drivers.length})
             </label>
             <select
               value={driverId}
               onChange={(e) => setDriverId(e.target.value)}
-              className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white outline-none focus:border-indigo-500 font-medium"
+              className={inputCls}
             >
               {drivers.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -287,53 +287,50 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </select>
           </div>
 
-          {/* Customer */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">Customer Name</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Customer name</label>
               <input
                 type="text"
                 required
                 placeholder="e.g. Jean Paul or Sarah"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white outline-none focus:border-indigo-500"
+                className={inputCls}
               />
             </div>
             <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">Phone or WhatsApp</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Phone or WhatsApp</label>
               <input
                 type="text"
                 required
                 placeholder="+250 788 123 456"
                 value={clientPhone}
                 onChange={(e) => setClientPhone(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-mono outline-none focus:border-indigo-500"
+                className={`${inputCls} font-mono`}
               />
             </div>
           </div>
 
-          {/* Flight & Trip Route */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5 flex items-center gap-1.5">
-                <Plane className="w-4 h-4" style={{ color: activeThemeColor }} />
-                <span>Flight Number (optional)</span>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                Flight (optional)
               </label>
               <input
                 type="text"
                 placeholder="WB 402 or QR 1387"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-mono uppercase outline-none focus:border-indigo-500"
+                className={`${inputCls} font-mono`}
               />
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
                 {flightPresets.map((fp) => (
                   <button
                     key={fp}
                     type="button"
                     onClick={() => setFlightNumber(fp)}
-                    className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white shrink-0 font-medium"
+                    className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-xs font-mono text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     {fp}
                   </button>
@@ -342,21 +339,21 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">Where are they going?</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Where are they going?</label>
               <input
                 type="text"
                 required
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white outline-none focus:border-indigo-500"
+                className={inputCls}
               />
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-xs">
-                {destinationPresets.slice(0, 2).map((dp) => (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {destinationPresets.slice(0, 3).map((dp) => (
                   <button
                     key={dp}
                     type="button"
                     onClick={() => setDestination(dp)}
-                    className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white truncate max-w-[160px]"
+                    className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-left"
                   >
                     {dp}
                   </button>
@@ -365,10 +362,9 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
           </div>
 
-          {/* Payment & Notes */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">Payment Method</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Payment method</label>
               <select
                 value={paymentMethod}
                 onChange={(e) =>
@@ -376,7 +372,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     e.target.value as 'MTN Mobile Money' | 'Airtel Money' | 'Bank Transfer' | 'Credit Card'
                   )
                 }
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white outline-none focus:border-indigo-500"
+                className={inputCls}
               >
                 <option value="MTN Mobile Money">MTN Mobile Money</option>
                 <option value="Airtel Money">Airtel Money</option>
@@ -386,129 +382,119 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[#0a2540] dark:text-slate-200 font-semibold mb-1.5">Notes (optional)</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Notes (optional)</label>
               <input
                 type="text"
                 placeholder="e.g. Baby seat or roof rack"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white outline-none focus:border-indigo-500"
+                className={inputCls}
               />
             </div>
           </div>
 
-          {/* Price Options */}
-          <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="text-sm font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
-              <Compass className="w-4 h-4" style={{ color: activeThemeColor }} />
-              <span>Extra Trip Options</span>
-            </div>
-
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Extras</label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer">
+              <label className="flex items-start gap-2.5 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/70 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isSafariPeak}
                   onChange={(e) => setIsSafariPeak(e.target.checked)}
-                  className="mt-1 rounded"
+                  className="mt-0.5 rounded"
                 />
                 <div className="text-xs">
-                  <div className="font-semibold text-[#0a2540] dark:text-white">Busy Season</div>
-                  <div className="text-[#425466] dark:text-slate-400">+15% extra</div>
+                  <div className="font-semibold text-slate-900 dark:text-white">{tr('Busy Season')}</div>
+                  <div className="text-slate-500 dark:text-slate-400">+15%</div>
                 </div>
               </label>
 
-              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer">
+              <label className="flex items-start gap-2.5 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/70 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isUpcountry}
                   onChange={(e) => setIsUpcountry(e.target.checked)}
-                  className="mt-1 rounded"
+                  className="mt-0.5 rounded"
                 />
                 <div className="text-xs">
-                  <div className="font-semibold text-[#0a2540] dark:text-white">Outside Kigali</div>
-                  <div className="text-[#425466] dark:text-slate-400">+25,000 RWF / day</div>
+                  <div className="font-semibold text-slate-900 dark:text-white">{tr('Outside Kigali')}</div>
+                  <div className="text-slate-500 dark:text-slate-400">
+                    +{formatMoney(25000)} per day
+                  </div>
                 </div>
               </label>
 
-              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer">
+              <label className="flex items-start gap-2.5 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/70 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={includeVat}
                   onChange={(e) => setIncludeVat(e.target.checked)}
-                  className="mt-1 rounded"
+                  className="mt-0.5 rounded"
                 />
                 <div className="text-xs">
-                  <div className="font-semibold text-[#0a2540] dark:text-white flex items-center gap-1">
-                    <span>18% Tax (VAT)</span>
-                    <Receipt className="w-3.5 h-3.5 text-emerald-500" />
-                  </div>
-                  <div className="text-[#425466] dark:text-slate-400">Official receipt</div>
+                  <div className="font-semibold text-slate-900 dark:text-white">{tr('18% Tax (VAT)')}</div>
+                  <div className="text-slate-500 dark:text-slate-400">{tr('Official receipt')}</div>
                 </div>
               </label>
             </div>
+          </div>
+        </div>
 
-            {/* Price Breakdown */}
-            <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-1.5">
-              <div className="flex justify-between text-[#425466] dark:text-slate-400">
-                <span>Car price ({days} days × {formatRwf(dailyRate)}):</span>
-                <span className="text-[#0a2540] dark:text-white font-semibold">{formatRwf(baseRental)}</span>
-              </div>
-              {isSafariPeak && (
-                <div className="flex justify-between text-amber-600 dark:text-amber-400">
-                  <span>Busy season (+15%):</span>
-                  <span>+{formatRwf(safariSurge)}</span>
-                </div>
-              )}
-              {isUpcountry && (
-                <div className="flex justify-between text-amber-600 dark:text-amber-400">
-                  <span>Driver outside Kigali ({days} days):</span>
-                  <span>+{formatRwf(upcountrySurge)}</span>
-                </div>
-              )}
-              {includeVat && (
-                <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                  <span>18% Tax (VAT):</span>
-                  <span>+{formatRwf(vatRwf)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm font-bold text-[#0a2540] dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
-                <span>Total Price:</span>
-                <span style={{ color: activeThemeColor }}>{formatRwf(totalRwf)}</span>
-              </div>
+        {/* Pinned Bottom Price Breakdown & Actions */}
+        <div className="px-6 py-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 space-y-1.5 shrink-0 text-sm">
+          <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>
+              Car, {days} {days === 1 ? 'day' : 'days'} at {formatMoney(dailyRate)}
+            </span>
+            <span className="font-mono text-slate-800 dark:text-slate-200 tabular-nums">{formatMoney(baseRental)}</span>
+          </div>
+          {isSafariPeak && (
+            <div className="flex justify-between text-xs text-amber-700 dark:text-amber-400">
+              <span>{tr('Busy Season')} (+15%)</span>
+              <span className="font-mono tabular-nums">+{formatMoney(safariSurge)}</span>
             </div>
+          )}
+          {isUpcountry && (
+            <div className="flex justify-between text-xs text-amber-700 dark:text-amber-400">
+              <span>
+                {tr('Outside Kigali')} ({days} {days === 1 ? 'day' : 'days'})
+              </span>
+              <span className="font-mono tabular-nums">+{formatMoney(upcountrySurge)}</span>
+            </div>
+          )}
+          {includeVat && (
+            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span>VAT 18%</span>
+              <span className="font-mono tabular-nums">+{formatMoney(vatRwf)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-base font-semibold text-slate-900 dark:text-white pt-2 mt-1 border-t border-slate-200/80 dark:border-slate-800">
+            <span>{tr('Total')}</span>
+            <span className="font-mono tabular-nums">{formatMoney(totalRwf)}</span>
           </div>
 
-          {/* Actions */}
-          <div className="pt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-800">
-            <div className="text-sm text-[#425466] dark:text-slate-400">
-              Total: <strong className="font-bold text-[#0a2540] dark:text-white font-mono">{formatRwf(totalRwf)}</strong>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-full text-sm font-semibold text-[#425466] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={collisionResult.hasCollision}
-                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all shadow-xs ${
-                  collisionResult.hasCollision
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                    : activeBtnText
-                }`}
-                style={!collisionResult.hasCollision ? { backgroundColor: activeThemeColor } : undefined}
-              >
-                Save Booking
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-2.5 pt-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              {tr('Cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={collisionResult.hasCollision}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-opacity ${
+                collisionResult.hasCollision
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                  : 'accent-bg hover:opacity-95'
+              }`}
+            >
+              Create booking
+            </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 };

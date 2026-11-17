@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kigali Fleet: flat redesign mockups</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+<style>
+:root{--bg:#eceff3;--ink:#14181f;--mute:#5a6472;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#10141b;--ink:#e8ecf3;--mute:#9aa6b8;color-scheme:dark}}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Inter,system-ui,sans-serif}
+.pg{max-width:1000px;margin:0 auto;padding:28px 18px 70px}
+h1{font:600 26px/1.2 Inter;margin:0 0 6px}
+.intro{color:var(--mute);margin:0 0 8px;max-width:64ch}
+h2{font:600 18px/1.3 Inter;margin:44px 0 4px}
+.cap{color:var(--mute);margin:0 0 12px;max-width:68ch;font-size:14px}
+.ov{overflow-x:auto}
+/* app surface */
+.app{background:#fff;color:#14181f;border:1px solid #cfd5dd;border-radius:2px;min-width:720px}
+.app *{margin:0}
+.m{font-variant-numeric:tabular-nums}
+.mu{color:#5a6472}.sm{font-size:13px}
+.hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #cfd5dd}
+.hd b{font-size:20px;font-weight:600}
+.btn{font:600 14px Inter,sans-serif;padding:8px 14px;border-radius:4px;border:1px solid #14181f;background:#fff;color:#14181f}
+.btn.p{background:#1f4fd8;border-color:#1f4fd8;color:#fff}
+.lnk{color:#1f4fd8;font-weight:600;font-size:14px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.ok{color:#1a7f4b}.at{color:#8a4b00}.pr{color:#b3261e}
+.dok{background:#1a7f4b}.dat{background:#c07a00}.dpr{background:#b3261e}
+/* 1 dispatch */
+.row{display:grid;grid-template-columns:150px 1.3fr 1.2fr auto;gap:6px 18px;padding:14px 18px;border-bottom:1px solid #e6e9ee;align-items:start}
+.row .st{font-weight:600;font-size:14px}
+.row .act{display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.sec{padding:12px 18px 6px;font-weight:600;font-size:14px;border-bottom:2px solid #14181f}
+.foot{padding:12px 18px;color:#5a6472;font-size:14px}
+/* 2 cards */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;min-width:720px}
+.car{background:#fff;color:#14181f;border:1px solid #cfd5dd;border-radius:2px}
+.car .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:12px 14px;border-bottom:1px solid #cfd5dd}
+.car .t b{font-weight:600;font-size:16px}.car .t span{font-weight:600;font-size:14px;white-space:nowrap}
+.car dl{display:grid;grid-template-columns:auto 1fr;margin:0}
+.car dt,.car dd{margin:0;padding:7px 14px;border-bottom:1px solid #e6e9ee;font-size:14px}
+.car dt{color:#5a6472}.car dd{text-align:right}
+.car .ft{display:flex}.car .ft button{flex:1;font:600 14px Inter;padding:10px;border:0;border-right:1px solid #e6e9ee;background:#fff;color:#14181f}
+.car .ft button:last-child{background:#14181f;color:#fff;border:0}
+.car .n{padding:8px 14px;font-size:13px;color:#5a6472}
+/* 3 modal */
+.scrim{background:#6b7380;padding:24px;min-width:720px}
+.mod{background:#fff;color:#14181f;max-width:640px;margin:0 auto;border-radius:4px;display:flex;flex-direction:column;height:560px;box-shadow:0 8px 28px rgba(0,0,0,.3)}
+.mod .bd{flex:1;overflow:auto;padding:16px 20px}
+.mod .bar{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid #cfd5dd}
+.mod .bar b{font-size:17px;font-weight:600}
+.mod label{display:block;font-size:13px;color:#5a6472;margin:12px 0 3px}
+.mod .f{border:1px solid #8b94a1;border-radius:3px;padding:7px 10px;font-size:14px;min-height:36px}
+.mod .g2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips span{border:1px solid #cfd5dd;border-radius:3px;padding:3px 8px;font-size:13px}
+.ex{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.ex div{border:1px solid #cfd5dd;border-radius:3px;padding:8px 10px;font-size:14px}
+.mod .tot{border-top:1px solid #cfd5dd;padding:12px 20px;background:#f7f8fa}
+.mod .tot div{display:flex;justify-content:space-between;font-size:14px;padding:1px 0}
+.mod .tot .gt{font-weight:600;font-size:17px;padding-top:6px;margin-top:4px;border-top:1px solid #cfd5dd}
+.mod .acts{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
+/* 4 calendar */
+.cal{display:grid;grid-template-columns:170px repeat(14,1fr)}
+.cal>div{border-bottom:1px solid #e6e9ee}
+.dh{text-align:center;font-size:13px;padding:6px 0;color:#5a6472;border-left:1px solid #eef0f3}
+.dh b{display:block;color:#14181f;font-weight:600;font-size:15px}
+.dh.we,.cell.we{background:#f4f6f9}
+.dh.td b{display:inline-block;background:#14181f;color:#fff;border-radius:50%;width:26px;line-height:26px}
+.lab{padding:10px 14px;border-right:1px solid #cfd5dd}
+.lab b{font-weight:600;display:block}
+.cell{border-left:1px solid #eef0f3;min-height:56px}
+.bar2{grid-row:auto;margin:6px 3px;padding:6px 8px;border-radius:2px;font-size:13px;line-height:1.3;border-left:3px solid;z-index:1;display:flex;flex-direction:column;justify-content:center}
+.bar2 b{font-weight:600}
+.bl{background:#e6edfc;color:#1a3fa8;border-color:#1f4fd8}
+.rd{background:#fbe9e7;color:#8f1f18;border-color:#b3261e}
+.lg{display:flex;gap:18px;padding:10px 18px;font-size:13px;color:#5a6472;flex-wrap:wrap}
+/* 5 dashboard */
+.att{border-bottom:1px solid #cfd5dd}
+.att div{display:flex;justify-content:space-between;gap:14px;padding:10px 18px;border-top:1px solid #e6e9ee;font-size:15px}
+.att .h{font-weight:600;border-top:0;padding-bottom:4px}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:0 28px;padding:18px}
+.kp>div{border-top:2px solid #14181f;padding-top:8px}
+.kp small{display:block;color:#5a6472;font-size:13px}
+.kp b{font-size:28px;font-weight:600}.kp b i{font:400 14px Inter;color:#5a6472;font-style:normal}
+.kp p{color:#5a6472;font-size:13px}
+table.bk{width:100%;border-collapse:collapse}
+table.bk th{text-align:left;font-weight:600;font-size:13px;color:#5a6472;padding:8px 18px;border-bottom:2px solid #14181f}
+table.bk td{padding:9px 18px;border-bottom:1px solid #e6e9ee;font-size:14px}
+.nt{margin-top:34px;color:var(--mute);font-size:14px;max-width:68ch}
+</style>
+</head>
+<body>
+<div class="pg">
+<h1>Kigali Fleet, redesigned</h1>
+<p class="intro">Five screens rebuilt with the same data. Rules used everywhere: 2 px corners, one outer line and hairlines inside, no shadows, no truncated words, one filled button per area, status as a dot plus a word. Scroll sideways on a phone.</p>
+
+<h2>1. Send Drivers: one list, sorted by urgency</h2>
+<p class="cap">Replaces five columns, three of them empty. Every name, route and booking number is shown in full.</p>
+<div class="ov"><div class="app">
+<div class="hd"><b>Send drivers</b><span class="sm mu">3 bookings need action</span></div>
+<div class="sec">Needs action (3)</div>
+<div class="row"><div><div class="st at"><span class="dot dat"></span>Waiting for reply</div><div class="m sm mu">bk-2026-087</div></div>
+<div><b style="font-weight:600">Marcus Vance &amp; Expeditions</b><div class="sm mu">Akagera National Park, game drive</div></div>
+<div><div>Patrick Habimana <span class="sm mu">EN/RW</span></div><div class="m sm mu">+250 788 777 901</div></div>
+<div class="act"><span class="lnk">Phone *134#</span><span class="lnk">Switch driver</span><button class="btn p">Send SMS again</button></div></div>
+<div class="row"><div><div class="st at"><span class="dot dat"></span>Waiting for reply</div><div class="m sm mu">bk-2026-091</div></div>
+<div><b style="font-weight:600">Rwanda Development Board</b><div class="sm mu">Kigali Airport to Kigali Hotel</div></div>
+<div><div>Diane Mutoni <span class="sm mu">EN/RW</span></div><div class="m sm mu">+250 782 111 445</div></div>
+<div class="act"><span class="lnk">Phone *134#</span><span class="lnk">Switch driver</span><button class="btn p">Send SMS again</button></div></div>
+<div class="row"><div><div class="st ok"><span class="dot dok"></span>Driver at pickup</div><div class="m sm mu">bk-2026-089</div></div>
+<div><b style="font-weight:600">Dr. Sarah Jenkins (UNHCR Regional)</b><div class="sm mu">Musanze, Volcanoes National Park</div></div>
+<div><div>Emmanuel Nshimiyimana <span class="m sm mu">RAD 450 B</span></div><div class="sm">Flight WB 402 (RwandAir): <span class="ok" style="font-weight:600">on time</span></div></div>
+<div class="act"><span class="lnk">Call driver</span><button class="btn p">Guest is in the car</button></div></div>
+<div class="foot">On the road: none. Finished today: none.</div>
+</div></div>
+
+<h2>2. Car cards: a flat list of facts</h2>
+<p class="cap">Three states side by side. Dates are written out and never cut off; only the last button is filled.</p>
+<div class="ov"><div class="cards">
+<div class="car"><div class="t"><b>Toyota Land Cruiser Prado TXL</b><span class="at"><span class="dot dat"></span>Booked</span></div>
+<dl><dt>Plate</dt><dd class="m">RAD 450 B</dd><dt>Driver</dt><dd>Emmanuel Nshimiyimana</dd><dt>Safety check</dt><dd class="at" style="font-weight:600">Expires in 9 days</dd><dt>Insurance</dt><dd class="at" style="font-weight:600">Expires in 4 days</dd><dt>Daily rate</dt><dd class="m">180,000 RWF</dd></dl>
+<div class="n">68,450 km. Checkup due at 70,000 km.</div>
+<div class="ft"><button>Repair</button><button>Details</button><button>Book</button></div></div>
+<div class="car"><div class="t"><b>Toyota Land Cruiser V8 VIP</b><span class="ok"><span class="dot dok"></span>Ready</span></div>
+<dl><dt>Plate</dt><dd class="m">RAE 109 M</dd><dt>Driver</dt><dd>Jean-Paul Mugisha</dd><dt>Safety check</dt><dd>Valid to 30 Jan 2027</dd><dt>Insurance</dt><dd>Valid to 14 Feb 2027</dd><dt>Daily rate</dt><dd class="m">220,000 RWF</dd></dl>
+<div class="n">41,200 km. Kigali Marriott Hub.</div>
+<div class="ft"><button>Repair</button><button>Details</button><button>Book</button></div></div>
+<div class="car"><div class="t"><b>Toyota RAV4 AWD 2022</b><span class="ok"><span class="dot dok"></span>Ready</span></div>
+<dl><dt>Plate</dt><dd class="m">RAC 812 K</dd><dt>Driver</dt><dd>Claudine Uwase</dd><dt>Safety check</dt><dd class="pr" style="font-weight:600">Expired 12 Mar 2026</dd><dt>Insurance</dt><dd class="pr" style="font-weight:600">Expired 2 Apr 2026</dd><dt>Daily rate</dt><dd class="m">65,000 RWF</dd></dl>
+<div class="n">52,180 km. Kigali Airport Station.</div>
+<div class="ft"><button>Repair</button><button>Details</button><button>Book</button></div></div>
+</div></div>
+
+<h2>3. New booking: the total never leaves the screen</h2>
+<p class="cap">The form scrolls; the price and the Create booking button stay pinned at the bottom. Suggestion chips wrap instead of truncating.</p>
+<div class="ov"><div class="scrim"><div class="mod">
+<div class="bar"><b>New booking</b><span class="mu">Close</span></div>
+<div class="bd">
+<div class="g2"><div><label>Car</label><div class="f">Toyota RAV4 AWD, RAC 812 K</div></div><div><label>Dates</label><div class="f">18 Nov to 22 Nov (4 days)</div></div></div>
+<label>Driver</label><div class="f">Jean-Paul Mugisha<div class="sm mu">EN/RW, +250 788 555 123, available</div></div>
+<div class="g2"><div><label>Customer name</label><div class="f mu">e.g. Jean Paul or Sarah</div></div><div><label>Phone or WhatsApp</label><div class="f m">+250 78</div></div></div>
+<div class="g2"><div><label>Flight (optional)</label><div class="f mu m">WB 402 or QR 1387</div><div class="chips"><span>WB 402</span><span>QR 1387</span><span>ET 807</span><span>SN 465</span></div></div>
+<div><label>Where are they going?</label><div class="f">Kigali Airport to Kigali Hotel</div><div class="chips"><span>Kigali Airport to Kigali Hotel</span><span>Kigali to Musanze, Volcanoes National Park</span></div></div></div>
+<div class="g2"><div><label>Payment</label><div class="f">MTN Mobile Money</div></div><div><label>Notes (optional)</label><div class="f mu">e.g. Baby seat or roof rack</div></div></div>
+<label>Extras</label><div class="ex"><div>Busy season<div class="sm mu">+15%</div></div><div>Outside Kigali<div class="sm mu">+25,000 RWF per day</div></div><div>VAT 18%<div class="sm mu">Official receipt</div></div></div>
+</div>
+<div class="tot"><div><span>Car, 4 days at 180,000 RWF</span><span class="m">720,000 RWF</span></div><div><span>VAT 18%</span><span class="m">129,600 RWF</span></div><div class="gt"><span>Total</span><span class="m">849,600 RWF</span></div>
+<div class="acts"><button class="btn">Cancel</button><button class="btn p">Create booking</button></div></div>
+</div></div></div>
+
+<h2>4. Trip calendar: fewer controls, full words on every bar</h2>
+<p class="cap">Month, range and search are all that show by default; car and type pickers live under Filters. Bars say what they mean, and repair is part of the legend.</p>
+<div class="ov"><div class="app" style="min-width:860px">
+<div class="hd"><b>Trip calendar</b><span style="display:flex;gap:10px"><button class="btn">Block car</button><button class="btn p">New booking</button></span></div>
+<div class="hd" style="font-size:14px"><span style="display:flex;gap:16px;align-items:center"><b style="font-size:16px">Nov 2026</b><span class="lnk">Today</span><span>Week</span><span style="font-weight:600;border-bottom:2px solid #14181f">Fortnight</span><span>Month</span></span><span style="display:flex;gap:14px;align-items:center"><span class="mu">Search plate or car</span><span class="btn">Filters (2)</span></span></div>
+<div class="sm mu" style="padding:8px 18px;border-bottom:1px solid #e6e9ee">Booked 6% this month. No double bookings.</div>
+<div class="cal" id="cal"></div>
+<div class="lg"><span><span class="dot" style="background:#1f4fd8"></span>Booked</span><span><span class="dot dok"></span>Done</span><span><span class="dot dat"></span>On trip</span><span><span class="dot dpr"></span>In repair</span></div>
+</div></div>
+
+<h2>5. Dashboard: what needs attention first</h2>
+<p class="cap">One title, one main button. Problems come first, then three plain numbers with no card borders.</p>
+<div class="ov"><div class="app">
+<div class="hd"><b>Dashboard</b><button class="btn p">New booking</button></div>
+<div class="att"><div class="h">Needs attention</div>
+<div><span><span class="dot dpr"></span>Mercedes-Benz E-Class E250 (RAE 550 L) is in the garage. Nobody can book it.</span><span class="lnk">See repairs</span></div>
+<div><span><span class="dot dpr"></span>RwandAir WB 402 is 35 minutes late. Dr. Jenkins is waiting at pickup.</span><span class="lnk">Call driver</span></div>
+<div><span><span class="dot dat"></span>Insurance for RAD 450 B expires in 4 days.</span><span class="lnk">Open car</span></div></div>
+<div class="kp">
+<div><small>Cars on trips</small><b>2 <i>of 7</i></b><p>4 free, 1 in repair</p></div>
+<div><small>Money earned today</small><b class="m">1,950,000 <i>RWF</i></b><p>1,320,000 RWF paid</p></div>
+<div><small>Drivers ready</small><b>3 <i>of 5</i></b><p>2 driving, 0 off duty</p></div></div>
+<table class="bk"><tr><th>Guest</th><th>Car and driver</th><th>Dates</th><th style="text-align:right">Price</th></tr>
+<tr><td>Dr. Sarah Jenkins</td><td>Land Cruiser Prado, Emmanuel</td><td>16 to 20 Nov</td><td class="m" style="text-align:right">900,000 RWF</td></tr>
+<tr><td>Marcus Vance &amp; Expeditions</td><td>Blueberry 4x4, Patrick</td><td>18 to 22 Nov</td><td class="m" style="text-align:right">300,000 RWF</td></tr>
+<tr><td>Rwanda Development Board</td><td>Clifford Bus, Diane</td><td>22 to 24 Nov</td><td class="m" style="text-align:right">750,000 RWF</td></tr></table>
+</div></div>
+
+<p class="nt">Notes: names, prices and routes are taken from your screenshots; dates and the late-flight alert are illustrative. Next step would be turning one of these into working code for your app.</p>
+</div>
+<script>
+(function(){
+var el=document.getElementById('cal'),W='MTWTFSS',h='<div></div>';
+for(var i=0;i<14;i++){var d=16+i,w=i%7,we=w>=5;h+='<div class="dh'+(we?' we':'')+(i===0?' td':'')+'">'+W[w]+'<b>'+d+'</b></div>'}
+var rows=[['Karisimbi 4x4','RAD 450 B','180k',1,5,'bl','5 days','900,000 RWF, Dr. Jenkins'],['Black Stallion','RAE 109 M','220k'],['Blanco Hybrid','RAC 812 K','65k',1,3,'rd','In repair','until 18 Nov'],['Blueberry 4x4','RAF 672 P','60k',3,5,'bl','5 days','300,000 RWF, Marcus'],['Clifford Bus','RAG 334 C','250k',7,3,'bl','3 days','750,000 RWF']];
+rows.forEach(function(r,ri){
+h+='<div class="lab" style="grid-row:'+(ri+2)+';grid-column:1"><b>'+r[0]+'</b><span class="m sm mu">'+r[1]+'</span> <span class="sm mu">'+r[2]+' per day</span></div>';
+for(var i=0;i<14;i++){h+='<div class="cell'+((i%7>=5)?' we':'')+'" style="grid-row:'+(ri+2)+';grid-column:'+(i+2)+'"></div>'}
+if(r[3])h+='<div class="bar2 '+r[5]+'" style="grid-row:'+(ri+2)+';grid-column:'+(r[3]+1)+' / span '+r[4]+'"><b>'+r[6]+'</b>'+r[7]+'</div>';
+});
+el.innerHTML=h;
+})();
+</script>
+</body>
+</html>

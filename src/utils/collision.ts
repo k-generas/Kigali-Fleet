@@ -1,4 +1,5 @@
 import { Booking, Driver, Vehicle, VehicleCategory, MaintenanceRecord } from '../types';
+import { formatCurrency } from './i18n';
 
 /**
  * Checks whether two inclusive date strings (YYYY-MM-DD) overlap
@@ -184,13 +185,10 @@ export function calculateDays(startDate: string, endDate: string): number {
 }
 
 /**
- * Formats Rwandan Franc amounts consistently with commas
+ * Formats amounts using active global currency (RWF or USD)
  */
 export function formatRwf(amount: number): string {
-  return new Intl.NumberFormat('en-RW', {
-    style: 'decimal',
-    maximumFractionDigits: 0,
-  }).format(amount) + ' RWF';
+  return formatCurrency(amount);
 }
 
 /**

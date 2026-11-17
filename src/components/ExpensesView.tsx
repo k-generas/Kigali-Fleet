@@ -9,16 +9,9 @@ import {
   User,
 } from '../types';
 import { ColorTheme } from '../theme';
-import { formatRwf } from '../utils/collision';
-import {
-  DollarSign,
-  Plus,
-  TrendingUp,
-  Clock,
-  Search,
-  Check,
-  X,
-} from 'lucide-react';
+import { Plus, Search, X, TrendingUp, TrendingDown, DollarSign, Clock } from 'lucide-react';
+import { useI18n } from '../utils/i18n';
+import { formatHumanDate } from '../utils/dates';
 
 interface ExpensesViewProps {
   expenses: ExpenseRecord[];
@@ -34,15 +27,15 @@ interface ExpensesViewProps {
 
 const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: 'Fuel & Gas', label: 'Fuel' },
-  { value: 'Routine Service', label: 'Regular Checkup' },
-  { value: 'Repairs & Parts', label: 'Repairs & Parts' },
-  { value: 'Insurance (Yellow Card)', label: 'Car Insurance' },
-  { value: 'Contrôle Technique Prep', label: 'Safety Inspection' },
-  { value: 'Driver Per-Diem', label: 'Driver Food & Stay' },
-  { value: 'Parking & Airport Fees', label: 'Parking & Airport' },
-  { value: 'Vehicle Wash & Detail', label: 'Car Wash' },
-  { value: 'Office & Admin', label: 'Office Costs' },
-  { value: 'Taxes & Licenses', label: 'Taxes & Permits' },
+  { value: 'Routine Service', label: 'Regular checkup' },
+  { value: 'Repairs & Parts', label: 'Repairs & parts' },
+  { value: 'Insurance (Yellow Card)', label: 'Car insurance' },
+  { value: 'Contrôle Technique Prep', label: 'Safety inspection' },
+  { value: 'Driver Per-Diem', label: 'Driver food & stay' },
+  { value: 'Parking & Airport Fees', label: 'Parking & airport' },
+  { value: 'Vehicle Wash & Detail', label: 'Car wash' },
+  { value: 'Office & Admin', label: 'Office costs' },
+  { value: 'Taxes & Licenses', label: 'Taxes & permits' },
   { value: 'Other', label: 'Other' },
 ];
 
@@ -55,12 +48,11 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
   bookings,
   payments,
   currentUser,
-  currentTheme,
   onAddExpense,
   onUpdateExpenseStatus,
   onDeleteExpense,
 }) => {
-  const activeColor = currentTheme?.hex || '#635bff';
+  const { currency, formatMoney, tr } = useI18n();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
@@ -173,109 +165,137 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="stripe-card flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl">
-        <div className="flex items-start gap-3.5">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0"
-            style={{ backgroundColor: activeColor }}
-          >
-            <DollarSign className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0a2540] dark:text-white">
-              Costs & Profit
-            </h1>
-            <p className="text-base text-[#425466] dark:text-slate-300 mt-1">
-              Write down fuel, repairs, and driver costs to see how much profit each car makes.
-            </p>
-          </div>
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {tr('Costs & Profit')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('Write down fuel, repairs, and driver costs to see how much profit each car makes.')}
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700 text-sm font-bold">
-            <button
-              onClick={() => setActiveTab('expenses')}
-              className={`px-4 py-2 rounded-full transition-colors ${
-                activeTab === 'expenses'
-                  ? 'bg-white dark:bg-slate-900 text-[#0a2540] dark:text-white shadow-xs'
-                  : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-              }`}
-            >
-              All Costs ({expenses.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('profitability')}
-              className={`px-4 py-2 rounded-full transition-colors ${
-                activeTab === 'profitability'
-                  ? 'bg-white dark:bg-slate-900 text-[#0a2540] dark:text-white shadow-xs'
-                  : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-              }`}
-            >
-              Profit Per Car
-            </button>
-          </div>
-
-          <button
-            onClick={() => setIsNewExpenseOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-bold shadow-sm hover:opacity-95 transition-opacity"
-            style={{ backgroundColor: activeColor }}
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Add Cost</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsNewExpenseOpen(true)}
+          className="accent-bg inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:opacity-95 transition-opacity shrink-0 shadow-xs"
+        >
+          <Plus className="w-4 h-4" />
+          <span>{tr('Add Cost')}</span>
+        </button>
       </div>
 
-      {/* 4 Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Money In</span>
-          <div className="text-xl sm:text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-            {formatRwf(totalRevenueRwf)}
+      {/* 4-Card KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Money in')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-4 h-4" />
+            </span>
           </div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Paid by guests</span>
+          <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 mt-2 font-mono tabular-nums">
+            {formatMoney(totalRevenueRwf)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {tr('paid by guests')}
+          </p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Money Spent</span>
-          <div className="text-xl sm:text-2xl font-extrabold font-mono text-rose-600 dark:text-rose-400">
-            {formatRwf(totalExpensesRwf)}
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Money spent')}</span>
+            <span className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <TrendingDown className="w-4 h-4" />
+            </span>
           </div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Fuel, repairs & staff</span>
+          <div className="text-2xl font-semibold text-rose-600 dark:text-rose-400 mt-2 font-mono tabular-nums">
+            {formatMoney(totalExpensesRwf)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {tr('fuel, repairs & staff')}
+          </p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Money Left</span>
-          <div className="text-xl sm:text-2xl font-extrabold font-mono text-[#0a2540] dark:text-white">
-            {formatRwf(netOperatingMarginRwf)}
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Money left')}</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4" />
+            </span>
           </div>
-          <div className="flex items-center gap-1 text-sm text-emerald-700 dark:text-emerald-400 font-bold">
-            <TrendingUp className="w-4 h-4" />
-            <span>{marginPercentage}% profit</span>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 font-mono tabular-nums">
+            {formatMoney(netOperatingMarginRwf)}
           </div>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1.5">
+            {marginPercentage}% {tr('profit')} margin
+          </p>
         </div>
 
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-1">
-          <span className="text-sm font-semibold text-[#425466] dark:text-slate-400">Waiting Check</span>
-          <div className="text-xl sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Waiting check</span>
+            <span className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400 mt-2 tabular-nums">
             {pendingApprovalCount}
           </div>
-          <span className="text-sm text-[#425466] dark:text-slate-400">Needs approval</span>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Costs awaiting approval
+          </p>
         </div>
       </div>
 
-      {/* Tab 1: Cost List */}
-      {activeTab === 'expenses' && (
-        <div className="space-y-4">
-          <div className="stripe-card flex flex-col md:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+      {/* Main Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setActiveTab('expenses')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                activeTab === 'expenses'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {tr('All costs')} ({expenses.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('profitability')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                activeTab === 'profitability'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {tr('Profit per car')}
+            </button>
+          </div>
+
+          {activeTab === 'expenses' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search item, shop or plate"
+                  className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg pl-9 pr-3 py-1.5 w-52 outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+                />
+              </div>
+
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-[#0a2540] dark:text-slate-200 rounded-xl p-2.5 font-medium"
+                className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg px-3 py-1.5 outline-none cursor-pointer"
               >
-                <option value="All">All Types ({expenses.length})</option>
+                <option value="All">All types ({expenses.length})</option>
                 {EXPENSE_CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>
                     {cat.label}
@@ -286,9 +306,9 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
               <select
                 value={selectedVehicleId}
                 onChange={(e) => setSelectedVehicleId(e.target.value)}
-                className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-[#0a2540] dark:text-slate-200 rounded-xl p-2.5 font-medium"
+                className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg px-3 py-1.5 outline-none cursor-pointer"
               >
-                <option value="All">All Cars</option>
+                <option value="All">All cars</option>
                 {vehicles.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.plate_number} — {v.model_name}
@@ -299,247 +319,243 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-[#0a2540] dark:text-slate-200 rounded-xl p-2.5 font-medium"
+                className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg px-3 py-1.5 outline-none cursor-pointer"
               >
-                <option value="All">All Statuses</option>
+                <option value="All">All statuses</option>
                 <option value="Pending">Waiting</option>
                 <option value="Approved">Approved</option>
                 <option value="Paid">Paid</option>
               </select>
             </div>
-
-            <div className="relative w-full md:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search item, shop, or plate..."
-                className="w-full pl-10 pr-3 py-2.5 bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-[#0a2540] dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-5 py-3.5 bg-[#f6f9fc] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-400 text-xs font-bold uppercase">
-              <div className="lg:col-span-3">Item & Shop</div>
-              <div className="lg:col-span-2">Type</div>
-              <div className="lg:col-span-2">Car</div>
-              <div className="lg:col-span-2">Cost & Date</div>
-              <div className="lg:col-span-1 text-center">Status</div>
-              <div className="lg:col-span-2 text-right">Action</div>
-            </div>
-
-            <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
-              {filteredExpenses.map((exp) => (
-                <div
-                  key={exp.id}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-5 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors"
-                >
-                  <div className="lg:col-span-3 min-w-0">
-                    <div className="font-bold text-[#0a2540] dark:text-white truncate">{exp.title}</div>
-                    {(exp.supplier_name || exp.receipt_ref) && (
-                      <div className="text-xs text-[#425466] dark:text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
-                        {exp.supplier_name && <span className="truncate">{exp.supplier_name}</span>}
-                        {exp.receipt_ref && <span className="font-mono shrink-0">· #{exp.receipt_ref}</span>}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="lg:col-span-2 min-w-0">
-                    <span className="inline-block px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-200 font-semibold text-xs whitespace-nowrap">
-                      {getFriendlyCategory(exp.category)}
-                    </span>
-                  </div>
-
-                  <div className="lg:col-span-2 min-w-0">
-                    {exp.vehicle_plate ? (
-                      <span className="font-mono font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
-                        {exp.vehicle_plate}
-                      </span>
-                    ) : (
-                      <span className="text-[#425466] dark:text-slate-400">General</span>
-                    )}
-                  </div>
-
-                  <div className="lg:col-span-2 min-w-0">
-                    <div className="font-mono font-bold text-[#0a2540] dark:text-white whitespace-nowrap tabular-nums">
-                      {formatRwf(exp.amount_rwf)}
-                    </div>
-                    <div className="text-xs text-[#425466] dark:text-slate-400 font-mono mt-0.5 whitespace-nowrap tabular-nums">
-                      {exp.date}
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-1 flex lg:justify-center">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                        exp.status === 'Paid'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30'
-                          : exp.status === 'Approved'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30'
-                          : exp.status === 'Pending'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
-                          : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30'
-                      }`}
-                    >
-                      {exp.status === 'Paid' && <Check className="w-3.5 h-3.5 shrink-0" />}
-                      {exp.status === 'Pending' && <Clock className="w-3.5 h-3.5 shrink-0" />}
-                      <span>{exp.status === 'Pending' ? 'Waiting' : exp.status}</span>
-                    </span>
-                  </div>
-
-                  <div className="lg:col-span-2 flex items-center lg:justify-end gap-2">
-                    {canApprove && exp.status === 'Pending' && (
-                      <button
-                        onClick={() => onUpdateExpenseStatus(exp.id, 'Approved', currentUser?.name)}
-                        className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 hover:bg-blue-100 text-blue-700 dark:text-blue-300 font-semibold text-xs whitespace-nowrap"
-                      >
-                        Approve
-                      </button>
-                    )}
-
-                    {canApprove && exp.status === 'Approved' && (
-                      <button
-                        onClick={() => onUpdateExpenseStatus(exp.id, 'Paid', currentUser?.name)}
-                        className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-semibold text-xs whitespace-nowrap"
-                      >
-                        Mark Paid
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => onDeleteExpense(exp.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                      title="Delete"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {filteredExpenses.length === 0 && (
-                <div className="text-center py-10 text-[#425466] dark:text-slate-400 text-base">
-                  No costs match your search.
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Tab 2: Profit Per Car */}
-      {activeTab === 'profitability' && (
-        <div className="stripe-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden p-6 space-y-4">
-          <div>
-            <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">Profit Per Car</h2>
-            <p className="text-sm text-[#425466] dark:text-slate-400">
+        {/* Tab 1: All Costs Table */}
+        {activeTab === 'expenses' && (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm min-w-[820px]">
+              <thead>
+                <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                  <th className="py-3 px-4">Item & shop</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">Car</th>
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4 text-right">Cost</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                {filteredExpenses.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 px-4 text-center text-slate-500 dark:text-slate-400">
+                      No costs match your search.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredExpenses.map((exp) => {
+                    const textClass =
+                      exp.status === 'Paid'
+                        ? 'text-emerald-700 dark:text-emerald-400'
+                        : exp.status === 'Approved'
+                        ? 'text-blue-700 dark:text-blue-400'
+                        : exp.status === 'Pending'
+                        ? 'text-amber-700 dark:text-amber-400'
+                        : 'text-rose-700 dark:text-rose-400';
+
+                    return (
+                      <tr
+                        key={exp.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors"
+                      >
+                        <td className="py-3.5 px-4">
+                          <div className="font-medium text-slate-900 dark:text-white">{exp.title}</div>
+                          {(exp.supplier_name || exp.receipt_ref) && (
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {exp.supplier_name}
+                              {exp.receipt_ref ? ` · #${exp.receipt_ref}` : ''}
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 dark:text-slate-300">
+                          {getFriendlyCategory(exp.category)}
+                        </td>
+
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {exp.vehicle_plate ? (
+                            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs font-medium text-slate-700 dark:text-slate-200">
+                              {exp.vehicle_plate}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500">General</span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400 tabular-nums">
+                          {formatHumanDate(exp.date)}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 dark:text-white whitespace-nowrap tabular-nums">
+                          {formatMoney(exp.amount_rwf)}
+                        </td>
+
+                        <td className={`py-3.5 px-4 font-medium text-xs whitespace-nowrap ${textClass}`}>
+                          {exp.status === 'Pending' ? 'Waiting' : exp.status}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2">
+                            {canApprove && exp.status === 'Pending' && (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateExpenseStatus(exp.id, 'Approved', currentUser?.name)}
+                                className="accent-tint accent-text px-2.5 py-1 rounded-md text-xs font-medium hover:opacity-90"
+                              >
+                                Approve
+                              </button>
+                            )}
+
+                            {canApprove && exp.status === 'Approved' && (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateExpenseStatus(exp.id, 'Paid', currentUser?.name)}
+                                className="px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100"
+                              >
+                                Mark paid
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => onDeleteExpense(exp.id)}
+                              className="px-2.5 py-1 rounded-md text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab 2: Profit Per Car Table */}
+        {activeTab === 'profitability' && (
+          <div className="overflow-x-auto">
+            <div className="px-5 py-3 bg-slate-50/70 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
               Money each car earned minus fuel, repairs, insurance, and driver costs.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="hidden lg:grid lg:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[#425466] dark:text-slate-400 text-xs font-bold uppercase">
-              <div className="lg:col-span-3">Car</div>
-              <div className="lg:col-span-1 text-center">Trips</div>
-              <div className="lg:col-span-2 text-right">Money In</div>
-              <div className="lg:col-span-2 text-right">Money Spent</div>
-              <div className="lg:col-span-2 text-right">Money Left</div>
-              <div className="lg:col-span-2 text-right">Profit %</div>
             </div>
-            <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
-              {vehicleProfitability.map((row) => (
-                <div
-                  key={row.vehicle.id}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center px-4 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40"
-                >
-                  <div className="lg:col-span-3 min-w-0">
-                    <div className="font-bold text-[#0a2540] dark:text-white truncate">{row.vehicle.model_name}</div>
-                    <div className="flex items-center gap-2 text-xs mt-0.5">
-                      <span className="font-mono font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
-                        {row.vehicle.plate_number}
-                      </span>
-                      <span className="text-[#425466] dark:text-slate-400 truncate">· {row.vehicle.category}</span>
-                    </div>
-                  </div>
+            <table className="w-full border-collapse text-sm min-w-[780px]">
+              <thead>
+                <tr className="bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                  <th className="py-3 px-4">Car</th>
+                  <th className="py-3 px-4 text-right">Trips</th>
+                  <th className="py-3 px-4 text-right">Money in</th>
+                  <th className="py-3 px-4 text-right">Money spent</th>
+                  <th className="py-3 px-4 text-right">Money left</th>
+                  <th className="py-3 px-4 text-right">Profit %</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                {vehicleProfitability.map((row) => (
+                  <tr
+                    key={row.vehicle.id}
+                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors"
+                  >
+                    <td className="py-3.5 px-4">
+                      <div className="font-medium text-slate-900 dark:text-white">
+                        {row.vehicle.model_name}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <span className="font-mono">{row.vehicle.plate_number}</span> · {row.vehicle.category}
+                      </div>
+                    </td>
 
-                  <div className="lg:col-span-1 lg:text-center font-mono font-semibold text-[#0a2540] dark:text-white">
-                    {row.tripsCount} trips
-                  </div>
+                    <td className="py-3.5 px-4 text-right font-mono text-slate-900 dark:text-white whitespace-nowrap tabular-nums">
+                      {row.tripsCount}
+                    </td>
 
-                  <div className="lg:col-span-2 lg:text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap tabular-nums">
-                    {formatRwf(row.revenue)}
-                  </div>
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap tabular-nums">
+                      {formatMoney(row.revenue)}
+                    </td>
 
-                  <div className="lg:col-span-2 lg:text-right font-mono font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap tabular-nums">
-                    {formatRwf(row.expenses)}
-                  </div>
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap tabular-nums">
+                      {formatMoney(row.expenses)}
+                    </td>
 
-                  <div className="lg:col-span-2 lg:text-right font-mono font-extrabold text-[#0a2540] dark:text-white whitespace-nowrap tabular-nums">
-                    {formatRwf(row.netProfit)}
-                  </div>
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 dark:text-white whitespace-nowrap tabular-nums">
+                      {formatMoney(row.netProfit)}
+                    </td>
 
-                  <div className="lg:col-span-2 flex items-center lg:justify-end gap-2">
-                    <div className="w-16 bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                      <div
-                        className="bg-emerald-500 h-full rounded-full"
-                        style={{ width: `${Math.min(100, Math.max(0, row.profitMargin))}%` }}
-                      />
-                    </div>
-                    <span className="font-mono font-bold text-sm text-[#0a2540] dark:text-white whitespace-nowrap">
-                      {row.profitMargin}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-2.5">
+                        <div className="w-16 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-emerald-500 h-full rounded-full"
+                            style={{ width: `${Math.min(100, Math.max(0, row.profitMargin))}%` }}
+                          />
+                        </div>
+                        <span className="font-mono font-semibold text-slate-900 dark:text-white w-10 text-right tabular-nums">
+                          {row.profitMargin}%
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Modal: Add Cost */}
       {isNewExpenseOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8">
-            <div className="flex items-center justify-between p-5 bg-[#f6f9fc] dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2.5">
-                <DollarSign className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <div>
-                  <h2 className="text-lg font-bold text-[#0a2540] dark:text-white">Add a Cost</h2>
-                  <span className="text-sm text-[#425466] dark:text-slate-400">
-                    Record money spent on a car or office
-                  </span>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px] overflow-y-auto">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 my-8 max-h-[90vh] overflow-y-auto kf-modal">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add a cost</h2>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Record money spent on a car or office
+                </span>
               </div>
               <button
+                type="button"
                 onClick={() => setIsNewExpenseOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitExpense} className="p-6 space-y-4 text-sm">
+            <form onSubmit={handleSubmitExpense} className="space-y-3.5 text-sm">
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">What Was Bought *</label>
+                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                  What was bought *
+                </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. 50L Diesel at Kacyiru"
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Cost Type</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Cost type</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-medium"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
                   >
                     {EXPENSE_CATEGORIES.map((cat) => (
                       <option key={cat.value} value={cat.value}>
@@ -550,27 +566,34 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Amount (RWF) *</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+                    {tr('Amount (RWF)')} *
+                  </label>
                   <input
                     type="number"
                     required
                     min={1000}
                     value={amountRwf}
                     onChange={(e) => setAmountRwf(parseInt(e.target.value, 10) || 0)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-mono font-bold"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
                   />
+                  {currency === 'USD' && (
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
+                      ≈ {formatMoney(amountRwf)}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">For Which Car</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">For which car</label>
                   <select
                     value={vehicleId}
                     onChange={(e) => setVehicleId(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-medium"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
                   >
-                    <option value="">General Office Cost</option>
+                    <option value="">General office cost</option>
                     {vehicles.map((v) => (
                       <option key={v.id} value={v.id}>
                         {v.plate_number} — {v.model_name}
@@ -580,66 +603,65 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Date</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Date</label>
                   <input
                     type="date"
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Shop or Garage</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Shop or garage</label>
                   <input
                     type="text"
                     value={supplierName}
                     onChange={(e) => setSupplierName(e.target.value)}
                     placeholder="e.g. TotalEnergies"
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Receipt Number</label>
+                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Receipt number</label>
                   <input
                     type="text"
                     value={receiptRef}
                     onChange={(e) => setReceiptRef(e.target.value)}
                     placeholder="e.g. TOT-88412"
-                    className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white font-mono"
+                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[#0a2540] dark:text-slate-200 font-bold mb-1">Extra Notes</label>
+                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Extra notes</label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Write any helpful note..."
-                  className="w-full bg-[#f6f9fc] dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-[#0a2540] dark:text-white"
+                  placeholder="Write any helpful note"
+                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none resize-none focus:border-slate-400"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsNewExpenseOpen(false)}
-                  className="px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-300 font-semibold"
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-full text-white font-bold shadow-sm"
-                  style={{ backgroundColor: activeColor }}
+                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
                 >
-                  Save Cost
+                  Save cost
                 </button>
               </div>
             </form>

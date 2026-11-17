@@ -13,6 +13,9 @@ import {
 import { ColorTheme } from '../theme';
 import { User, UserRole } from '../types';
 import { isSuperAdminEmail, isSuperAdminUser } from '../utils/auth';
+import { ThemeAppearanceMenu } from './ThemeAppearanceMenu';
+import { useI18n } from '../utils/i18n';
+import { LocaleCurrencySwitcher } from './LocaleCurrencySwitcher';
 
 interface LoginViewProps {
   onLoginSuccess: (isSuperAdmin?: boolean) => void;
@@ -20,6 +23,10 @@ interface LoginViewProps {
   onNavigateToLanding: () => void;
   onOpenForgotPassword: () => void;
   currentTheme: ColorTheme;
+  accentColorId?: string;
+  onSelectAccentColor?: (themeId: string) => void;
+  themeMode?: 'dark' | 'light';
+  onToggleThemeMode?: () => void;
   users: User[];
   onSelectUser: (userId: string) => void;
   onLoginWithGoogle?: () => Promise<any>;
@@ -41,6 +48,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
   onNavigateToLanding,
   onOpenForgotPassword,
   currentTheme,
+  accentColorId = 'amber',
+  onSelectAccentColor,
+  themeMode = 'dark',
+  onToggleThemeMode,
   users,
   onSelectUser,
   onLoginWithGoogle,
@@ -48,9 +59,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
   onCreateUserAccount,
   onLogFailedLogin,
 }) => {
+  const { tr } = useI18n();
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('owner@kigaliexecutive.rw');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const [signupName, setSignupName] = useState('');
@@ -62,9 +74,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const activeColor = currentTheme.hex;
-  const activeBtnText = currentTheme.btnText;
 
   // Strict privacy: never list super admin accounts in public sample user list
   const publicDemoUsers = users.filter((u) => u.role !== 'superadmin' && !isSuperAdminEmail(u.email));
@@ -184,57 +193,80 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
   };
 
+  const inputClass =
+    'w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-slate-400 dark:focus:border-slate-500 transition-colors';
+
   return (
-    <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 flex flex-col justify-between transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 flex flex-col justify-between transition-colors">
       {/* Top Bar */}
-      <header className="px-5 sm:px-8 py-4 flex items-center justify-between bg-white dark:bg-[#0d1424] border-b border-slate-200 dark:border-slate-800">
-        <button onClick={onNavigateToLanding} className="flex items-center gap-2.5 text-left">
-          <div
-            className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold ${activeBtnText}`}
-            style={{ backgroundColor: activeColor }}
-          >
-            <Car className="w-5 h-5" />
+      <header className="sticky top-0 z-40 px-4 sm:px-6 h-16 flex items-center justify-between gap-4 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800">
+        <button type="button" onClick={onNavigateToLanding} className="flex items-center gap-2.5 text-left">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center accent-bg">
+            <Car className="w-4 h-4" />
           </div>
-          <span className="font-extrabold text-xl text-[#0a2540] dark:text-white tracking-tight">
-            Kigali<span style={{ color: activeColor }}>Fleet</span>
+          <span className="font-semibold text-lg tracking-tight text-slate-900 dark:text-white">
+            Kigali<span className="accent-text">Fleet</span>
           </span>
         </button>
 
-        <button
-          onClick={onNavigateToRegister}
-          className="text-sm sm:text-[15px] font-semibold text-[#425466] dark:text-slate-300 hover:text-[#0a2540] dark:hover:text-white flex items-center gap-1.5"
-        >
-          <span>Add a New Company</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-wrap justify-end">
+          <div className="hidden sm:block">
+            <LocaleCurrencySwitcher currentTheme={currentTheme} compact />
+          </div>
+
+          {onSelectAccentColor && onToggleThemeMode && (
+            <ThemeAppearanceMenu
+              currentTheme={currentTheme}
+              accentColorId={accentColorId}
+              onSelectAccentColor={onSelectAccentColor}
+              themeMode={themeMode}
+              onToggleThemeMode={onToggleThemeMode}
+            />
+          )}
+
+          <button
+            type="button"
+            onClick={onNavigateToRegister}
+            className="text-sm font-semibold accent-text hover:underline flex items-center gap-1"
+          >
+            <span>{tr('Register Company')}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
+      <div className="sm:hidden flex items-center justify-center py-2 px-4 bg-slate-100/80 dark:bg-[#111827] border-b border-slate-200/80 dark:border-slate-800">
+        <LocaleCurrencySwitcher currentTheme={currentTheme} compact />
+      </div>
+
       {/* Main Center Card */}
-      <main className="flex-1 flex items-center justify-center p-5 sm:p-8">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-extrabold text-[#0a2540] dark:text-white">
-              {authMode === 'signin' ? 'Sign in' : 'Create your account'}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-md space-y-5">
+          <div className="text-center space-y-1.5">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+              {tr(authMode === 'signin' ? 'Sign in to Live Account' : 'Create Live Account')}
             </h1>
-            <p className="text-base text-[#425466] dark:text-slate-300">
-              {authMode === 'signin'
-                ? 'Open your car rental workspace.'
-                : 'Make an account for your job in the company.'}
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {tr(
+                authMode === 'signin'
+                  ? 'Sign in with Google or email to manage your real company garage.'
+                  : 'Create your own isolated company workspace in seconds.'
+              )}
             </p>
           </div>
 
-          {/* Tabs */}
-          <div className="grid grid-cols-2 p-1 bg-slate-200/80 dark:bg-slate-900 rounded-xl text-[15px] font-bold">
+          {/* Segmented Auth Mode Tabs */}
+          <div className="grid grid-cols-2 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-lg">
             <button
               type="button"
               onClick={() => {
                 setAuthMode('signin');
                 setErrorMessage(null);
               }}
-              className={`py-2.5 rounded-lg transition-all ${
+              className={`py-2 text-sm rounded-md transition-all ${
                 authMode === 'signin'
-                  ? 'bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white shadow-xs'
-                  : 'text-[#425466] dark:text-slate-400'
+                  ? 'bg-white dark:bg-[#111827] text-slate-900 dark:text-white font-semibold shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Sign in
@@ -245,10 +277,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 setAuthMode('signup');
                 setErrorMessage(null);
               }}
-              className={`py-2.5 rounded-lg transition-all ${
+              className={`py-2 text-sm rounded-md transition-all ${
                 authMode === 'signup'
-                  ? 'bg-white dark:bg-slate-800 text-[#0a2540] dark:text-white shadow-xs'
-                  : 'text-[#425466] dark:text-slate-400'
+                  ? 'bg-white dark:bg-[#111827] text-slate-900 dark:text-white font-semibold shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Create account
@@ -256,14 +288,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
 
           {errorMessage && (
-            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-sm font-medium">
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200/80 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-sm">
               {errorMessage}
             </div>
           )}
 
           {successMessage && (
-            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-200 text-sm font-medium flex items-center gap-2">
-              <Check className="w-5 h-5 shrink-0" />
+            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/80 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-sm flex items-center gap-2">
+              <Check className="w-4 h-4 shrink-0" />
               <span>{successMessage}</span>
             </div>
           )}
@@ -271,7 +303,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           {authMode === 'signin' && (
             <form
               onSubmit={handleManualLogin}
-              className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-5"
+              className="p-6 rounded-xl bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 kf-card space-y-4"
             >
               {onLoginWithGoogle && (
                 <button
@@ -279,18 +311,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   disabled={isLoading}
                   onClick={async () => {
                     setIsLoading(true);
+                    setErrorMessage(null);
                     try {
                       const res = await onLoginWithGoogle();
                       onLoginSuccess(isSuperAdminEmail(res?.user?.email));
-                    } catch {
-                      setErrorMessage('Google sign in did not finish. Please try again.');
+                    } catch (err: any) {
+                      setErrorMessage(err?.message || 'Google sign in did not finish. Please try again.');
                     } finally {
                       setIsLoading(false);
                     }
                   }}
-                  className="w-full py-3 px-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-[#0a2540] dark:text-white font-bold text-[15px] flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  className="w-full py-2.5 px-4 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-sm flex items-center justify-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
-                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -302,51 +335,50 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
               <div className="relative flex items-center justify-center">
                 <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
-                <span className="bg-white dark:bg-slate-900 px-3 text-sm text-[#425466] dark:text-slate-400">or</span>
+                <span className="bg-white dark:bg-[#111827] px-3 text-[13px] text-slate-400">or</span>
                 <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1.5">Email</label>
+                <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.rw"
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
+                    className={`${inputClass} pl-9 pr-3`}
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200">Password</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300">Password</label>
                   <button
                     type="button"
                     onClick={onOpenForgotPassword}
-                    className="text-sm font-semibold hover:underline"
-                    style={{ color: activeColor }}
+                    className="text-[13px] font-semibold accent-text hover:underline"
                   >
                     Forgot password?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-10 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
+                    className={`${inputClass} pl-9 pr-9`}
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0a2540] dark:hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -356,8 +388,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full py-3.5 rounded-full font-bold text-base shadow-sm transition-all hover:brightness-105 disabled:opacity-50 ${activeBtnText}`}
-                style={{ backgroundColor: activeColor }}
+                className="w-full py-2.5 rounded-lg font-semibold text-sm accent-bg hover:opacity-95 transition-opacity disabled:opacity-50"
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </button>
@@ -367,7 +398,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           {authMode === 'signup' && (
             <form
               onSubmit={handleManualSignUp}
-              className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 stripe-card space-y-4"
+              className="p-6 rounded-xl bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 kf-card space-y-4"
             >
               {onLoginWithGoogle && (
                 <button
@@ -375,18 +406,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   disabled={isLoading}
                   onClick={async () => {
                     setIsLoading(true);
+                    setErrorMessage(null);
                     try {
                       const res = await onLoginWithGoogle();
                       onLoginSuccess(isSuperAdminEmail(res?.user?.email));
-                    } catch {
-                      setErrorMessage('Google sign up did not finish. Please try again.');
+                    } catch (err: any) {
+                      setErrorMessage(err?.message || 'Google sign up did not finish. Please try again.');
                     } finally {
                       setIsLoading(false);
                     }
                   }}
-                  className="w-full py-3 px-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-[#0a2540] dark:text-white font-bold text-[15px] flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  className="w-full py-2.5 px-4 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-sm flex items-center justify-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
-                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -397,56 +429,56 @@ export const LoginView: React.FC<LoginViewProps> = ({
               )}
 
               <div>
-                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Full name</label>
+                <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1">Full name</label>
                 <div className="relative">
-                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
                     placeholder="Jean-Luc Habimana"
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
+                    className={`${inputClass} pl-9 pr-3`}
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Email</label>
+                <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
+                    className={`${inputClass} pl-9 pr-3`}
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Phone number</label>
+                <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1">Phone number</label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="tel"
                     value={signupPhone}
                     onChange={(e) => setSignupPhone(e.target.value)}
                     placeholder="+250 788 000 000"
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
+                    className={`${inputClass} pl-9 pr-3 font-mono`}
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Your job</label>
+                <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1">Your job</label>
                 <select
                   value={signupRole}
                   onChange={(e) => setSignupRole(e.target.value as UserRole)}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
+                  className={`${inputClass} px-3`}
                 >
                   <option value="owner">Company Owner</option>
                   <option value="manager">Manager</option>
@@ -459,15 +491,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0a2540] dark:text-slate-200 mb-1">Password</label>
+                <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="password"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
                     placeholder="At least 6 letters or numbers"
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-[15px] text-[#0a2540] dark:text-white outline-none"
+                    className={`${inputClass} pl-9 pr-3`}
                     required
                   />
                 </div>
@@ -476,22 +508,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full py-3.5 rounded-full font-bold text-base shadow-sm transition-all hover:brightness-105 disabled:opacity-50 ${activeBtnText}`}
-                style={{ backgroundColor: activeColor }}
+                className="w-full py-2.5 rounded-lg font-semibold text-sm accent-bg hover:opacity-95 transition-opacity disabled:opacity-50"
               >
                 {isLoading ? 'Creating...' : 'Create account'}
               </button>
             </form>
           )}
 
-          {/* Quick Demo Accounts */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-[#0a2540] dark:text-white">Try a sample account</span>
-              <span className="text-[#425466] dark:text-slate-400">Tap once</span>
+          {/* Free Demo Sandbox Explorer */}
+          <div className="p-5 rounded-xl bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 kf-card space-y-3">
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span className="font-semibold text-slate-900 dark:text-white">{tr('Explore Free Demo Sandbox')}</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                {tr('No Account Needed')}
+              </span>
             </div>
+            <p className="text-[13px] text-slate-500 dark:text-slate-400">
+              {tr('Try KigaliFleet with sample Kigali cars, drivers, and bookings before creating your real company.')}
+            </p>
 
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-56 overflow-y-auto">
               {publicDemoUsers.map((u) => {
                 const isCurrent = selectedDemoUser === u.id;
                 return (
@@ -499,19 +535,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     key={u.id}
                     type="button"
                     onClick={() => handleQuickRoleSelect(u)}
-                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-colors ${
+                    className={`w-full px-3.5 py-2.5 rounded-lg text-left flex items-center justify-between transition-colors ${
                       isCurrent
-                        ? 'bg-slate-100 dark:bg-slate-800 border-amber-500'
-                        : 'bg-[#f6f9fc] dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ? 'accent-tint border accent-border'
+                        : 'bg-slate-50/80 dark:bg-slate-800/40 border border-transparent hover:border-slate-200 dark:hover:border-slate-700'
                     }`}
                   >
                     <div className="min-w-0">
-                      <div className="text-[15px] font-bold text-[#0a2540] dark:text-white truncate">{u.name}</div>
-                      <div className="text-sm text-[#425466] dark:text-slate-400 truncate">
-                        {getPlainRoleLabel(u.role)}
+                      <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">{u.name}</div>
+                      <div className="text-[13px] text-slate-500 dark:text-slate-400 truncate">
+                        {getPlainRoleLabel(u.role)} · {tr('Demo Sandbox')}
                       </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-slate-400 shrink-0" />
+                    <ArrowRight className={`w-4 h-4 shrink-0 ${isCurrent ? 'accent-text' : 'text-slate-400'}`} />
                   </button>
                 );
               })}
@@ -520,7 +556,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         </div>
       </main>
 
-      <footer className="p-5 text-center text-sm text-[#425466] dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
+      <footer className="p-4 text-center text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#111827]">
         © 2026 KigaliFleet · Kigali, Rwanda
       </footer>
     </div>

@@ -18,6 +18,7 @@ import {
 export const INITIAL_VEHICLES: Vehicle[] = [
   {
     id: 'veh-lc-prado-01',
+    company_id: 'comp-kigali-exec',
     category: 'LandCruiser',
     model_name: 'Toyota Land Cruiser Prado TXL (4x4)',
     plate_number: 'RAD 450 B',
@@ -30,6 +31,17 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 68450,
     location: 'Kigali HQ - Remera',
     image_url: '/assets/images/hero_safari_landcruiser_1794311457296.jpg',
+    gallery_urls: ['/assets/images/hero_safari_landcruiser_1794311457296.jpg'],
+    description:
+      'Comfortable 7-seat 4x4 Prado built for Musanze mountain roads, Akagera safaris, and executive Kigali meetings. Dual-zone AC, big luggage space, and full safety kit included.',
+    features: [
+      '4WD / 4x4',
+      'Air Conditioning',
+      'Bluetooth & USB',
+      'Free Wi-Fi Ready',
+      'Unlimited Rwanda km',
+      'First-Aid & Spare Tire',
+    ],
     assigned_driver_id: 'drv-emmanuel',
     assigned_driver_name: 'Emmanuel Nshimiyimana',
     insurance_expiry: '2026-11-20',
@@ -40,6 +52,7 @@ export const INITIAL_VEHICLES: Vehicle[] = [
   },
   {
     id: 'veh-lc-v8-02',
+    company_id: 'comp-kigali-exec',
     category: 'LandCruiser',
     model_name: 'Toyota Land Cruiser V8 Executive VIP',
     plate_number: 'RAE 109 M',
@@ -52,6 +65,17 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 41200,
     location: 'Kigali Marriott Hub',
     image_url: '/assets/images/hero_safari_landcruiser_1794311457296.jpg',
+    gallery_urls: ['/assets/images/hero_safari_landcruiser_1794311457296.jpg'],
+    description:
+      'Flagship VIP Land Cruiser V8 with leather seats, quiet cabin, and strong V8 4x4 power for diplomatic guests, airport pickups, and luxury lodge transfers.',
+    features: [
+      '4WD / 4x4',
+      'Air Conditioning',
+      'Leather VIP Seats',
+      'Bluetooth & USB',
+      'Free Wi-Fi Ready',
+      'Unlimited Rwanda km',
+    ],
     assigned_driver_id: 'drv-jean-paul',
     assigned_driver_name: 'Jean-Paul Mugisha',
     insurance_expiry: '2027-02-14',
@@ -62,6 +86,7 @@ export const INITIAL_VEHICLES: Vehicle[] = [
   },
   {
     id: 'veh-rav4-01',
+    company_id: 'comp-kigali-exec',
     category: 'RAV4',
     model_name: 'Toyota RAV4 AWD (2022 Hybrid)',
     plate_number: 'RAC 812 K',
@@ -74,6 +99,17 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 52180,
     location: 'Kigali Airport Station (KIA)',
     image_url: '/assets/images/car_toyota_rav4_1794311458980.jpg',
+    gallery_urls: ['/assets/images/car_toyota_rav4_1794311458980.jpg'],
+    description:
+      'Fuel-saving 5-seat AWD RAV4 with smooth automatic gears, cold AC, and roomy trunk. Ideal for self-drive in Kigali or weekend trips to Lake Kivu.',
+    features: [
+      '4WD / 4x4',
+      'Air Conditioning',
+      'Bluetooth & USB',
+      'Child Seat Ready',
+      'Unlimited Rwanda km',
+      'First-Aid & Spare Tire',
+    ],
     assigned_driver_id: 'drv-claudine',
     assigned_driver_name: 'Claudine Uwase',
     insurance_expiry: '2026-10-15',
@@ -84,6 +120,7 @@ export const INITIAL_VEHICLES: Vehicle[] = [
   },
   {
     id: 'veh-rav4-02',
+    company_id: 'comp-kigali-exec',
     category: 'RAV4',
     model_name: 'Toyota RAV4 4x4 Expedition Spec',
     plate_number: 'RAF 672 P',
@@ -96,6 +133,16 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 84320,
     location: 'Kigali HQ - Remera',
     image_url: '/assets/images/car_toyota_rav4_1794311458980.jpg',
+    gallery_urls: ['/assets/images/car_toyota_rav4_1794311458980.jpg'],
+    description:
+      'Economical diesel 4x4 RAV4 with raised ground clearance and protective bash guard for countryside work trips and upcountry field visits.',
+    features: [
+      '4WD / 4x4',
+      'Air Conditioning',
+      'Bluetooth & USB',
+      'Unlimited Rwanda km',
+      'First-Aid & Spare Tire',
+    ],
     assigned_driver_id: 'drv-patrick',
     assigned_driver_name: 'Patrick Habimana',
     insurance_expiry: '2026-12-01',
@@ -106,6 +153,7 @@ export const INITIAL_VEHICLES: Vehicle[] = [
   },
   {
     id: 'veh-coaster-01',
+    company_id: 'comp-kigali-exec',
     category: 'Coaster',
     model_name: 'Toyota Coaster Bus (30-Passenger AC)',
     plate_number: 'RAG 334 C',
@@ -117,6 +165,17 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     seating_capacity: 30,
     current_odometer_km: 112500,
     location: 'Kigali Convention Centre Depot',
+    image_url: '/assets/images/car_coaster_bus_1794792526002.jpg',
+    gallery_urls: ['/assets/images/car_coaster_bus_1794792526002.jpg'],
+    description:
+      'Clean 30-seat conference & group bus with high-roof cabin, overhead luggage racks, PA microphone, and full air conditioning for events and delegations.',
+    features: [
+      'Air Conditioning',
+      'Bluetooth & USB',
+      'Free Wi-Fi Ready',
+      'Unlimited Rwanda km',
+      'First-Aid & Spare Tire',
+    ],
     assigned_driver_id: 'drv-eric',
     assigned_driver_name: 'Eric Manzi',
     insurance_expiry: '2026-12-31',
@@ -127,6 +186,7 @@ export const INITIAL_VEHICLES: Vehicle[] = [
   },
   {
     id: 'veh-safari-01',
+    company_id: 'comp-kigali-exec',
     category: 'Safari Van',
     model_name: 'Toyota HiAce Safari Pop-Top (Photographic)',
     plate_number: 'RAD 920 T',
@@ -139,6 +199,17 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 95400,
     location: 'Kigali HQ - Remera',
     image_url: '/assets/images/car_safari_van_1794311459444.jpg',
+    gallery_urls: ['/assets/images/car_safari_van_1794311459444.jpg'],
+    description:
+      'Dedicated 8-seat wildlife safari van featuring a full pop-up game-viewing roof, window seat for every guest, 220V camera charging sockets, and cooler box.',
+    features: [
+      '4WD / 4x4',
+      'Pop-Up Safari Roof',
+      'Air Conditioning',
+      '220V Camera Charger',
+      'Free Wi-Fi Ready',
+      'First-Aid & Spare Tire',
+    ],
     assigned_driver_id: 'drv-jean-paul',
     assigned_driver_name: 'Jean-Paul Mugisha',
     insurance_expiry: '2026-11-30',
@@ -149,6 +220,7 @@ export const INITIAL_VEHICLES: Vehicle[] = [
   },
   {
     id: 'veh-sedan-01',
+    company_id: 'comp-kigali-exec',
     category: 'Luxury Sedan',
     model_name: 'Mercedes-Benz E-Class E250',
     plate_number: 'RAE 550 L',
@@ -160,6 +232,17 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     seating_capacity: 5,
     current_odometer_km: 47900,
     location: 'Toyota Rwanda Authorized Workshop',
+    image_url: '/assets/images/car_luxury_sedan_1794792526061.jpg',
+    gallery_urls: ['/assets/images/car_luxury_sedan_1794792526061.jpg'],
+    description:
+      'Executive Mercedes E-Class with leather interior, smooth ride, and silent cabin tailored for VIP airport arrivals, diplomatic events, and weddings.',
+    features: [
+      'Air Conditioning',
+      'Leather VIP Seats',
+      'Bluetooth & USB',
+      'Free Wi-Fi Ready',
+      'Unlimited Rwanda km',
+    ],
     assigned_driver_id: 'drv-claudine',
     assigned_driver_name: 'Claudine Uwase',
     insurance_expiry: '2027-03-20',
@@ -173,6 +256,7 @@ export const INITIAL_VEHICLES: Vehicle[] = [
 export const INITIAL_DRIVERS: Driver[] = [
   {
     id: 'drv-jean-paul',
+    company_id: 'comp-kigali-exec',
     name: 'Jean-Paul Mugisha',
     phone: '+250 788 555 123',
     email: 'jp.mugisha@kigalifleet.rw',
@@ -190,6 +274,7 @@ export const INITIAL_DRIVERS: Driver[] = [
   },
   {
     id: 'drv-emmanuel',
+    company_id: 'comp-kigali-exec',
     name: 'Emmanuel Nshimiyimana',
     phone: '+250 783 222 890',
     email: 'emmanuel.n@kigalifleet.rw',
@@ -207,6 +292,7 @@ export const INITIAL_DRIVERS: Driver[] = [
   },
   {
     id: 'drv-claudine',
+    company_id: 'comp-kigali-exec',
     name: 'Claudine Uwase',
     phone: '+250 785 444 333',
     email: 'claudine.u@kigalifleet.rw',
@@ -224,6 +310,7 @@ export const INITIAL_DRIVERS: Driver[] = [
   },
   {
     id: 'drv-patrick',
+    company_id: 'comp-kigali-exec',
     name: 'Patrick Habimana',
     phone: '+250 788 777 901',
     email: 'patrick.h@kigalifleet.rw',
@@ -241,6 +328,7 @@ export const INITIAL_DRIVERS: Driver[] = [
   },
   {
     id: 'drv-diane',
+    company_id: 'comp-kigali-exec',
     name: 'Diane Mutoni',
     phone: '+250 782 111 445',
     email: 'diane.m@kigalifleet.rw',
@@ -261,6 +349,7 @@ export const INITIAL_DRIVERS: Driver[] = [
 export const INITIAL_BOOKINGS: Booking[] = [
   {
     id: 'bk-2026-089',
+    company_id: 'comp-kigali-exec',
     client_name: 'Dr. Sarah Jenkins (UNHCR Regional)',
     client_email: 'sarah.jenkins@unhcr.org',
     client_phone: '+250 788 642 110',
@@ -281,6 +370,7 @@ export const INITIAL_BOOKINGS: Booking[] = [
   },
   {
     id: 'bk-2026-090',
+    company_id: 'comp-kigali-exec',
     client_name: 'Marcus Vance & Expedition Team',
     client_email: 'm.vance@safari-expeditions.co.uk',
     client_phone: '+44 7911 123456',
@@ -301,6 +391,7 @@ export const INITIAL_BOOKINGS: Booking[] = [
   },
   {
     id: 'bk-2026-091',
+    company_id: 'comp-kigali-exec',
     client_name: 'Rwanda Development Board (RDB) Summit',
     client_email: 'transport@rdb-events.gov.rw',
     client_phone: '+250 788 333 999',
@@ -371,6 +462,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
 export const INITIAL_LOGS: ActivityLog[] = [
   {
     id: 'log-1',
+    company_id: 'comp-kigali-exec',
     timestamp: '2026-11-01 07:15',
     action: 'Driver Dispatched via SMS',
     details: 'Automated itinerary in Kinyarwanda dispatched to Patrick Habimana for Booking #bk-2026-090.',
@@ -378,6 +470,7 @@ export const INITIAL_LOGS: ActivityLog[] = [
   },
   {
     id: 'log-2',
+    company_id: 'comp-kigali-exec',
     timestamp: '2026-11-01 06:40',
     action: 'Flight Status Checked',
     details: 'RwandAir flight WB 402 confirmed on schedule for Dr. Sarah Jenkins at KIA Terminal.',
@@ -385,6 +478,7 @@ export const INITIAL_LOGS: ActivityLog[] = [
   },
   {
     id: 'log-3',
+    company_id: 'comp-kigali-exec',
     timestamp: '2026-10-31 16:20',
     action: 'Collision Prevention Activated',
     details: 'Blocked double-booking attempt on Toyota Land Cruiser Prado (RAD 450 B) for Nov 04.',
@@ -739,6 +833,7 @@ export const INITIAL_USERS: User[] = [
 export const INITIAL_CUSTOMERS: Customer[] = [
   {
     id: 'cust-sarah-jenkins',
+    company_id: 'comp-kigali-exec',
     name: 'Dr. Sarah Jenkins',
     phone: '+250 788 642 110',
     email: 'sarah.jenkins@unhcr.org',
@@ -756,6 +851,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
   {
     id: 'cust-gaston-ntwari',
+    company_id: 'comp-kigali-exec',
     name: 'Gaston Ntwari',
     phone: '+250 788 312 990',
     email: 'gaston.ntwari@bk.rw',
@@ -773,6 +869,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
   {
     id: 'cust-marcus-lindqvist',
+    company_id: 'comp-kigali-exec',
     name: 'Marcus Lindqvist',
     phone: '+46 70 123 4567',
     email: 'marcus.lindqvist@nordiceco.se',
@@ -789,6 +886,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
   {
     id: 'cust-claire-mukamurenzi',
+    company_id: 'comp-kigali-exec',
     name: 'Claire Mukamurenzi',
     phone: '+250 788 419 822',
     email: 'claire.m@rdb.gov.rw',
@@ -806,6 +904,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
   {
     id: 'cust-aline-umulisa',
+    company_id: 'comp-kigali-exec',
     name: 'Aline Umulisa',
     phone: '+250 788 776 543',
     email: 'aline.umulisa@gmail.com',
@@ -821,6 +920,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
   {
     id: 'cust-david-henderson',
+    company_id: 'comp-kigali-exec',
     name: 'David K. Henderson',
     phone: '+250 788 901 234',
     email: 'david@akageraexpeditions.com',
@@ -838,6 +938,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
   {
     id: 'cust-pierre-dupont',
+    company_id: 'comp-kigali-exec',
     name: 'Ambassador Pierre Dupont',
     phone: '+250 788 221 100',
     email: 'pierre.dupont@diplomatie.gouv.fr',
@@ -858,6 +959,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
 export const INITIAL_PAYMENTS: PaymentRecord[] = [
   {
     id: 'pay-2026-001',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-089',
     customer_name: 'Dr. Sarah Jenkins',
     customer_phone: '+250 788 642 110',
@@ -874,6 +976,7 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
   },
   {
     id: 'pay-2026-002',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-090',
     customer_name: 'Gaston Ntwari',
     customer_phone: '+250 788 312 990',
@@ -889,6 +992,7 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
   },
   {
     id: 'pay-2026-003',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-091',
     customer_name: 'Marcus Lindqvist',
     customer_phone: '+46 70 123 4567',
@@ -905,6 +1009,7 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
   },
   {
     id: 'pay-2026-004',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-092',
     customer_name: 'Claire Mukamurenzi',
     customer_phone: '+250 788 419 822',
@@ -920,6 +1025,7 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
   },
   {
     id: 'pay-2026-005',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-093',
     customer_name: 'Aline Umulisa',
     customer_phone: '+250 788 776 543',
@@ -935,6 +1041,7 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
   },
   {
     id: 'pay-2026-006',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-094',
     customer_name: 'David K. Henderson',
     customer_phone: '+250 788 901 234',
@@ -949,6 +1056,7 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
   },
   {
     id: 'pay-2026-007',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-095',
     customer_name: 'Ambassador Pierre Dupont',
     customer_phone: '+250 788 221 100',
@@ -967,6 +1075,7 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
 export const INITIAL_MAINTENANCE: MaintenanceRecord[] = [
   {
     id: 'mnt-2026-001',
+    company_id: 'comp-kigali-exec',
     vehicle_id: 'veh-sedan-01',
     vehicle_plate: 'RAE 550 L',
     vehicle_model: 'Mercedes-Benz E-Class E250',
@@ -988,6 +1097,7 @@ export const INITIAL_MAINTENANCE: MaintenanceRecord[] = [
   },
   {
     id: 'mnt-2026-002',
+    company_id: 'comp-kigali-exec',
     vehicle_id: 'veh-lc-prado-01',
     vehicle_plate: 'RAD 450 B',
     vehicle_model: 'Toyota Land Cruiser Prado TXL (4x4)',
@@ -1010,6 +1120,7 @@ export const INITIAL_MAINTENANCE: MaintenanceRecord[] = [
   },
   {
     id: 'mnt-2026-003',
+    company_id: 'comp-kigali-exec',
     vehicle_id: 'veh-coaster-01',
     vehicle_plate: 'RAG 334 C',
     vehicle_model: 'Toyota Coaster Bus (30-Passenger AC)',
@@ -1032,6 +1143,7 @@ export const INITIAL_MAINTENANCE: MaintenanceRecord[] = [
   },
   {
     id: 'mnt-2026-004',
+    company_id: 'comp-kigali-exec',
     vehicle_id: 'veh-rav4-01',
     vehicle_plate: 'RAC 812 K',
     vehicle_model: 'Toyota RAV4 AWD (2022 Hybrid)',
@@ -1052,6 +1164,7 @@ export const INITIAL_MAINTENANCE: MaintenanceRecord[] = [
 ];
 
 export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
+  company_id: 'comp-kigali-exec',
   turnaround_buffer_hours: 4,
   maintenance_auto_lock: true,
   controle_technique_alert_days: 14,
@@ -1071,6 +1184,7 @@ export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
 export const INITIAL_HANDOVER_INSPECTIONS: VehicleHandoverInspection[] = [
   {
     id: 'insp-pickup-001',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-089',
     vehicle_id: 'veh-lc-prado-01',
     vehicle_plate: 'RAD 450 B',
@@ -1099,6 +1213,7 @@ export const INITIAL_HANDOVER_INSPECTIONS: VehicleHandoverInspection[] = [
   },
   {
     id: 'insp-return-002',
+    company_id: 'comp-kigali-exec',
     booking_id: 'bk-2026-087',
     vehicle_id: 'veh-rav4-01',
     vehicle_plate: 'RAC 812 K',
@@ -1131,6 +1246,7 @@ export const INITIAL_HANDOVER_INSPECTIONS: VehicleHandoverInspection[] = [
 export const INITIAL_EXPENSES: ExpenseRecord[] = [
   {
     id: 'exp-2026-001',
+    company_id: 'comp-kigali-exec',
     title: 'Diesel Fuel for Akagera Safari (RAD 450 B)',
     category: 'Fuel & Gas',
     amount_rwf: 85000,
@@ -1148,6 +1264,7 @@ export const INITIAL_EXPENSES: ExpenseRecord[] = [
   },
   {
     id: 'exp-2026-002',
+    company_id: 'comp-kigali-exec',
     title: 'Yellow Card Insurance Renewal (RAC 812 K)',
     category: 'Insurance (Yellow Card)',
     amount_rwf: 180000,
@@ -1164,6 +1281,7 @@ export const INITIAL_EXPENSES: ExpenseRecord[] = [
   },
   {
     id: 'exp-2026-003',
+    company_id: 'comp-kigali-exec',
     title: 'VIP Chauffeur Per-Diem (Musanze Gorilla Trek)',
     category: 'Driver Per-Diem',
     amount_rwf: 45000,
@@ -1180,6 +1298,7 @@ export const INITIAL_EXPENSES: ExpenseRecord[] = [
   },
   {
     id: 'exp-2026-004',
+    company_id: 'comp-kigali-exec',
     title: 'Pre-Rental Deep Clean & Interior Detailing',
     category: 'Vehicle Wash & Detail',
     amount_rwf: 15000,
@@ -1195,6 +1314,7 @@ export const INITIAL_EXPENSES: ExpenseRecord[] = [
   },
   {
     id: 'exp-2026-005',
+    company_id: 'comp-kigali-exec',
     title: 'RNP Contrôle Technique Safety Inspection Prep',
     category: 'Contrôle Technique Prep',
     amount_rwf: 50000,
@@ -1212,6 +1332,7 @@ export const INITIAL_EXPENSES: ExpenseRecord[] = [
 export const INITIAL_OPERATIONAL_TASKS: OperationalTask[] = [
   {
     id: 'tsk-001',
+    company_id: 'comp-kigali-exec',
     title: 'Complete Contrôle Technique prep for RAC 812 K',
     description: 'Test emergency braking and calibrate headlights before booking on Nov 15.',
     assigned_to_name: 'Faustin Nkurunziza',
@@ -1224,6 +1345,7 @@ export const INITIAL_OPERATIONAL_TASKS: OperationalTask[] = [
   },
   {
     id: 'tsk-002',
+    company_id: 'comp-kigali-exec',
     title: 'Verify UNHCR Purchase Order & TIN for Dr. Sarah Jenkins',
     description: 'Ensure official RRA EBM tax invoice includes TIN #100293847.',
     assigned_to_name: 'Alain Habumugisha',
@@ -1236,6 +1358,7 @@ export const INITIAL_OPERATIONAL_TASKS: OperationalTask[] = [
   },
   {
     id: 'tsk-003',
+    company_id: 'comp-kigali-exec',
     title: 'Pre-safari pop-up roof hydraulic inspection for RAD 920 T',
     description: 'Grease pop-top seals and check 220V camera battery inverter outlets.',
     assigned_to_name: 'Clementine Mutoni',
@@ -1248,6 +1371,7 @@ export const INITIAL_OPERATIONAL_TASKS: OperationalTask[] = [
   },
   {
     id: 'tsk-004',
+    company_id: 'comp-kigali-exec',
     title: 'Track RwandAir Flight WB 402 arrival at KIA Gate 1',
     description: 'Chauffeur Claudine Uwase to be at arrivals hall with passenger signboard.',
     assigned_to_name: 'Eric Nshimiyimana',

@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase App
@@ -15,9 +16,10 @@ export const db = initializeFirestore(
   firebaseConfig.firestoreDatabaseId
 );
 
-// Initialize Firebase Authentication
+// Initialize Firebase Authentication & Cloud Storage
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+export const storage = getStorage(app);
 
 export enum OperationType {
   CREATE = 'create',

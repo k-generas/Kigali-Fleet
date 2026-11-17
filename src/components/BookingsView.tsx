@@ -1,26 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { Booking, Driver, Vehicle, BookingStatus, PaymentStatus } from '../types';
-import { formatRwf } from '../utils/collision';
 import {
-  FileText,
   Send,
-  CheckCircle2,
   Plane,
-  AlertTriangle,
-  Phone,
   Search,
-  MapPin,
-  Car,
-  UserCheck,
-  Check,
   X,
   Printer,
   Plus,
-  Trash2,
-  ArrowUpRight,
-  Activity,
+  CalendarCheck,
+  Car,
+  DollarSign,
+  Clock,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { useI18n } from '../utils/i18n';
+import { formatHumanDate, formatHumanDateRange } from '../utils/dates';
 
 interface BookingsViewProps {
   bookings: Booking[];
@@ -44,7 +38,6 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   bookings,
   vehicles,
   drivers,
-  currentTheme,
   onOpenNewBooking,
   onSelectBookingForDispatch,
   onAcknowledgeCheckin,
@@ -53,15 +46,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   onUpdateBooking,
   onDeleteBooking,
 }) => {
+  const { formatMoney, tr } = useI18n();
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterPayment, setFilterPayment] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
-
-  const activeThemeColor = currentTheme?.hex || '#635bff';
-  const activeBtnText = currentTheme?.btnText || 'text-white';
 
   const metrics = useMemo(() => {
     const total = bookings.length;
@@ -109,338 +100,379 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     }
   };
 
+  const statusTabs: { value: string; label: string }[] = [
+    { value: 'All', label: `${tr('All')} (${bookings.length})` },
+    { value: 'Confirmed', label: `${tr('Booked')} (${bookings.filter((b) => b.status === 'Confirmed').length})` },
+    { value: 'In Progress', label: `${tr('On trip')} (${bookings.filter((b) => b.status === 'In Progress').length})` },
+    { value: 'Completed', label: `${tr('Done')} (${bookings.filter((b) => b.status === 'Completed').length})` },
+    { value: 'Cancelled', label: `${tr('Cancelled')} (${bookings.filter((b) => b.status === 'Cancelled').length})` },
+  ];
+
+  const getStatusDotClass = (status: BookingStatus) => {
+    if (status === 'In Progress') return 'bg-amber-500';
+    if (status === 'Completed') return 'bg-emerald-500';
+    if (status === 'Cancelled') return 'bg-rose-500';
+    return 'bg-blue-500';
+  };
+
+  const getStatusTextClass = (status: BookingStatus) => {
+    if (status === 'In Progress') return 'text-amber-700 dark:text-amber-400';
+    if (status === 'Completed') return 'text-emerald-700 dark:text-emerald-400';
+    if (status === 'Cancelled') return 'text-rose-700 dark:text-rose-400';
+    return 'text-blue-700 dark:text-blue-400';
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 stripe-card">
+      {/* Page Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-[#0a2540] dark:text-white flex items-center gap-2.5">
-              <FileText className="w-6 h-6" style={{ color: activeThemeColor }} />
-              <span>Bookings</span>
-            </h2>
-            <span
-              className="text-xs font-mono px-3 py-1 rounded-full font-semibold"
-              style={{
-                backgroundColor: `${activeThemeColor}18`,
-                color: activeThemeColor,
-              }}
-            >
-              {bookings.length} total
-            </span>
-          </div>
-          <p className="text-sm text-[#425466] dark:text-slate-400 mt-1">
-            All customer trips, dates, prices, and payments in one simple list.
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {tr('Bookings')}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {tr('All customer trips, dates, prices, and payments in one simple list.')}
           </p>
         </div>
 
         <button
+          type="button"
           onClick={onOpenNewBooking}
-          className={`inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all shadow-xs active:scale-95 self-start sm:self-auto ${activeBtnText}`}
-          style={{ backgroundColor: activeThemeColor }}
+          className="accent-bg inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:opacity-95 transition-opacity shrink-0 shadow-xs"
         >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>New Booking</span>
+          <Plus className="w-4 h-4" />
+          <span>{tr('New Booking')}</span>
         </button>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-[#425466] dark:text-slate-400">All Bookings</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-[#0a2540] dark:text-white font-mono">{metrics.total}</span>
-            <FileText className="w-4 h-4 text-slate-400" />
-          </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-sky-600 dark:text-sky-400">Booked</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-sky-600 dark:text-sky-400 font-mono">{metrics.confirmed}</span>
-            <CheckCircle2 className="w-4 h-4 text-sky-500" />
-          </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">On Trip</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">{metrics.inProgress}</span>
-            <Activity className="w-4 h-4 text-amber-500" />
-          </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Done</span>
-          <div className="flex items-baseline justify-between mt-1.5">
-            <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-mono">{metrics.completed}</span>
-            <Check className="w-4 h-4 text-indigo-500" />
-          </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Total Money</span>
-          <div className="mt-1.5">
-            <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono truncate block">
-              {formatRwf(metrics.totalRevenueRwf)}
+      {/* 4-Card KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('All bookings')}</span>
+            <span className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+              <CalendarCheck className="w-4 h-4" />
             </span>
           </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 tabular-nums">
+            {metrics.total}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            {metrics.confirmed} booked · {metrics.completed} done
+          </p>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl stripe-card">
-          <span className="text-xs font-medium text-rose-600 dark:text-rose-400">Still Unpaid</span>
-          <div className="mt-1.5">
-            <span className="text-base font-bold text-rose-600 dark:text-rose-400 font-mono truncate block">
-              {formatRwf(metrics.pendingBalanceRwf)}
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('On trip')}</span>
+            <span className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Car className="w-4 h-4" />
             </span>
           </div>
+          <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400 mt-2 tabular-nums">
+            {metrics.inProgress}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Active trips out on the road
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Total money')}</span>
+            <span className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-2 font-mono tabular-nums">
+            {formatMoney(metrics.totalRevenueRwf)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Active & completed bookings
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 kf-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{tr('Still unpaid')}</span>
+            <span className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-rose-600 dark:text-rose-400 mt-2 font-mono tabular-nums">
+            {formatMoney(metrics.pendingBalanceRwf)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            Pending customer payment
+          </p>
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 stripe-card">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search customer, car plate, flight, or place..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-8 py-2 text-sm text-[#0a2540] dark:text-white outline-none focus:border-indigo-500"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0a2540] dark:hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <div className="flex items-center bg-[#f6f9fc] dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-            {['All', 'Confirmed', 'In Progress', 'Completed', 'Cancelled'].map((st) => (
-              <button
-                key={st}
-                onClick={() => setFilterStatus(st)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                  filterStatus === st
-                    ? 'bg-white dark:bg-slate-900 text-[#0a2540] dark:text-white shadow-xs'
-                    : 'text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white'
-                }`}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
-
-          <select
-            value={filterPayment}
-            onChange={(e) => setFilterPayment(e.target.value)}
-            className="bg-[#f6f9fc] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-[#0a2540] dark:text-slate-200 outline-none"
-          >
-            <option value="All">All Payments</option>
-            <option value="Fully Paid">Fully Paid</option>
-            <option value="Deposit Paid (MoMo)">Deposit Paid</option>
-            <option value="Pending Payment">Unpaid</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Horizontal Grid Ledger */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden stripe-card">
-        <div className="hidden xl:grid xl:grid-cols-12 gap-3 px-4 py-3.5 bg-[#f6f9fc] dark:bg-slate-800/70 text-[#425466] dark:text-slate-300 text-xs font-bold uppercase border-b border-slate-200 dark:border-slate-800">
-          <div className="xl:col-span-3">Customer</div>
-          <div className="xl:col-span-2">Car & Driver</div>
-          <div className="xl:col-span-3">Trip & Flight</div>
-          <div className="xl:col-span-2">Payment</div>
-          <div className="xl:col-span-2 text-right">Status & Actions</div>
-        </div>
-
-        <div className="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-[#0a2540] dark:text-slate-200">
-          {filteredBookings.length === 0 ? (
-            <div className="py-12 text-center text-[#425466] dark:text-slate-400">
-              <FileText className="w-8 h-8 mx-auto opacity-40 mb-2" />
-              <p className="font-semibold">No bookings match your search.</p>
-            </div>
-          ) : (
-            filteredBookings.map((b) => {
-              const vehicle = vehicles.find((v) => v.id === b.vehicle_id);
-              const driver = drivers.find((d) => d.id === b.driver_id);
-
+      {/* Bookings Table Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden kf-card">
+        {/* Segmented Filter Tabs & Search */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg overflow-x-auto">
+            {statusTabs.map((tab) => {
+              const active = filterStatus === tab.value;
               return (
-                <div
-                  key={b.id}
-                  className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 items-center px-4 py-4 hover:bg-[#f6f9fc] dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
-                  onClick={() => {
-                    setSelectedBookingDetails(b);
-                    setConfirmCancelId(null);
-                  }}
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setFilterStatus(tab.value)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
                 >
-                  <div className="xl:col-span-3 min-w-0" onClick={(e) => e.stopPropagation()}>
-                    <div
-                      onClick={() => setSelectedBookingDetails(b)}
-                      className="font-mono font-bold text-xs cursor-pointer hover:underline whitespace-nowrap"
-                      style={{ color: activeThemeColor }}
-                    >
-                      #{b.id}
-                    </div>
-                    <div className="font-semibold text-[#0a2540] dark:text-white mt-0.5 truncate">
-                      {b.client_name}
-                    </div>
-                    <div className="text-xs text-[#425466] dark:text-slate-400 font-mono whitespace-nowrap">
-                      {b.client_phone}
-                    </div>
-                  </div>
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
 
-                  <div className="xl:col-span-2 min-w-0 space-y-1">
-                    <div className="font-medium text-[#0a2540] dark:text-white truncate">
-                      {vehicle?.model_name || 'No car'}
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-flex items-center border border-amber-400/50 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded font-mono text-xs font-bold text-amber-700 dark:text-amber-300 whitespace-nowrap">
-                        {vehicle?.plate_number}
-                      </span>
-                      {driver ? (
-                        <span className="text-xs text-[#425466] dark:text-slate-300 truncate font-medium">
-                          {driver.name}
-                        </span>
-                      ) : (
-                        <span className="text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1 whitespace-nowrap">
-                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                          <span>No driver</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={tr('Search customer, plate, flight or place')}
+                className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg pl-9 pr-8 py-1.5 w-64 outline-none focus:bg-white dark:focus:bg-[#0f172a] focus:border-slate-400 dark:focus:border-slate-500"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
-                  <div className="xl:col-span-3 min-w-0 space-y-1" onClick={(e) => e.stopPropagation()}>
-                    <div className="font-medium text-[#0a2540] dark:text-slate-200 flex items-center gap-1.5 min-w-0">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{b.destination}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-[#425466] dark:text-slate-400 font-mono whitespace-nowrap">
-                        {b.start_date} → {b.end_date}
-                      </span>
-                      {b.flight_number && (
-                        <div className="inline-flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-sky-600 dark:text-sky-400 whitespace-nowrap">
-                            <Plane className="w-3.5 h-3.5 shrink-0" />
-                            <span>{b.flight_number}</span>
-                          </span>
-                          <select
-                            value={b.flight_status || 'Scheduled'}
-                            onChange={(e) =>
-                              onUpdateFlightStatus(b.id, e.target.value as 'On Time' | 'Delayed' | 'Landed' | 'Scheduled')
-                            }
-                            className="text-xs font-medium px-2 py-0.5 rounded-lg border bg-[#f6f9fc] dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 outline-none cursor-pointer"
-                          >
-                            <option value="Scheduled">Scheduled</option>
-                            <option value="On Time">On Time</option>
-                            <option value="Delayed">Late</option>
-                            <option value="Landed">Landed</option>
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            <select
+              value={filterPayment}
+              onChange={(e) => setFilterPayment(e.target.value)}
+              className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              <option value="All">{tr('All payments')}</option>
+              <option value="Fully Paid">{tr('Fully paid')}</option>
+              <option value="Deposit Paid (MoMo)">{tr('Deposit paid')}</option>
+              <option value="Pending Payment">{tr('Unpaid')}</option>
+            </select>
+          </div>
+        </div>
 
-                  <div className="xl:col-span-2 min-w-0" onClick={(e) => e.stopPropagation()}>
-                    <div className="font-mono font-bold text-[#0a2540] dark:text-white tabular-nums whitespace-nowrap">
-                      {formatRwf(b.total_rwf)}
-                    </div>
-                    <select
-                      value={b.payment_status}
-                      onChange={(e) =>
-                        handleUpdatePaymentStatus(b.id, e.target.value as PaymentStatus)
-                      }
-                      className="text-xs font-semibold rounded-lg px-2 py-1 mt-1 border bg-[#f6f9fc] dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 outline-none cursor-pointer max-w-full"
-                    >
-                      <option value="Fully Paid">Fully Paid</option>
-                      <option value="Deposit Paid (MoMo)">Deposit Paid</option>
-                      <option value="Pending Payment">Unpaid</option>
-                    </select>
-                  </div>
+        {/* Clean Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm min-w-[920px]">
+            <thead>
+              <tr className="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
+                <th className="py-3 px-4">{tr('Customer')}</th>
+                <th className="py-3 px-4">{tr('Car & driver')}</th>
+                <th className="py-3 px-4">{tr('Trip & flight')}</th>
+                <th className="py-3 px-4 text-right">{tr('Total')}</th>
+                <th className="py-3 px-4">{tr('Status')}</th>
+                <th className="py-3 px-4 text-right">{tr('Action')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredBookings.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 px-4 text-center text-slate-500 dark:text-slate-400">
+                    {tr('No bookings match your search.')}
+                  </td>
+                </tr>
+              ) : (
+                filteredBookings.map((b) => {
+                  const vehicle = vehicles.find((v) => v.id === b.vehicle_id);
+                  const driver = drivers.find((d) => d.id === b.driver_id);
 
-                  <div className="xl:col-span-2 flex items-center md:justify-end gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={b.status}
-                      onChange={(e) =>
-                        onUpdateBookingStatus(b.id, e.target.value as BookingStatus)
-                      }
-                      className="text-xs font-semibold rounded-lg px-2.5 py-1.5 outline-none border bg-[#f6f9fc] dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-[#0a2540] dark:text-slate-200 cursor-pointer"
-                    >
-                      <option value="Confirmed">Booked</option>
-                      <option value="In Progress">On Trip</option>
-                      <option value="Completed">Done</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-
-                    {b.dispatch_status === 'Not Sent' && (
-                      <button
-                        onClick={() => onSelectBookingForDispatch(b.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all whitespace-nowrap shadow-xs active:scale-95 ${activeBtnText}`}
-                        style={{ backgroundColor: activeThemeColor }}
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Send SMS</span>
-                      </button>
-                    )}
-
-                    {b.dispatch_status === 'Dispatched (SMS)' && (
-                      <button
-                        onClick={() => onAcknowledgeCheckin(b.id)}
-                        className="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-slate-200 rounded-full border border-slate-200 dark:border-slate-700 font-semibold whitespace-nowrap"
-                      >
-                        Mark Ready
-                      </button>
-                    )}
-
-                    <button
+                  return (
+                    <tr
+                      key={b.id}
                       onClick={() => {
                         setSelectedBookingDetails(b);
                         setConfirmCancelId(null);
                       }}
-                      className="p-2 rounded-lg text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
-                      title="See booking details"
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 align-top cursor-pointer transition-colors"
                     >
-                      <ArrowUpRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBookingDetails(b)}
+                          className="font-mono text-xs font-semibold accent-text hover:underline"
+                        >
+                          #{b.id}
+                        </button>
+                        <div className="font-semibold text-slate-900 dark:text-white mt-0.5">
+                          {b.client_name}
+                        </div>
+                        <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                          {b.client_phone}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <div className="font-medium text-slate-900 dark:text-white">
+                          {vehicle?.model_name || 'No car'}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {vehicle?.plate_number && (
+                            <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
+                              {vehicle.plate_number}
+                            </span>
+                          )}
+                          {driver ? (
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {driver.name}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+                              <span>{tr('No driver')}</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="text-slate-900 dark:text-white font-medium">
+                          {b.destination}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+                          <span>{formatHumanDateRange(b.start_date, b.end_date)}</span>
+                          {b.flight_number && (
+                            <span className="inline-flex items-center gap-1.5">
+                              <Plane className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                              <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                                {b.flight_number}
+                              </span>
+                              <select
+                                value={b.flight_status || 'Scheduled'}
+                                onChange={(e) =>
+                                  onUpdateFlightStatus(
+                                    b.id,
+                                    e.target.value as 'On Time' | 'Delayed' | 'Landed' | 'Scheduled'
+                                  )
+                                }
+                                className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-md px-1.5 py-0.5 outline-none cursor-pointer"
+                              >
+                                <option value="Scheduled">Scheduled</option>
+                                <option value="On Time">On time</option>
+                                <option value="Delayed">Late</option>
+                                <option value="Landed">Landed</option>
+                              </select>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="font-mono font-semibold text-slate-900 dark:text-white tabular-nums">
+                          {formatMoney(b.total_rwf)}
+                        </div>
+                        <div className="mt-1">
+                          <select
+                            value={b.payment_status}
+                            onChange={(e) =>
+                              handleUpdatePaymentStatus(b.id, e.target.value as PaymentStatus)
+                            }
+                            className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs rounded-md px-2 py-0.5 outline-none cursor-pointer"
+                          >
+                            <option value="Fully Paid">Fully paid</option>
+                            <option value="Deposit Paid (MoMo)">Deposit paid</option>
+                            <option value="Pending Payment">Unpaid</option>
+                          </select>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="inline-flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${getStatusDotClass(b.status)}`} />
+                          <select
+                            value={b.status}
+                            onChange={(e) =>
+                              onUpdateBookingStatus(b.id, e.target.value as BookingStatus)
+                            }
+                            className={`bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-xs font-medium rounded-lg px-2.5 py-1.5 outline-none cursor-pointer ${getStatusTextClass(b.status)}`}
+                          >
+                            <option value="Confirmed">Booked</option>
+                            <option value="In Progress">On trip</option>
+                            <option value="Completed">Done</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="inline-flex items-center justify-end gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedBookingDetails(b);
+                              setConfirmCancelId(null);
+                            }}
+                            className="accent-text text-xs font-medium hover:underline"
+                          >
+                            {tr('Details')}
+                          </button>
+
+                          {b.dispatch_status === 'Not Sent' && (
+                            <button
+                              type="button"
+                              onClick={() => onSelectBookingForDispatch(b.id)}
+                              className="accent-bg inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-95"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>{tr('Send SMS')}</span>
+                            </button>
+                          )}
+
+                          {b.dispatch_status === 'Dispatched (SMS)' && (
+                            <button
+                              type="button"
+                              onClick={() => onAcknowledgeCheckin(b.id)}
+                              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            >
+                              {tr('Mark ready')}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Booking Details Modal */}
       {selectedBookingDetails && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
+            <div className="flex items-start justify-between border-b border-slate-200/80 dark:border-slate-800 pb-4">
               <div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="font-mono font-bold text-sm px-2.5 py-0.5 rounded-lg"
-                    style={{ backgroundColor: `${activeThemeColor}18`, color: activeThemeColor }}
-                  >
+                <div className="flex items-center gap-2.5 text-xs">
+                  <span className="font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 accent-text">
                     #{selectedBookingDetails.id}
                   </span>
-                  <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-slate-100 dark:bg-slate-800 text-[#0a2540] dark:text-slate-200">
-                    {selectedBookingDetails.status}
+                  <span className={`inline-flex items-center gap-1.5 font-medium ${getStatusTextClass(selectedBookingDetails.status)}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${getStatusDotClass(selectedBookingDetails.status)}`} />
+                    <span>{selectedBookingDetails.status}</span>
                   </span>
                 </div>
-                <h3 className="text-xl font-bold text-[#0a2540] dark:text-white mt-2">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-1.5">
                   {selectedBookingDetails.client_name}
                 </h3>
-                <div className="text-sm text-[#425466] dark:text-slate-400 mt-1 flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5" />
-                    {selectedBookingDetails.client_phone}
-                  </span>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-2">
+                  <span className="font-mono">{selectedBookingDetails.client_phone}</span>
                   <span>·</span>
                   <span>{selectedBookingDetails.client_email}</span>
                 </div>
@@ -448,69 +480,71 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setIsReceiptOpen(!isReceiptOpen)}
-                  className="p-2 rounded-lg text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
                   title="Show receipt"
                 >
-                  <Printer className="w-5 h-5" />
+                  <Printer className="w-4 h-4" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setSelectedBookingDetails(null);
                     setIsReceiptOpen(false);
                     setConfirmCancelId(null);
                   }}
-                  className="p-2 rounded-lg text-[#425466] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
+            {/* Key Summary Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-xs text-[#425466] dark:text-slate-400 font-medium">Total Price</span>
-                <p className="text-base font-bold text-[#0a2540] dark:text-white font-mono mt-1">
-                  {formatRwf(selectedBookingDetails.total_rwf)}
+              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Total price</span>
+                <p className="text-sm font-semibold font-mono text-slate-900 dark:text-white mt-0.5 tabular-nums">
+                  {formatMoney(selectedBookingDetails.total_rwf)}
                 </p>
               </div>
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-xs text-[#425466] dark:text-slate-400 font-medium">Payment</span>
-                <p className="text-sm font-semibold text-[#0a2540] dark:text-white mt-1 truncate">
+              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Payment</span>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5 truncate">
                   {selectedBookingDetails.payment_status}
                 </p>
               </div>
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-xs text-[#425466] dark:text-slate-400 font-medium">Method</span>
-                <p className="text-sm font-semibold text-[#0a2540] dark:text-white mt-1">
+              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Method</span>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
                   {selectedBookingDetails.payment_method}
                 </p>
               </div>
-              <div className="p-3.5 bg-[#f6f9fc] dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-xs text-[#425466] dark:text-slate-400 font-medium">Start Date</span>
-                <p className="text-sm font-semibold text-[#0a2540] dark:text-white font-mono mt-1">
-                  {selectedBookingDetails.start_date}
+              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Trip dates</span>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
+                  {formatHumanDate(selectedBookingDetails.start_date)}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* Vehicle & Driver Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {(() => {
                 const vehicle = vehicles.find((v) => v.id === selectedBookingDetails.vehicle_id);
                 return (
-                  <div className="p-4 bg-[#f6f9fc] dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                    <div className="text-xs font-semibold text-[#425466] dark:text-slate-400 flex items-center gap-1.5">
-                      <Car className="w-4 h-4" style={{ color: activeThemeColor }} />
-                      <span>Car</span>
-                    </div>
-                    <div className="text-base font-bold text-[#0a2540] dark:text-white">
+                  <div className="p-4 bg-slate-50/90 dark:bg-slate-800/40 rounded-xl space-y-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Car</div>
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">
                       {vehicle?.model_name || 'Car'}
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-mono font-bold" style={{ color: activeThemeColor }}>
+                    <div className="flex items-center justify-between text-xs pt-0.5">
+                      <span className="font-mono accent-text font-semibold">
                         {vehicle?.plate_number}
                       </span>
-                      <span className="text-[#425466] dark:text-slate-400">{vehicle?.location}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{vehicle?.location}</span>
                     </div>
                   </div>
                 );
@@ -519,17 +553,14 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               {(() => {
                 const driver = drivers.find((d) => d.id === selectedBookingDetails.driver_id);
                 return (
-                  <div className="p-4 bg-[#f6f9fc] dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                    <div className="text-xs font-semibold text-[#425466] dark:text-slate-400 flex items-center gap-1.5">
-                      <UserCheck className="w-4 h-4" style={{ color: activeThemeColor }} />
-                      <span>Driver</span>
-                    </div>
-                    <div className="text-base font-bold text-[#0a2540] dark:text-white">
+                  <div className="p-4 bg-slate-50/90 dark:bg-slate-800/40 rounded-xl space-y-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Driver</div>
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">
                       {driver?.name || 'No driver yet'}
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-mono text-[#425466] dark:text-slate-400">{driver?.phone}</span>
-                      <span className="text-[#425466] dark:text-slate-400">{driver?.rating || 5.0} ★</span>
+                    <div className="flex items-center justify-between text-xs pt-0.5">
+                      <span className="font-mono text-slate-500 dark:text-slate-400">{driver?.phone}</span>
+                      <span className="font-mono text-slate-500 dark:text-slate-400">{driver?.rating || 5.0} / 5</span>
                     </div>
                   </div>
                 );
@@ -537,108 +568,115 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             </div>
 
             {selectedBookingDetails.flight_number && (
-              <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 space-y-1.5 text-sm">
-                <div className="flex items-center justify-between font-bold text-sky-800 dark:text-sky-300">
-                  <span className="flex items-center gap-2">
+              <div className="p-3.5 rounded-lg bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 space-y-1 text-xs">
+                <div className="flex items-center justify-between font-semibold text-blue-700 dark:text-blue-300">
+                  <span className="inline-flex items-center gap-1.5">
                     <Plane className="w-4 h-4" />
-                    <span>Airport Flight</span>
+                    <span>Airport flight</span>
                   </span>
                   <span className="font-mono">{selectedBookingDetails.flight_number}</span>
                 </div>
-                <div className="text-sky-900 dark:text-sky-200">
-                  From <strong>{selectedBookingDetails.flight_origin || 'Entebbe'}</strong> · Status:{' '}
-                  <strong>{selectedBookingDetails.flight_status || 'On Time'}</strong>
+                <div className="text-slate-700 dark:text-slate-200">
+                  From <strong className="font-semibold">{selectedBookingDetails.flight_origin || 'Entebbe'}</strong> · Status:{' '}
+                  <strong className="font-semibold">{selectedBookingDetails.flight_status || 'On Time'}</strong>
                 </div>
               </div>
             )}
 
             {isReceiptOpen && (
-              <div className="p-5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3 font-mono text-sm">
+              <div className="p-5 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-xl space-y-3 font-mono text-sm">
                 <div className="text-center border-b border-slate-200 dark:border-slate-800 pb-3">
-                  <h4 className="font-bold text-base text-[#0a2540] dark:text-white">Payment Receipt</h4>
-                  <p className="text-xs text-[#425466] dark:text-slate-400">KigaliFleet · TIN 100984512</p>
+                  <h4 className="font-semibold text-base text-slate-900 dark:text-white">Payment receipt</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">KigaliFleet · TIN 100984512</p>
                 </div>
 
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between">
-                    <span>Customer:</span>
-                    <span className="font-bold">{selectedBookingDetails.client_name}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Customer:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {selectedBookingDetails.client_name}
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Booking:</span>
+                    <span className="text-slate-500 dark:text-slate-400">Booking:</span>
                     <span>#{selectedBookingDetails.id}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Trip:</span>
-                    <span className="truncate max-w-[240px]">{selectedBookingDetails.destination}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Trip:</span>
+                    <span className="truncate max-w-[260px]">{selectedBookingDetails.destination}</span>
                   </div>
                 </div>
 
-                <div className="border-t border-b border-dashed border-slate-300 dark:border-slate-700 py-3 space-y-1.5 text-xs">
+                <div className="border-t border-b border-dashed border-slate-200 dark:border-slate-700 py-3 space-y-1.5 text-xs">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>{formatRwf(Math.round(selectedBookingDetails.total_rwf / 1.18))}</span>
+                    <span>{formatMoney(Math.round(selectedBookingDetails.total_rwf / 1.18))}</span>
                   </div>
-                  <div className="flex justify-between text-[#425466] dark:text-slate-400">
+                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
                     <span>Tax (18%):</span>
-                    <span>{formatRwf(Math.round(selectedBookingDetails.total_rwf - selectedBookingDetails.total_rwf / 1.18))}</span>
+                    <span>
+                      {formatMoney(Math.round(selectedBookingDetails.total_rwf - selectedBookingDetails.total_rwf / 1.18))}
+                    </span>
                   </div>
-                  <div className="flex justify-between font-bold text-sm text-[#0a2540] dark:text-white pt-1">
-                    <span>Total Paid:</span>
-                    <span>{formatRwf(selectedBookingDetails.total_rwf)}</span>
+                  <div className="flex justify-between font-semibold text-sm text-slate-900 dark:text-white pt-1">
+                    <span>Total paid:</span>
+                    <span>{formatMoney(selectedBookingDetails.total_rwf)}</span>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Footer */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
               {confirmCancelId === selectedBookingDetails.id ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">Cancel this booking?</span>
+                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Cancel this booking?</span>
                   <button
+                    type="button"
                     onClick={() => {
                       onDeleteBooking?.(selectedBookingDetails.id);
                       setSelectedBookingDetails(null);
                       setConfirmCancelId(null);
                     }}
-                    className="px-3.5 py-1.5 rounded-full bg-rose-600 text-white text-xs font-semibold"
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium"
                   >
-                    Yes, Cancel
+                    Yes, cancel
                   </button>
                   <button
+                    type="button"
                     onClick={() => setConfirmCancelId(null)}
-                    className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold"
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200"
                   >
                     Keep
                   </button>
                 </div>
               ) : (
                 <button
+                  type="button"
                   onClick={() => setConfirmCancelId(selectedBookingDetails.id)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full transition-colors"
+                  className="text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Cancel Booking</span>
+                  Cancel booking
                 </button>
               )}
 
               <div className="flex items-center gap-2.5">
                 <button
+                  type="button"
                   onClick={() => setIsReceiptOpen(!isReceiptOpen)}
-                  className="px-4 py-2 text-sm font-semibold rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#0a2540] dark:text-slate-200"
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  {isReceiptOpen ? 'Hide Receipt' : 'Show Receipt'}
+                  {isReceiptOpen ? 'Hide receipt' : 'Show receipt'}
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     onSelectBookingForDispatch(selectedBookingDetails.id);
                     setSelectedBookingDetails(null);
                   }}
-                  className={`px-5 py-2 text-sm font-semibold rounded-full transition-all shadow-xs ${activeBtnText}`}
-                  style={{ backgroundColor: activeThemeColor }}
+                  className="accent-bg px-4 py-2 text-sm font-medium rounded-lg hover:opacity-95"
                 >
-                  Send Driver SMS
+                  Send driver SMS
                 </button>
               </div>
             </div>

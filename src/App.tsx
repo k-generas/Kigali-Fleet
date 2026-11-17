@@ -34,8 +34,9 @@ import { ExpensesView } from './components/ExpensesView';
 import { TasksView } from './components/TasksView';
 import { RentalAgreementModal } from './components/RentalAgreementModal';
 import { Booking, SuperAdminModuleId, Vehicle } from './types';
-import { RotateCcw, ShieldAlert, Lock } from 'lucide-react';
+import { RotateCcw, ShieldAlert, Sparkles, Car } from 'lucide-react';
 import { isSuperAdminUser } from './utils/auth';
+import { I18nProvider, translateText } from './utils/i18n';
 
 const VALID_TABS = [
   'landing',
@@ -130,6 +131,7 @@ export default function App() {
   const handleSelectTab = useCallback((tab: string) => {
     setCurrentTab(tab);
     if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       try {
         const url = new URL(window.location.href);
         url.searchParams.set('tab', tab);
@@ -174,17 +176,22 @@ export default function App() {
     ? store.vehicles.find((v) => v.id === activeDispatchBooking.vehicle_id) || null
     : null;
 
-  if (currentTab === 'login') {
-    return (
-      <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 font-sans antialiased">
+  const renderView = () => {
+    if (currentTab === 'login') {
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 font-sans antialiased">
         <LoginView
           onLoginSuccess={(isSuper) => handleSelectTab(isSuper ? 'super-admin' : 'overview')}
           onNavigateToRegister={() => handleSelectTab('register')}
           onNavigateToLanding={() => handleSelectTab('landing')}
           onOpenForgotPassword={() => setIsForgotPasswordOpen(true)}
           currentTheme={store.currentTheme}
+          accentColorId={store.accentColorId}
+          onSelectAccentColor={store.setAccentColor}
+          themeMode={store.theme}
+          onToggleThemeMode={store.toggleTheme}
           users={store.users}
-          onSelectUser={store.login}
+          onSelectUser={store.enterDemoMode}
           onLoginWithGoogle={store.loginWithGoogle}
           onLoginWithCredentials={store.loginWithCredentials}
           onCreateUserAccount={store.createUserAccount}
@@ -195,6 +202,7 @@ export default function App() {
           isOpen={isForgotPasswordOpen}
           onClose={() => setIsForgotPasswordOpen(false)}
           currentTheme={store.currentTheme}
+          onSendResetEmail={store.sendPasswordReset}
         />
       </div>
     );
@@ -202,13 +210,18 @@ export default function App() {
 
   if (currentTab === 'register') {
     return (
-      <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 font-sans antialiased">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 font-sans antialiased">
         <RegisterView
           onRegisterSuccess={() => handleSelectTab('overview')}
           onNavigateToLogin={() => handleSelectTab('login')}
           onNavigateToLanding={() => handleSelectTab('landing')}
           currentTheme={store.currentTheme}
+          accentColorId={store.accentColorId}
+          onSelectAccentColor={store.setAccentColor}
+          themeMode={store.theme}
+          onToggleThemeMode={store.toggleTheme}
           onRegisterCompany={store.registerCompany}
+          onLoginWithGoogle={store.loginWithGoogle}
         />
       </div>
     );
@@ -216,7 +229,7 @@ export default function App() {
 
   if (currentTab === 'landing') {
     return (
-      <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 font-sans antialiased">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 font-sans antialiased">
         <LandingPageView
           onEnterApp={() => handleSelectTab('overview')}
           onOpenStorefront={() => handleSelectTab('storefront')}
@@ -268,6 +281,7 @@ export default function App() {
           onClose={() => setIsStorefrontOpen(false)}
           onNavigateToStorefront={() => handleSelectTab('storefront')}
           currentTheme={store.currentTheme}
+          currentCompany={store.currentCompany}
         />
       </div>
     );
@@ -275,12 +289,43 @@ export default function App() {
 
   if (currentTab === 'storefront') {
     return (
-      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 font-sans antialiased">
+      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 font-sans antialiased">
+        {store.isDemoMode && store.currentCompany.id === 'comp-kigali-exec' && (
+          <div className="bg-white dark:bg-[#0f172a] border-b border-slate-200/80 dark:border-slate-800 px-4 py-2.5 text-sm flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+              <span>
+                <strong className="font-semibold text-slate-900 dark:text-white">{translateText('Free Demo Storefront Preview', store.language)}</strong> —{' '}
+                {translateText('Sample Kigali cars shown so visitors can test online booking.', store.language)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleSelectTab('register')}
+                className="px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap accent-bg hover:opacity-95 transition-opacity"
+              >
+                {translateText('Create Real Company', store.language)}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTab('login')}
+                className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap transition-colors"
+              >
+                {translateText('Sign in', store.language)}
+              </button>
+            </div>
+          </div>
+        )}
         <PublicStorefrontView
           vehicles={store.vehicles}
           drivers={store.drivers}
           bookings={store.bookings}
           currentTheme={store.currentTheme}
+          accentColorId={store.accentColorId}
+          onSelectAccentColor={store.setAccentColor}
+          themeMode={store.theme}
+          onToggleThemeMode={store.toggleTheme}
           currentCompany={store.currentCompany}
           companySettings={store.settings}
           onCompleteClientBooking={store.addBooking}
@@ -292,7 +337,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0f1c] text-[#0a2540] dark:text-slate-100 flex font-sans transition-colors antialiased">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 flex font-sans antialiased">
       {/* 1. Left Sidebar Navigation Menu */}
       <Sidebar
         currentTab={currentTab}
@@ -332,12 +377,14 @@ export default function App() {
           currentUser={store.currentUser}
           currentCompany={store.currentCompany}
           onSwitchRole={store.switchRole}
+          isDemoMode={store.isDemoMode}
           isFirebaseConnected={store.isFirebaseConnected}
           onLoginWithGoogle={store.loginWithGoogle}
           onNavigateTab={handleSelectTab}
           onOpenSuperAdminModule={(mod) => {
-            if (store.currentUser.role !== 'superadmin') {
-              store.switchRole('superadmin');
+            if (!isSuperAdminUser(store.currentUser)) {
+              handleSelectTab('login');
+              return;
             }
             setRequestedAdminModule(mod);
             handleSelectTab('super-admin');
@@ -349,7 +396,70 @@ export default function App() {
         />
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 w-full max-w-[1440px] mx-auto p-4 sm:p-6 lg:p-8 min-w-0">
+        <main className="flex-1 w-full max-w-[1440px] mx-auto p-4 sm:p-6 lg:p-8 min-w-0 space-y-6">
+          {store.isDemoMode && (
+            <div className="rounded-xl bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 kf-card px-4 sm:px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200">
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-1.5 sm:mt-0" />
+                <span>
+                  <strong className="font-semibold text-slate-900 dark:text-white">{translateText('Free Demo Sandbox', store.language)}:</strong>{' '}
+                  {translateText('You are testing sample Kigali cars & bookings locally. Create a real company when ready to go live.', store.language)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSelectTab('register')}
+                  className="px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap accent-bg hover:opacity-95 transition-opacity"
+                >
+                  {translateText('Create Real Company', store.language)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectTab('login')}
+                  className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap transition-colors"
+                >
+                  {translateText('Sign in', store.language)}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!store.isDemoMode &&
+            store.vehicles.length === 0 &&
+            (currentTab === 'overview' || currentTab === 'vehicles') && (
+              <div className="rounded-xl bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 kf-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 accent-bg">
+                    <Car className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                      {translateText('Your Live Garage is Ready', store.language)}
+                    </h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                      {translateText('Add your real rental cars with photos, or load 4 editable sample Kigali cars to start fast.', store.language)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={store.seedSampleFleetForCompany}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 whitespace-nowrap transition-colors"
+                  >
+                    {translateText('Load Starter Sample Cars', store.language)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTab('vehicles')}
+                    className="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap accent-bg hover:opacity-95 transition-opacity"
+                  >
+                    {translateText('Add Real Cars', store.language)}
+                  </button>
+                </div>
+              </div>
+            )}
           {currentTab === 'overview' && (
             <OverviewView
               vehicles={store.vehicles}
@@ -390,6 +500,8 @@ export default function App() {
               expenses={store.expenses}
               maintenance={store.maintenance}
               currentTheme={store.currentTheme}
+              companyId={store.currentCompany.id}
+              isDemoMode={store.isDemoMode}
               onAddVehicle={store.addVehicle}
               onUpdateStatus={store.updateVehicleStatus}
               onUpdateRate={store.updateVehicleRate}
@@ -646,29 +758,34 @@ export default function App() {
                 onClearRequestedModule={() => setRequestedAdminModule(null)}
               />
             ) : (
-              <div className="max-w-xl mx-auto my-16 p-8 rounded-2xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800/80 text-center space-y-5 stripe-card">
-                <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 flex items-center justify-center mx-auto text-rose-500">
-                  <ShieldAlert className="w-8 h-8" />
+              <div className="max-w-xl mx-auto my-12 p-7 rounded-xl bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 kf-card text-center space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200/70 dark:border-red-500/30 flex items-center justify-center mx-auto text-red-600 dark:text-red-400">
+                  <ShieldAlert className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-[#0a2540] dark:text-white">Private Admin Area</h3>
-                  <p className="text-sm text-[#425466] dark:text-slate-300 mt-2 leading-relaxed">
-                    This page is only for platform admins. Your account (<code className="font-mono font-semibold text-[#0a2540] dark:text-white">{store.currentUser.email}</code>) does not have admin access.
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                    {translateText('Private Admin Area', store.language)}
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    {translateText('This page is only for platform admins.', store.language)} (
+                    <code className="font-mono font-semibold text-slate-900 dark:text-white">
+                      {store.currentUser.email}
+                    </code>
+                    )
                   </p>
                 </div>
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
                     onClick={() => handleSelectTab('overview')}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0a2540] dark:text-white font-semibold text-sm border border-slate-200 dark:border-slate-700 transition-colors"
+                    className="w-full sm:w-auto px-5 py-2 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium text-sm border border-slate-200 dark:border-slate-700 transition-colors"
                   >
-                    Return Home
+                    {translateText('Return Home', store.language)}
                   </button>
                   <button
                     onClick={() => handleSelectTab('login')}
-                    className={`w-full sm:w-auto px-6 py-2.5 rounded-full font-semibold text-sm shadow-xs transition-colors ${store.currentTheme.btnText}`}
-                    style={{ backgroundColor: store.currentTheme.hex }}
+                    className="w-full sm:w-auto px-5 py-2 rounded-lg font-medium text-sm accent-bg"
                   >
-                    Sign in as Admin
+                    {translateText('Sign in as Admin', store.language)}
                   </button>
                 </div>
               </div>
@@ -677,22 +794,22 @@ export default function App() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1424] text-[#425466] dark:text-slate-400 text-sm py-5 px-6">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <footer className="border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] text-slate-500 dark:text-slate-400 text-sm py-4 px-6">
+          <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[#0a2540] dark:text-white">KigaliFleet</span>
+              <span className="font-semibold text-slate-900 dark:text-white">KigaliFleet</span>
               <span>·</span>
-              <span>Kigali, Rwanda</span>
+              <span>{translateText('Kigali, Rwanda', store.language)}</span>
             </div>
 
             <div className="flex items-center gap-4">
               <button
                 onClick={store.resetToDefaults}
-                className="inline-flex items-center gap-1.5 hover:text-[#0a2540] dark:hover:text-white transition-colors font-medium"
+                className="inline-flex items-center gap-1.5 hover:text-slate-900 dark:hover:text-white transition-colors font-medium"
                 title="Restore sample cars, drivers, and bookings"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>Start Over</span>
+                <span>{translateText('Start Over', store.language)}</span>
               </button>
             </div>
           </div>
@@ -736,6 +853,7 @@ export default function App() {
         onClose={() => setIsStorefrontOpen(false)}
         onNavigateToStorefront={() => handleSelectTab('storefront')}
         currentTheme={store.currentTheme}
+        currentCompany={store.currentCompany}
       />
 
       {/* Forgot Password Recovery Modal */}
@@ -743,6 +861,7 @@ export default function App() {
         isOpen={isForgotPasswordOpen}
         onClose={() => setIsForgotPasswordOpen(false)}
         currentTheme={store.currentTheme}
+        onSendResetEmail={store.sendPasswordReset}
       />
 
       {/* Official Legal Rental Agreement Contract Modal */}
@@ -759,6 +878,23 @@ export default function App() {
         currentUser={store.currentUser}
         currentTheme={store.currentTheme}
       />
-    </div>
+      </div>
+    );
+  };
+
+  return (
+    <I18nProvider
+      currency={store.currency}
+      setCurrency={store.setCurrency}
+      language={store.language}
+      setLanguage={store.setLanguage}
+    >
+      <AppTranslatedFooterWrapper>{renderView()}</AppTranslatedFooterWrapper>
+    </I18nProvider>
   );
 }
+
+const AppTranslatedFooterWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <>{children}</>;
+};
+
