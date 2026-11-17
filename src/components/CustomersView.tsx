@@ -16,6 +16,7 @@ import {
 import { ColorTheme } from '../theme';
 import { useI18n } from '../utils/i18n';
 import { formatHumanDateRange } from '../utils/dates';
+import { ModalShell } from './ModalShell';
 
 interface CustomersViewProps {
   customers: Customer[];
@@ -545,148 +546,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
       {/* Customer Details Modal */}
       {selectedDossierCustomer && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-2xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto kf-modal">
-            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {selectedDossierCustomer.name}
-                </h3>
-                <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                  {selectedDossierCustomer.organization || getCategoryBadge(selectedDossierCustomer.category).label}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedDossierCustomer(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-              <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Total paid</span>
-                <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums mt-0.5 block">
-                  {formatMoney(selectedDossierCustomer.total_spent_rwf || 0)}
-                </span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Still owed</span>
-                <span
-                  className={`text-base font-semibold font-mono tabular-nums mt-0.5 block ${
-                    (selectedDossierCustomer.outstanding_balance_rwf || 0) > 0
-                      ? 'text-rose-600 dark:text-rose-400'
-                      : 'text-slate-900 dark:text-white'
-                  }`}
-                >
-                  {formatMoney(selectedDossierCustomer.outstanding_balance_rwf || 0)}
-                </span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Payment rule</span>
-                <span className="font-medium text-slate-900 dark:text-white mt-0.5 block">
-                  {getFriendlyTerms(selectedDossierCustomer.credit_terms)}
-                </span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Discount</span>
-                <span className="font-semibold font-mono text-slate-900 dark:text-white tabular-nums mt-0.5 block">
-                  {selectedDossierCustomer.discount_rate_pct || 0}%
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50/90 dark:bg-slate-800/40 text-sm">
-              <div>
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Phone & email</span>
-                <span className="text-slate-900 dark:text-white font-medium mt-0.5 block">
-                  <span className="font-mono">{selectedDossierCustomer.phone}</span>
-                  {selectedDossierCustomer.email ? ` · ${selectedDossierCustomer.email}` : ''}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Tax ID & address</span>
-                <span className="text-slate-900 dark:text-white font-medium mt-0.5 block">
-                  TIN: <span className="font-mono">{selectedDossierCustomer.tin_number || 'None'}</span> ·{' '}
-                  {selectedDossierCustomer.address || 'Kigali, Rwanda'}
-                </span>
-              </div>
-              {selectedDossierCustomer.notes && (
-                <div className="sm:col-span-2">
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block">Notes</span>
-                  <span className="text-slate-900 dark:text-white mt-0.5 block">
-                    {selectedDossierCustomer.notes}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Trip History */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Past & current trips ({customerBookings.length})
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenNewBookingForCustomer(
-                      selectedDossierCustomer.name,
-                      selectedDossierCustomer.phone,
-                      selectedDossierCustomer.email
-                    );
-                    setSelectedDossierCustomer(null);
-                  }}
-                  className="accent-text text-sm font-medium hover:underline"
-                >
-                  + Book new trip
-                </button>
-              </div>
-
-              {customerBookings.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/90 dark:bg-slate-800/40 rounded-xl">
-                  No trips recorded for this customer yet.
-                </div>
-              ) : (
-                <div className="border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
-                  {customerBookings.map((b) => {
-                    const veh = vehicles.find((v) => v.id === b.vehicle_id);
-                    return (
-                      <div key={b.id} className="p-3 flex items-center justify-between text-sm">
-                        <div>
-                          <div className="font-medium text-slate-900 dark:text-white">
-                            {b.destination}
-                            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
-                              ({b.status === 'In Progress' ? 'On road' : b.status === 'Completed' ? 'Done' : b.status})
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            {formatHumanDateRange(b.start_date, b.end_date)} · {veh?.model_name || 'Car'}{' '}
-                            {veh?.plate_number ? `(${veh.plate_number})` : ''}
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
-                            {formatMoney(b.total_rwf)}
-                          </span>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{b.payment_status}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+        <ModalShell
+          isOpen={!!selectedDossierCustomer}
+          onClose={() => setSelectedDossierCustomer(null)}
+          maxWidthClass="max-w-2xl"
+          title={selectedDossierCustomer.name}
+          subtitle={
+            selectedDossierCustomer.organization || getCategoryBadge(selectedDossierCustomer.category).label
+          }
+          bodyClassName="p-5 sm:p-6 space-y-5 text-sm"
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-3">
               {(selectedDossierCustomer.outstanding_balance_rwf || 0) > 0 ? (
                 <button
                   type="button"
@@ -694,7 +564,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     handleOpenPayment(selectedDossierCustomer);
                     setSelectedDossierCustomer(null);
                   }}
-                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
+                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs cursor-pointer"
                 >
                   Mark {formatMoney(selectedDossierCustomer.outstanding_balance_rwf)} paid
                 </button>
@@ -711,284 +581,385 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     handleOpenEdit(selectedDossierCustomer);
                     setSelectedDossierCustomer(null);
                   }}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   {tr('Edit')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedDossierCustomer(null)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   {tr('Close')}
                 </button>
               </div>
             </div>
+          }
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+            <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Total paid</span>
+              <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums mt-0.5 block">
+                {formatMoney(selectedDossierCustomer.total_spent_rwf || 0)}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Still owed</span>
+              <span
+                className={`text-base font-semibold font-mono tabular-nums mt-0.5 block ${
+                  (selectedDossierCustomer.outstanding_balance_rwf || 0) > 0
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-slate-900 dark:text-white'
+                }`}
+              >
+                {formatMoney(selectedDossierCustomer.outstanding_balance_rwf || 0)}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Payment rule</span>
+              <span className="font-medium text-slate-900 dark:text-white mt-0.5 block">
+                {getFriendlyTerms(selectedDossierCustomer.credit_terms)}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Discount</span>
+              <span className="font-semibold font-mono text-slate-900 dark:text-white tabular-nums mt-0.5 block">
+                {selectedDossierCustomer.discount_rate_pct || 0}%
+              </span>
+            </div>
           </div>
-        </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50/90 dark:bg-slate-800/40 text-sm">
+            <div>
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Phone & email</span>
+              <span className="text-slate-900 dark:text-white font-medium mt-0.5 block">
+                <span className="font-mono">{selectedDossierCustomer.phone}</span>
+                {selectedDossierCustomer.email ? ` · ${selectedDossierCustomer.email}` : ''}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Tax ID & address</span>
+              <span className="text-slate-900 dark:text-white font-medium mt-0.5 block">
+                TIN: <span className="font-mono">{selectedDossierCustomer.tin_number || 'None'}</span> ·{' '}
+                {selectedDossierCustomer.address || 'Kigali, Rwanda'}
+              </span>
+            </div>
+            {selectedDossierCustomer.notes && (
+              <div className="sm:col-span-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">Notes</span>
+                <span className="text-slate-900 dark:text-white mt-0.5 block">
+                  {selectedDossierCustomer.notes}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Trip History */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Past & current trips ({customerBookings.length})
+              </h4>
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenNewBookingForCustomer(
+                    selectedDossierCustomer.name,
+                    selectedDossierCustomer.phone,
+                    selectedDossierCustomer.email
+                  );
+                  setSelectedDossierCustomer(null);
+                }}
+                className="accent-text text-sm font-medium hover:underline cursor-pointer"
+              >
+                + Book new trip
+              </button>
+            </div>
+
+            {customerBookings.length === 0 ? (
+              <div className="text-center py-6 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/90 dark:bg-slate-800/40 rounded-xl">
+                No trips recorded for this customer yet.
+              </div>
+            ) : (
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800">
+                {customerBookings.map((b) => {
+                  const veh = vehicles.find((v) => v.id === b.vehicle_id);
+                  return (
+                    <div key={b.id} className="p-3 flex items-center justify-between text-sm">
+                      <div>
+                        <div className="font-medium text-slate-900 dark:text-white">
+                          {b.destination}
+                          <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                            ({b.status === 'In Progress' ? 'On road' : b.status === 'Completed' ? 'Done' : b.status})
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {formatHumanDateRange(b.start_date, b.end_date)} · {veh?.model_name || 'Car'}{' '}
+                          {veh?.plate_number ? `(${veh.plate_number})` : ''}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+                          {formatMoney(b.total_rwf)}
+                        </span>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{b.payment_status}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </ModalShell>
       )}
 
       {/* Add / Edit Customer Modal */}
-      {isAddCustomerOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 my-8 max-h-[90vh] overflow-y-auto kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {editingCustomer ? 'Edit customer' : 'Add new customer'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsAddCustomerOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <ModalShell
+        isOpen={isAddCustomerOpen}
+        onClose={() => setIsAddCustomerOpen(false)}
+        maxWidthClass="max-w-lg"
+        asForm
+        onSubmit={handleSubmitForm}
+        title={editingCustomer ? 'Edit customer' : 'Add new customer'}
+        bodyClassName="p-5 sm:p-6 space-y-3.5 text-sm"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsAddCustomerOpen(false)}
+              className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs cursor-pointer"
+            >
+              {editingCustomer ? 'Save changes' : 'Save customer'}
+            </button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Full name *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Sarah Jenkins"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+            />
+          </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-3.5 text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Full name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Sarah Jenkins"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Customer type *</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as CustomerCategory })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
-                  >
-                    <option value="Corporate">Company</option>
-                    <option value="NGO / Diplomatic">NGO / Embassy</option>
-                    <option value="Tourist / Expat">Visitor / Tourist</option>
-                    <option value="Travel Agency">Tour Partner</option>
-                    <option value="Individual">Person</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Company or group</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Bank of Kigali"
-                    value={formData.organization}
-                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Tax number (TIN)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 100293847"
-                    value={formData.tin_number}
-                    onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Phone number *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="+250 788 000 000"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Email address</label>
-                  <input
-                    type="email"
-                    placeholder="name@company.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">When they pay</label>
-                  <select
-                    value={formData.credit_terms}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        credit_terms: e.target.value as 'Immediate MoMo' | 'Net-15' | 'Net-30' | 'Pre-paid 50%',
-                      })
-                    }
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
-                  >
-                    <option value="Immediate MoMo">Pay now (MoMo / Card)</option>
-                    <option value="Net-15">Pay in 15 days</option>
-                    <option value="Net-30">Pay in 30 days</option>
-                    <option value="Pre-paid 50%">Half before trip</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Price discount (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="50"
-                    placeholder="0"
-                    value={formData.discount_rate_pct}
-                    onChange={(e) => setFormData({ ...formData, discount_rate_pct: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Street or area in Kigali</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Kiyovu or Kimihurura"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Special notes</label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Likes Land Cruiser, needs French-speaking driver"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none resize-none focus:border-slate-400"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddCustomerOpen(false)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
-                >
-                  {editingCustomer ? 'Save changes' : 'Save customer'}
-                </button>
-              </div>
-            </form>
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Customer type *</label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value as CustomerCategory })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              <option value="Corporate">Company</option>
+              <option value="NGO / Diplomatic">NGO / Embassy</option>
+              <option value="Tourist / Expat">Visitor / Tourist</option>
+              <option value="Travel Agency">Tour Partner</option>
+              <option value="Individual">Person</option>
+            </select>
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Company or group</label>
+            <input
+              type="text"
+              placeholder="e.g. Bank of Kigali"
+              value={formData.organization}
+              onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Tax number (TIN)</label>
+            <input
+              type="text"
+              placeholder="e.g. 100293847"
+              value={formData.tin_number}
+              onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Phone number *</label>
+            <input
+              type="text"
+              required
+              placeholder="+250 788 000 000"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Email address</label>
+            <input
+              type="email"
+              placeholder="name@company.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">When they pay</label>
+            <select
+              value={formData.credit_terms}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  credit_terms: e.target.value as 'Immediate MoMo' | 'Net-15' | 'Net-30' | 'Pre-paid 50%',
+                })
+              }
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              <option value="Immediate MoMo">Pay now (MoMo / Card)</option>
+              <option value="Net-15">Pay in 15 days</option>
+              <option value="Net-30">Pay in 30 days</option>
+              <option value="Pre-paid 50%">Half before trip</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Price discount (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="50"
+              placeholder="0"
+              value={formData.discount_rate_pct}
+              onChange={(e) => setFormData({ ...formData, discount_rate_pct: Number(e.target.value) })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Street or area in Kigali</label>
+          <input
+            type="text"
+            placeholder="e.g. Kiyovu or Kimihurura"
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+          />
+        </div>
+
+        <div>
+          <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Special notes</label>
+          <textarea
+            rows={2}
+            placeholder="e.g. Likes Land Cruiser, needs French-speaking driver"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none resize-none focus:border-slate-400"
+          />
+        </div>
+      </ModalShell>
 
       {/* Settle Balance / Record Payment Modal */}
       {paymentModalCustomer && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record payment</h3>
+        <ModalShell
+          isOpen={!!paymentModalCustomer}
+          onClose={() => setPaymentModalCustomer(null)}
+          maxWidthClass="max-w-md"
+          asForm
+          onSubmit={handleConfirmPayment}
+          title="Record payment"
+          bodyClassName="p-5 sm:p-6 space-y-3.5 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setPaymentModalCustomer(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs cursor-pointer"
+              >
+                Save {formatMoney(paymentAmountInput)}
               </button>
             </div>
-
-            <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50/90 dark:bg-slate-800/40 p-4 rounded-xl space-y-1.5">
-              <div>
-                Customer:{' '}
-                <strong className="font-semibold text-slate-900 dark:text-white">
-                  {paymentModalCustomer.name}
-                </strong>
-              </div>
-              <div>
-                Company:{' '}
-                <strong className="font-semibold text-slate-900 dark:text-white">
-                  {paymentModalCustomer.organization || 'Personal'}
-                </strong>
-              </div>
-              <div>
-                Still owed:{' '}
-                <strong className="font-semibold text-rose-600 dark:text-rose-400 font-mono tabular-nums">
-                  {formatMoney(paymentModalCustomer.outstanding_balance_rwf || 0)}
-                </strong>
-              </div>
+          }
+        >
+          <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50/90 dark:bg-slate-800/40 p-4 rounded-xl space-y-1.5">
+            <div>
+              Customer:{' '}
+              <strong className="font-semibold text-slate-900 dark:text-white">
+                {paymentModalCustomer.name}
+              </strong>
             </div>
-
-            <form onSubmit={handleConfirmPayment} className="space-y-3.5 text-sm">
-              <div>
-                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">
-                  {tr('Amount Paid (RWF)')} *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1000"
-                  max={paymentModalCustomer.outstanding_balance_rwf || 99999999}
-                  value={paymentAmountInput}
-                  onChange={(e) => setPaymentAmountInput(Number(e.target.value))}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
-                />
-                {currency === 'USD' && (
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
-                    ≈ {formatMoney(paymentAmountInput)}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">How they paid</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as 'MTN Mobile Money' | 'Bank Transfer')}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
-                >
-                  <option value="MTN Mobile Money">MTN Mobile Money (MoMo)</option>
-                  <option value="Bank Transfer">Bank transfer</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setPaymentModalCustomer(null)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
-                >
-                  Save {formatMoney(paymentAmountInput)}
-                </button>
-              </div>
-            </form>
+            <div>
+              Company:{' '}
+              <strong className="font-semibold text-slate-900 dark:text-white">
+                {paymentModalCustomer.organization || 'Personal'}
+              </strong>
+            </div>
+            <div>
+              Still owed:{' '}
+              <strong className="font-semibold text-rose-600 dark:text-rose-400 font-mono tabular-nums">
+                {formatMoney(paymentModalCustomer.outstanding_balance_rwf || 0)}
+              </strong>
+            </div>
           </div>
-        </div>
+
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">
+              {tr('Amount Paid (RWF)')} *
+            </label>
+            <input
+              type="number"
+              required
+              min="1000"
+              max={paymentModalCustomer.outstanding_balance_rwf || 99999999}
+              value={paymentAmountInput}
+              onChange={(e) => setPaymentAmountInput(Number(e.target.value))}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
+            />
+            {currency === 'USD' && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
+                ≈ {formatMoney(paymentAmountInput)}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">How they paid</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as 'MTN Mobile Money' | 'Bank Transfer')}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              <option value="MTN Mobile Money">MTN Mobile Money (MoMo)</option>
+              <option value="Bank Transfer">Bank transfer</option>
+            </select>
+          </div>
+        </ModalShell>
       )}
     </div>
   );

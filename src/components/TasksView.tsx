@@ -11,7 +11,8 @@ import {
 import { ColorTheme } from '../theme';
 import { formatDueStatus } from '../utils/dates';
 import { useI18n } from '../utils/i18n';
-import { Plus, Search, X, Check, ListTodo, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, Check, ListTodo, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ModalShell } from './ModalShell';
 
 interface TasksViewProps {
   tasks: OperationalTask[];
@@ -377,141 +378,128 @@ export const TasksView: React.FC<TasksViewProps> = ({
       </div>
 
       {/* Modal: New Job */}
-      {isNewTaskOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px] overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden my-8 kf-modal">
-            <div className="flex items-center justify-between px-6 py-4 bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{tr('Add team job')}</h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  {tr('Pick a person and set a due date')}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsNewTaskOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <ModalShell
+        isOpen={isNewTaskOpen}
+        onClose={() => setIsNewTaskOpen(false)}
+        maxWidthClass="max-w-lg"
+        asForm
+        onSubmit={handleSubmitTask}
+        title={tr('Add team job')}
+        subtitle={tr('Pick a person and set a due date')}
+        bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsNewTaskOpen(false)}
+              className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              {tr('Cancel')}
+            </button>
+            <button
+              type="submit"
+              className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs cursor-pointer"
+            >
+              {tr('Save job')}
+            </button>
+          </div>
+        }
+      >
+        <div>
+          <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+            {tr('Job title')} *
+          </label>
+          <input
+            type="text"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={tr('e.g. Check headlights on RAC 812 K before inspection')}
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
+          />
+        </div>
 
-            <form onSubmit={handleSubmitTask} className="p-6 space-y-4 text-sm">
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                  {tr('Job title')} *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={tr('e.g. Check headlights on RAC 812 K before inspection')}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
-                />
-              </div>
+        <div>
+          <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+            {tr('Details')}
+          </label>
+          <textarea
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={tr('Write what needs to be done or where to go...')}
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
+          />
+        </div>
 
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                  {tr('Details')}
-                </label>
-                <textarea
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={tr('Write what needs to be done or where to go...')}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-slate-400"
-                />
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+              {tr('Who does it')}
+            </label>
+            <select
+              value={assignedName}
+              onChange={(e) => handleSelectStaff(e.target.value)}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
+            >
+              {users.map((u) => (
+                <option key={u.id} value={u.name}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                    {tr('Who does it')}
-                  </label>
-                  <select
-                    value={assignedName}
-                    onChange={(e) => handleSelectStaff(e.target.value)}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
-                  >
-                    {users.map((u) => (
-                      <option key={u.id} value={u.name}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                    {tr('Due date')}
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                    {tr('How urgent')}
-                  </label>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
-                  >
-                    <option value="Low">{tr('Low')}</option>
-                    <option value="Normal">{tr('Normal')}</option>
-                    <option value="High">{tr('Important')}</option>
-                    <option value="Urgent">{tr('Urgent')}</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                    {tr('Car (optional)')}
-                  </label>
-                  <select
-                    value={vehicleId}
-                    onChange={(e) => setVehicleId(e.target.value)}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
-                  >
-                    <option value="">{tr('No specific car')}</option>
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.plate_number} — {v.model_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsNewTaskOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {tr('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
-                >
-                  {tr('Save job')}
-                </button>
-              </div>
-            </form>
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+              {tr('Due date')}
+            </label>
+            <input
+              type="date"
+              required
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
+            />
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+              {tr('How urgent')}
+            </label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TaskPriority)}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
+            >
+              <option value="Low">{tr('Low')}</option>
+              <option value="Normal">{tr('Normal')}</option>
+              <option value="High">{tr('Important')}</option>
+              <option value="Urgent">{tr('Urgent')}</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+              {tr('Car (optional)')}
+            </label>
+            <select
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white outline-none"
+            >
+              <option value="">{tr('No specific car')}</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.plate_number} — {v.model_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </ModalShell>
     </div>
   );
 };

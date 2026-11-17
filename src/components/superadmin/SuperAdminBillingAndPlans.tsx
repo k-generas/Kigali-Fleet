@@ -6,8 +6,8 @@ import {
   Edit3,
   Plus,
   Search,
-  X,
 } from 'lucide-react';
+import { ModalShell } from '../ModalShell';
 import {
   Company,
   CompanySubscription,
@@ -272,129 +272,113 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
 
         {/* More Time Modal */}
         {extendTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!newRenewalDate || extendReason.trim().length < 4) return;
-                onExtendSubscription(extendTarget.id, newRenewalDate, extendReason.trim());
-                setExtendTarget(null);
-              }}
-              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <CalendarClock className="w-4 h-4 accent-text" />
-                  <span>Give more time: {extendTarget.company_name}</span>
-                </h4>
+          <ModalShell
+            isOpen={!!extendTarget}
+            onClose={() => setExtendTarget(null)}
+            maxWidthClass="max-w-md"
+            asForm
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newRenewalDate || extendReason.trim().length < 4) return;
+              onExtendSubscription(extendTarget.id, newRenewalDate, extendReason.trim());
+              setExtendTarget(null);
+            }}
+            icon={<CalendarClock className="w-4 h-4 accent-text" />}
+            title={`Give more time: ${extendTarget.company_name}`}
+            footer={
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setExtendTarget(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  New renewal date
-                </label>
-                <input
-                  type="date"
-                  value={newRenewalDate}
-                  onChange={(e) => setNewRenewalDate(e.target.value)}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Reason for change</label>
-                <textarea
-                  rows={2}
-                  value={extendReason}
-                  onChange={(e) => setExtendReason(e.target.value)}
-                  placeholder="e.g. Bank transfer slip received, waiting to clear."
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setExtendTarget(null)}
-                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg cursor-pointer">
                   Save new date
                 </button>
               </div>
-            </form>
-          </div>
+            }
+          >
+            <div>
+              <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                New renewal date
+              </label>
+              <input
+                type="date"
+                value={newRenewalDate}
+                onChange={(e) => setNewRenewalDate(e.target.value)}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100"
+                required
+              />
+            </div>
+            <div>
+              <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Reason for change</label>
+              <textarea
+                rows={2}
+                value={extendReason}
+                onChange={(e) => setExtendReason(e.target.value)}
+                placeholder="e.g. Bank transfer slip received, waiting to clear."
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
+                required
+              />
+            </div>
+          </ModalShell>
         )}
 
         {/* Free Days Modal */}
         {trialTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (trialReason.trim().length < 4) return;
-                onGrantTrial(trialTarget.company_id, trialDays, trialReason.trim());
-                setTrialTarget(null);
-              }}
-              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Give free days: {trialTarget.company_name}
-                </h4>
+          <ModalShell
+            isOpen={!!trialTarget}
+            onClose={() => setTrialTarget(null)}
+            maxWidthClass="max-w-md"
+            asForm
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (trialReason.trim().length < 4) return;
+              onGrantTrial(trialTarget.company_id, trialDays, trialReason.trim());
+              setTrialTarget(null);
+            }}
+            title={`Give free days: ${trialTarget.company_name}`}
+            footer={
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setTrialTarget(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Number of free days</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={90}
-                  value={trialDays}
-                  onChange={(e) => setTrialDays(Number(e.target.value))}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Reason for change</label>
-                <textarea
-                  rows={2}
-                  value={trialReason}
-                  onChange={(e) => setTrialReason(e.target.value)}
-                  placeholder="e.g. Giving extra free days while they add their cars."
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setTrialTarget(null)}
-                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg cursor-pointer">
                   Give {trialDays} free days
                 </button>
               </div>
-            </form>
-          </div>
+            }
+          >
+            <div>
+              <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Number of free days</label>
+              <input
+                type="number"
+                min={1}
+                max={90}
+                value={trialDays}
+                onChange={(e) => setTrialDays(Number(e.target.value))}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100"
+                required
+              />
+            </div>
+            <div>
+              <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Reason for change</label>
+              <textarea
+                rows={2}
+                value={trialReason}
+                onChange={(e) => setTrialReason(e.target.value)}
+                placeholder="e.g. Giving extra free days while they add their cars."
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
+                required
+              />
+            </div>
+          </ModalShell>
         )}
 
         <ReasonActionModal
@@ -546,205 +530,197 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
 
         {/* Plan Editor Modal */}
         {editingPlan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!editingPlan.name.trim() || planReason.trim().length < 4) return;
-                onSavePlan(
-                  {
-                    ...editingPlan,
-                    features: planFeaturesText
-                      .split('\n')
-                      .map((l) => l.trim())
-                      .filter(Boolean),
-                  },
-                  planReason.trim()
-                );
-                setEditingPlan(null);
-              }}
-              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4 text-sm max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">Edit plan prices & limits</h4>
+          <ModalShell
+            isOpen={!!editingPlan}
+            onClose={() => setEditingPlan(null)}
+            maxWidthClass="max-w-lg"
+            asForm
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!editingPlan.name.trim() || planReason.trim().length < 4) return;
+              onSavePlan(
+                {
+                  ...editingPlan,
+                  features: planFeaturesText
+                    .split('\n')
+                    .map((l) => l.trim())
+                    .filter(Boolean),
+                },
+                planReason.trim()
+              );
+              setEditingPlan(null);
+            }}
+            title="Edit plan prices & limits"
+            footer={
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingPlan(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Plan name</label>
-                  <input
-                    type="text"
-                    value={editingPlan.name}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Plan level</label>
-                  <select
-                    value={editingPlan.tier_key}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, tier_key: e.target.value as any })}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
-                  >
-                    <option value="trial">Trial</option>
-                    <option value="starter">Starter</option>
-                    <option value="growth">Growth</option>
-                    <option value="enterprise">Enterprise</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Monthly (RWF)</label>
-                  <input
-                    type="number"
-                    value={editingPlan.monthly_fee_rwf}
-                    onChange={(e) =>
-                      setEditingPlan({ ...editingPlan, monthly_fee_rwf: Number(e.target.value) })
-                    }
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                    required
-                  />
-                  {currency === 'USD' && (
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 block">
-                      ≈ {formatMoney(editingPlan.monthly_fee_rwf)}
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Yearly (RWF)</label>
-                  <input
-                    type="number"
-                    value={editingPlan.annual_fee_rwf}
-                    onChange={(e) =>
-                      setEditingPlan({ ...editingPlan, annual_fee_rwf: Number(e.target.value) })
-                    }
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                    required
-                  />
-                  {currency === 'USD' && (
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 block">
-                      ≈ {formatMoney(editingPlan.annual_fee_rwf)}
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Free days</label>
-                  <input
-                    type="number"
-                    value={editingPlan.trial_days}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, trial_days: Number(e.target.value) })}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Max cars</label>
-                  <input
-                    type="number"
-                    value={editingPlan.max_vehicles}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, max_vehicles: Number(e.target.value) })}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Max staff</label>
-                  <input
-                    type="number"
-                    value={editingPlan.max_employees}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, max_employees: Number(e.target.value) })}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Offices</label>
-                  <input
-                    type="number"
-                    value={editingPlan.max_branches}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, max_branches: Number(e.target.value) })}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Trips/mo</label>
-                  <input
-                    type="number"
-                    value={editingPlan.max_monthly_bookings}
-                    onChange={(e) =>
-                      setEditingPlan({ ...editingPlan, max_monthly_bookings: Number(e.target.value) })
-                    }
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">What is included (one per line)</label>
-                <textarea
-                  rows={3}
-                  value={planFeaturesText}
-                  onChange={(e) => setPlanFeaturesText(e.target.value)}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingPlan.is_public}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, is_public: e.target.checked })}
-                  />
-                  <span>Show on public page</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingPlan.is_active}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, is_active: e.target.checked })}
-                  />
-                  <span>Open for new companies</span>
-                </label>
-              </div>
-
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Reason for change</label>
-                <input
-                  type="text"
-                  value={planReason}
-                  onChange={(e) => setPlanReason(e.target.value)}
-                  placeholder="e.g. Updated prices for new year."
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setEditingPlan(null)}
-                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg cursor-pointer">
                   Save plan
                 </button>
               </div>
-            </form>
-          </div>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Plan name</label>
+                <input
+                  type="text"
+                  value={editingPlan.name}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Plan level</label>
+                <select
+                  value={editingPlan.tier_key}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, tier_key: e.target.value as any })}
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100"
+                >
+                  <option value="trial">Trial</option>
+                  <option value="starter">Starter</option>
+                  <option value="growth">Growth</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Monthly (RWF)</label>
+                <input
+                  type="number"
+                  value={editingPlan.monthly_fee_rwf}
+                  onChange={(e) =>
+                    setEditingPlan({ ...editingPlan, monthly_fee_rwf: Number(e.target.value) })
+                  }
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+                  required
+                />
+                {currency === 'USD' && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 block">
+                    ≈ {formatMoney(editingPlan.monthly_fee_rwf)}
+                  </span>
+                )}
+              </div>
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Yearly (RWF)</label>
+                <input
+                  type="number"
+                  value={editingPlan.annual_fee_rwf}
+                  onChange={(e) =>
+                    setEditingPlan({ ...editingPlan, annual_fee_rwf: Number(e.target.value) })
+                  }
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+                  required
+                />
+                {currency === 'USD' && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 block">
+                    ≈ {formatMoney(editingPlan.annual_fee_rwf)}
+                  </span>
+                )}
+              </div>
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Free days</label>
+                <input
+                  type="number"
+                  value={editingPlan.trial_days}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, trial_days: Number(e.target.value) })}
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Max cars</label>
+                <input
+                  type="number"
+                  value={editingPlan.max_vehicles}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, max_vehicles: Number(e.target.value) })}
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Max staff</label>
+                <input
+                  type="number"
+                  value={editingPlan.max_employees}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, max_employees: Number(e.target.value) })}
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Offices</label>
+                <input
+                  type="number"
+                  value={editingPlan.max_branches}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, max_branches: Number(e.target.value) })}
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Trips/mo</label>
+                <input
+                  type="number"
+                  value={editingPlan.max_monthly_bookings}
+                  onChange={(e) =>
+                    setEditingPlan({ ...editingPlan, max_monthly_bookings: Number(e.target.value) })
+                  }
+                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">What is included (one per line)</label>
+              <textarea
+                rows={3}
+                value={planFeaturesText}
+                onChange={(e) => setPlanFeaturesText(e.target.value)}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editingPlan.is_public}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, is_public: e.target.checked })}
+                />
+                <span>Show on public page</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editingPlan.is_active}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, is_active: e.target.checked })}
+                />
+                <span>Open for new companies</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Reason for change</label>
+              <input
+                type="text"
+                value={planReason}
+                onChange={(e) => setPlanReason(e.target.value)}
+                placeholder="e.g. Updated prices for new year."
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+                required
+              />
+            </div>
+          </ModalShell>
         )}
       </div>
     );
@@ -871,131 +847,115 @@ export const SuperAdminBillingAndPlans: React.FC<SuperAdminBillingAndPlansProps>
 
         {/* Confirm Paid Modal */}
         {reconcileTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (reconcileNotes.trim().length < 5) return;
-                onReconcilePayment(reconcileTarget.id, reconcileStatus, reconcileNotes.trim());
-                setReconcileTarget(null);
-              }}
-              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Check payment {reconcileTarget.transaction_ref}
-                </h4>
+          <ModalShell
+            isOpen={!!reconcileTarget}
+            onClose={() => setReconcileTarget(null)}
+            maxWidthClass="max-w-md"
+            asForm
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (reconcileNotes.trim().length < 5) return;
+              onReconcilePayment(reconcileTarget.id, reconcileStatus, reconcileNotes.trim());
+              setReconcileTarget(null);
+            }}
+            title={`Check payment ${reconcileTarget.transaction_ref}`}
+            footer={
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setReconcileTarget(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 font-mono text-xs tabular-nums">
-                {reconcileTarget.company_name} · {formatMoney(reconcileTarget.amount_rwf)}
-              </div>
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Payment result</label>
-                <select
-                  value={reconcileStatus}
-                  onChange={(e) => setReconcileStatus(e.target.value as SaasPaymentStatus)}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                >
-                  <option value="Successful">Paid (turn on company & make receipt)</option>
-                  <option value="Failed">Failed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Note (required)</label>
-                <textarea
-                  rows={2}
-                  value={reconcileNotes}
-                  onChange={(e) => setReconcileNotes(e.target.value)}
-                  placeholder="e.g. Checked Bank of Kigali slip #449182."
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setReconcileTarget(null)}
-                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg cursor-pointer">
                   Save result
                 </button>
               </div>
-            </form>
-          </div>
+            }
+          >
+            <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 font-mono text-xs tabular-nums">
+              {reconcileTarget.company_name} · {formatMoney(reconcileTarget.amount_rwf)}
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Payment result</label>
+              <select
+                value={reconcileStatus}
+                onChange={(e) => setReconcileStatus(e.target.value as SaasPaymentStatus)}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+              >
+                <option value="Successful">Paid (turn on company & make receipt)</option>
+                <option value="Failed">Failed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Note (required)</label>
+              <textarea
+                rows={2}
+                value={reconcileNotes}
+                onChange={(e) => setReconcileNotes(e.target.value)}
+                placeholder="e.g. Checked Bank of Kigali slip #449182."
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+                required
+              />
+            </div>
+          </ModalShell>
         )}
 
         {/* Refund Modal */}
         {refundTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (refundAmount <= 0 || refundReason.trim().length < 5) return;
-                onRefundPayment(refundTarget.id, refundAmount, refundReason.trim());
-                setRefundTarget(null);
-              }}
-              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Send money back ({refundTarget.transaction_ref})
-                </h4>
+          <ModalShell
+            isOpen={!!refundTarget}
+            onClose={() => setRefundTarget(null)}
+            maxWidthClass="max-w-md"
+            asForm
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (refundAmount <= 0 || refundReason.trim().length < 5) return;
+              onRefundPayment(refundTarget.id, refundAmount, refundReason.trim());
+              setRefundTarget(null);
+            }}
+            title={`Send money back (${refundTarget.transaction_ref})`}
+            footer={
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setRefundTarget(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Amount to return (RWF)</label>
-                <input
-                  type="number"
-                  min={1000}
-                  max={refundTarget.amount_rwf - (refundTarget.refunded_amount_rwf || 0)}
-                  value={refundAmount}
-                  onChange={(e) => setRefundAmount(Number(e.target.value))}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Reason for refund</label>
-                <textarea
-                  rows={2}
-                  value={refundReason}
-                  onChange={(e) => setRefundReason(e.target.value)}
-                  placeholder="e.g. Company paid twice by mistake on MoMo."
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setRefundTarget(null)}
-                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
+                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 rounded-lg font-semibold bg-rose-600 hover:bg-rose-700 text-white">
+                <button type="submit" className="px-4 py-2 rounded-lg font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer">
                   Confirm refund
                 </button>
               </div>
-            </form>
-          </div>
+            }
+          >
+            <div>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Amount to return (RWF)</label>
+              <input
+                type="number"
+                min={1000}
+                max={refundTarget.amount_rwf - (refundTarget.refunded_amount_rwf || 0)}
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(Number(e.target.value))}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+                required
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Reason for refund</label>
+              <textarea
+                rows={2}
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="e.g. Company paid twice by mistake on MoMo."
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+                required
+              />
+            </div>
+          </ModalShell>
         )}
       </div>
     );

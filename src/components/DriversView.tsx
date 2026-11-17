@@ -21,6 +21,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { ModalShell } from './ModalShell';
 
 interface DriversViewProps {
   drivers: Driver[];
@@ -848,37 +849,57 @@ export const DriversView: React.FC<DriversViewProps> = ({
 
       {/* Driver Details & History Modal */}
       {selectedDriverDetails && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 kf-modal">
-            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {selectedDriverDetails.name}
-                </h3>
-                <div className="text-sm text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                  {selectedDriverDetails.phone} · {selectedDriverDetails.email || 'kigalifleet.rw'}
-                </div>
-              </div>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setSelectedDriverDetails(null)}
+          maxWidthClass="max-w-xl"
+          title={selectedDriverDetails.name}
+          subtitle={
+            <span className="font-mono">
+              {selectedDriverDetails.phone} · {selectedDriverDetails.email || 'kigalifleet.rw'}
+            </span>
+          }
+          headerActions={
+            <button
+              type="button"
+              onClick={() => setEditingDriver(selectedDriverDetails)}
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white bg-slate-100/80 dark:bg-slate-800/70 hover:bg-slate-200/80 dark:hover:bg-slate-700 transition-colors"
+              title="Edit driver details"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+          }
+          bodyClassName="p-5 sm:p-6 space-y-5"
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeleteDriver) {
+                    onDeleteDriver(selectedDriverDetails.id);
+                    setSelectedDriverDetails(null);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{tr('Remove driver')}</span>
+              </button>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setEditingDriver(selectedDriverDetails)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  title="Edit driver details"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedDriverDetails(null)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  aria-label="Close"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActivePortalDriverId(selectedDriverDetails.id);
+                  setActiveTab('portal');
+                  setSelectedDriverDetails(null);
+                }}
+                className="accent-bg px-4 py-2 text-sm font-medium rounded-lg shadow-xs"
+              >
+                {tr('Open phone view')}
+              </button>
             </div>
+          }
+        >
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50/90 dark:bg-slate-800/40 text-sm">
               <div>
@@ -959,61 +980,38 @@ export const DriversView: React.FC<DriversViewProps> = ({
               )}
             </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  if (onDeleteDriver) {
-                    onDeleteDriver(selectedDriverDetails.id);
-                    setSelectedDriverDetails(null);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>{tr('Remove driver')}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActivePortalDriverId(selectedDriverDetails.id);
-                  setActiveTab('portal');
-                  setSelectedDriverDetails(null);
-                }}
-                className="accent-bg px-4 py-2 text-sm font-medium rounded-lg shadow-xs"
-              >
-                {tr('Open phone view')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Add Driver Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {tr('Add new driver')}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {tr('Enter driver details and driving license')}
-                </p>
-              </div>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setIsAddModalOpen(false)}
+          asForm
+          onSubmit={handleCreateDriver}
+          maxWidthClass="max-w-lg"
+          title={tr('Add new driver')}
+          subtitle={tr('Enter driver details and driving license')}
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Cancel')}
+              </button>
+              <button
+                type="submit"
+                className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
+              >
+                {tr('Save driver')}
               </button>
             </div>
-
-            <form onSubmit={handleCreateDriver} className="space-y-4 text-sm">
+          }
+        >
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
                   Full name
@@ -1169,45 +1167,37 @@ export const DriversView: React.FC<DriversViewProps> = ({
                 />
               </div>
 
-              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {tr('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
-                >
-                  {tr('Save driver')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Edit Driver Modal */}
       {editingDriver && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Edit driver ({editingDriver.name})
-              </h3>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setEditingDriver(null)}
+          asForm
+          onSubmit={handleSaveEditDriver}
+          maxWidthClass="max-w-lg"
+          title={`Edit driver (${editingDriver.name})`}
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setEditingDriver(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Cancel')}
+              </button>
+              <button
+                type="submit"
+                className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
+              >
+                {tr('Save changes')}
               </button>
             </div>
-
-            <form onSubmit={handleSaveEditDriver} className="space-y-4 text-sm">
+          }
+        >
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
                   Full name
@@ -1270,24 +1260,7 @@ export const DriversView: React.FC<DriversViewProps> = ({
                 />
               </div>
 
-              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setEditingDriver(null)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {tr('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
-                >
-                  {tr('Save changes')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

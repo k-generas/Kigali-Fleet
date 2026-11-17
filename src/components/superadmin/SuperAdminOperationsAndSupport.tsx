@@ -10,8 +10,8 @@ import {
   Plus,
   Search,
   Send,
-  X,
 } from 'lucide-react';
+import { ModalShell } from '../ModalShell';
 import {
   Booking,
   Company,
@@ -209,62 +209,54 @@ export const SuperAdminOperationsAndSupport: React.FC<SuperAdminOperationsAndSup
         </div>
 
         {inspectedBooking && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-            <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4 text-sm">
-              <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <div>
-                  <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    Booking details ({inspectedBooking.id})
-                  </h4>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
-                    Viewing is saved in the safety log
-                  </p>
+          <ModalShell
+            isOpen={!!inspectedBooking}
+            onClose={() => setInspectedBooking(null)}
+            maxWidthClass="max-w-lg"
+            title={`Booking details (${inspectedBooking.id})`}
+            subtitle={
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono">
+                Viewing is saved in the safety log
+              </span>
+            }
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                <div className="text-xs text-slate-500 dark:text-slate-400">Client</div>
+                <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                  {inspectedBooking.client_name}
                 </div>
-                <button
-                  onClick={() => setInspectedBooking(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
-                  <div className="text-xs text-slate-500 dark:text-slate-400">Client</div>
-                  <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
-                    {inspectedBooking.client_name}
-                  </div>
-                  <div className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                    {inspectedBooking.client_phone}
-                  </div>
-                </div>
-                <div className="p-3.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
-                  <div className="text-xs text-slate-500 dark:text-slate-400">Payment</div>
-                  <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
-                    {inspectedBooking.payment_status}
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
-                    {inspectedBooking.payment_method}
-                  </div>
+                <div className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                  {inspectedBooking.client_phone}
                 </div>
               </div>
-              <div className="p-3.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 space-y-1.5 text-sm">
-                <div>
-                  <strong className="font-semibold">Place:</strong> {inspectedBooking.destination}
+              <div className="p-3.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+                <div className="text-xs text-slate-500 dark:text-slate-400">Payment</div>
+                <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                  {inspectedBooking.payment_status}
                 </div>
-                <div>
-                  <strong className="font-semibold">Driver step:</strong> {inspectedBooking.dispatch_status}
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  {inspectedBooking.payment_method}
                 </div>
-                <div>
-                  <strong className="font-semibold">Company:</strong> {currentCompany.name}
-                </div>
-                {inspectedBooking.notes && (
-                  <div>
-                    <strong className="font-semibold">Notes:</strong> {inspectedBooking.notes}
-                  </div>
-                )}
               </div>
             </div>
-          </div>
+            <div className="p-3.5 rounded-lg bg-slate-50/90 dark:bg-slate-800/40 space-y-1.5 text-sm">
+              <div>
+                <strong className="font-semibold">Place:</strong> {inspectedBooking.destination}
+              </div>
+              <div>
+                <strong className="font-semibold">Driver step:</strong> {inspectedBooking.dispatch_status}
+              </div>
+              <div>
+                <strong className="font-semibold">Company:</strong> {currentCompany.name}
+              </div>
+              {inspectedBooking.notes && (
+                <div>
+                  <strong className="font-semibold">Notes:</strong> {inspectedBooking.notes}
+                </div>
+              )}
+            </div>
+          </ModalShell>
         )}
       </div>
     );
@@ -742,86 +734,80 @@ export const SuperAdminOperationsAndSupport: React.FC<SuperAdminOperationsAndSup
       </div>
 
       {editingTpl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!editingTpl.name.trim()) return;
-              onSaveTemplate(editingTpl);
-              setEditingTpl(null);
-            }}
-            className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-              <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">Edit message template</h4>
+        <ModalShell
+          isOpen={!!editingTpl}
+          onClose={() => setEditingTpl(null)}
+          maxWidthClass="max-w-md"
+          asForm
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!editingTpl.name.trim()) return;
+            onSaveTemplate(editingTpl);
+            setEditingTpl(null);
+          }}
+          title="Edit message template"
+          footer={
+            <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setEditingTpl(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Name</label>
-              <input
-                type="text"
-                value={editingTpl.name}
-                onChange={(e) => setEditingTpl({ ...editingTpl, name: e.target.value })}
-                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">How sent</label>
-                <select
-                  value={editingTpl.channel}
-                  onChange={(e) => setEditingTpl({ ...editingTpl, channel: e.target.value as any })}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                >
-                  <option value="SMS">SMS</option>
-                  <option value="Email">Email</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="In-App">In app</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">When sent</label>
-                <input
-                  type="text"
-                  value={editingTpl.event_trigger}
-                  onChange={(e) => setEditingTpl({ ...editingTpl, event_trigger: e.target.value })}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">
-                Message words (supports {'{{name}}'})
-              </label>
-              <textarea
-                rows={4}
-                value={editingTpl.body}
-                onChange={(e) => setEditingTpl({ ...editingTpl, body: e.target.value })}
-                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                required
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setEditingTpl(null)}
-                className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
+                className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium cursor-pointer"
               >
                 Cancel
               </button>
-              <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
+              <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg cursor-pointer">
                 Save message
               </button>
             </div>
-          </form>
-        </div>
+          }
+        >
+          <div>
+            <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Name</label>
+            <input
+              type="text"
+              value={editingTpl.name}
+              onChange={(e) => setEditingTpl({ ...editingTpl, name: e.target.value })}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">How sent</label>
+              <select
+                value={editingTpl.channel}
+                onChange={(e) => setEditingTpl({ ...editingTpl, channel: e.target.value as any })}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+              >
+                <option value="SMS">SMS</option>
+                <option value="Email">Email</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="In-App">In app</option>
+              </select>
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">When sent</label>
+              <input
+                type="text"
+                value={editingTpl.event_trigger}
+                onChange={(e) => setEditingTpl({ ...editingTpl, event_trigger: e.target.value })}
+                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">
+              Message words (supports {'{{name}}'})
+            </label>
+            <textarea
+              rows={4}
+              value={editingTpl.body}
+              onChange={(e) => setEditingTpl({ ...editingTpl, body: e.target.value })}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+              required
+            />
+          </div>
+        </ModalShell>
       )}
     </div>
   );

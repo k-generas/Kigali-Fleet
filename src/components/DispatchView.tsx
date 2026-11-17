@@ -11,9 +11,9 @@ import {
   CheckCircle,
   Printer,
   Search,
-  X,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { ModalShell } from './ModalShell';
 
 interface DispatchViewProps {
   bookings: Booking[];
@@ -605,106 +605,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
       {/* Trip Paper Modal (Bon de Mission) */}
       {selectedTicketBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3.5">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {tr('Trip Paper (Bon de Mission)')}
-                </h3>
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  {tr('For police road checks across Rwanda')}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedTicketBooking(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div
-              id="printable-bon-de-mission"
-              className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 space-y-4 text-sm"
-            >
-              <div className="text-center border-b border-slate-200 pb-3">
-                <div className="text-xs font-medium text-slate-500">Republic of Rwanda · City of Kigali</div>
-                <h2 className="text-xl font-semibold text-slate-900 mt-0.5">
-                  {currentCompany?.name || 'KIGALI EXPEDITION TOURS & FLEET LTD'}
-                </h2>
-                <div className="text-xs text-slate-500 font-mono">TIN: 102938475 · MINITRANS/TR/2026/089</div>
-                <div className="inline-block mt-2 px-3 py-1 bg-slate-900 text-white font-medium text-xs rounded-md">
-                  Official Trip Paper · Bon de Mission
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-slate-200 pb-3">
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">1. Driver</h4>
-                  {(() => {
-                    const drv = drivers.find((d) => d.id === selectedTicketBooking.driver_id);
-                    return (
-                      <div className="space-y-0.5 text-xs text-slate-700">
-                        <div>Name: {drv?.name || 'Assigned driver'}</div>
-                        <div className="font-mono">National ID: {drv?.national_id || '1 1990 8 0029384 1 20'}</div>
-                        <div className="font-mono">License: {drv?.license_number || 'RW-B-2018-092'}</div>
-                        <div className="font-mono">Phone: {drv?.phone || '+250 788 123 456'}</div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">2. Car</h4>
-                  {(() => {
-                    const veh = vehicles.find((v) => v.id === selectedTicketBooking.vehicle_id);
-                    return (
-                      <div className="space-y-0.5 text-xs text-slate-700">
-                        <div>Car: {veh?.model_name || 'Car'}</div>
-                        <div>
-                          Plate: <span className="font-mono font-semibold">{veh?.plate_number}</span>
-                        </div>
-                        <div>
-                          Safety check: valid until {formatHumanDate(veh?.controle_technique_expiry || '2027-01-30')}
-                        </div>
-                        <div>Insurance: valid</div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              <div className="space-y-1 border-b border-slate-200 pb-3">
-                <h4 className="font-semibold text-slate-900">3. Guest and trip</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
-                  <div>Guest: {selectedTicketBooking.client_name}</div>
-                  <div className="font-mono">Phone: {selectedTicketBooking.client_phone}</div>
-                  <div>Dates: {formatHumanDateRange(selectedTicketBooking.start_date, selectedTicketBooking.end_date, { includeYear: true })}</div>
-                  <div>Route: {selectedTicketBooking.destination}</div>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-end pt-2">
-                <div>
-                  <div className="text-xs text-slate-500">Manager</div>
-                  <div className="signature-line text-lg mt-2 border-b border-slate-400 pr-6">
-                    {currentUser?.name || 'Office Desk'}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-slate-500">Driver signature</div>
-                  <div className="mt-6 border-b border-slate-400 w-36" />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
+        <ModalShell
+          isOpen={!!selectedTicketBooking}
+          onClose={() => setSelectedTicketBooking(null)}
+          maxWidthClass="max-w-2xl"
+          printFullscreen
+          title={tr('Trip Paper (Bon de Mission)')}
+          subtitle={tr('For police road checks across Rwanda')}
+          footer={
+            <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 accent-bg hover:opacity-95"
+                className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 accent-bg hover:opacity-95 cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>{tr('Print Trip Paper')}</span>
@@ -713,282 +626,264 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedTicketBooking(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
               >
                 {tr('Close')}
               </button>
             </div>
+          }
+        >
+          <div
+            id="printable-bon-de-mission"
+            className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 print:border-none print:p-0 space-y-4 text-sm"
+          >
+            <div className="text-center border-b border-slate-200 pb-3">
+              <div className="text-xs font-medium text-slate-500">Republic of Rwanda · City of Kigali</div>
+              <h2 className="text-xl font-semibold text-slate-900 mt-0.5">
+                {currentCompany?.name || 'KIGALI EXPEDITION TOURS & FLEET LTD'}
+              </h2>
+              <div className="text-xs text-slate-500 font-mono">TIN: 102938475 · MINITRANS/TR/2026/089</div>
+              <div className="inline-block mt-2 px-3 py-1 bg-slate-900 text-white font-medium text-xs rounded-md">
+                Official Trip Paper · Bon de Mission
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-slate-200 pb-3">
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-1">1. Driver</h4>
+                {(() => {
+                  const drv = drivers.find((d) => d.id === selectedTicketBooking.driver_id);
+                  return (
+                    <div className="space-y-0.5 text-xs text-slate-700">
+                      <div>Name: {drv?.name || 'Assigned driver'}</div>
+                      <div className="font-mono">National ID: {drv?.national_id || '1 1990 8 0029384 1 20'}</div>
+                      <div className="font-mono">License: {drv?.license_number || 'RW-B-2018-092'}</div>
+                      <div className="font-mono">Phone: {drv?.phone || '+250 788 123 456'}</div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-1">2. Car</h4>
+                {(() => {
+                  const veh = vehicles.find((v) => v.id === selectedTicketBooking.vehicle_id);
+                  return (
+                    <div className="space-y-0.5 text-xs text-slate-700">
+                      <div>Car: {veh?.model_name || 'Car'}</div>
+                      <div>
+                        Plate: <span className="font-mono font-semibold">{veh?.plate_number}</span>
+                      </div>
+                      <div>
+                        Safety check: valid until {formatHumanDate(veh?.controle_technique_expiry || '2027-01-30')}
+                      </div>
+                      <div>Insurance: valid</div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div className="space-y-1 border-b border-slate-200 pb-3">
+              <h4 className="font-semibold text-slate-900">3. Guest and trip</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
+                <div>Guest: {selectedTicketBooking.client_name}</div>
+                <div className="font-mono">Phone: {selectedTicketBooking.client_phone}</div>
+                <div>Dates: {formatHumanDateRange(selectedTicketBooking.start_date, selectedTicketBooking.end_date, { includeYear: true })}</div>
+                <div>Route: {selectedTicketBooking.destination}</div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-end pt-2">
+              <div>
+                <div className="text-xs text-slate-500">Manager</div>
+                <div className="signature-line text-lg mt-2 border-b border-slate-400 pr-6">
+                  {currentUser?.name || 'Office Desk'}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-slate-500">Driver signature</div>
+                <div className="mt-6 border-b border-slate-400 w-36" />
+              </div>
+            </div>
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Send SMS Modal */}
       {selectedSMSBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {tr('Send SMS to Driver')}
-              </h3>
+        <ModalShell
+          isOpen={!!selectedSMSBooking}
+          onClose={() => setSelectedSMSBooking(null)}
+          maxWidthClass="max-w-lg"
+          title={tr('Send SMS to Driver')}
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setSelectedSMSBooking(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {smsSendNotice && (
-              <div className="bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 shrink-0" />
-                <span>{smsSendNotice}</span>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between bg-slate-50/90 dark:bg-slate-800/40 p-3 rounded-lg text-xs">
-              <span className="text-slate-600 dark:text-slate-300 font-medium">{tr('Language')}:</span>
-              <div className="inline-flex bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg gap-1">
-                <button
-                  type="button"
-                  onClick={() => setSmsLanguage('RW')}
-                  className={`px-3 py-1 rounded-md text-xs font-medium ${
-                    smsLanguage === 'RW'
-                      ? 'accent-bg'
-                      : 'text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  Kinyarwanda
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSmsLanguage('EN')}
-                  className={`px-3 py-1 rounded-md text-xs font-medium ${
-                    smsLanguage === 'EN'
-                      ? 'accent-bg'
-                      : 'text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  English
-                </button>
-              </div>
-            </div>
-
-            {(() => {
-              const drv = drivers.find((d) => d.id === selectedSMSBooking.driver_id);
-              const veh = vehicles.find((v) => v.id === selectedSMSBooking.vehicle_id);
-              const smsData =
-                drv && veh
-                  ? generateDriverSMS({
-                      booking: selectedSMSBooking,
-                      driver: drv,
-                      vehicle: veh,
-                      language: smsLanguage,
-                    })
-                  : null;
-
-              return (
-                <div className="space-y-2">
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
-                    {tr('Sending to')}:{' '}
-                    <strong className="font-semibold text-slate-900 dark:text-white">
-                      {drv?.name} ({drv?.phone})
-                    </strong>
-                  </div>
-                  <div className="bg-slate-50/90 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 p-3.5 rounded-lg font-mono text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                    {smsData?.messageText || tr('Making message...')}
-                  </div>
-                </div>
-              );
-            })()}
-
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setSelectedSMSBooking(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
               >
                 {tr('Cancel')}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmSendSMS}
-                className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 accent-bg hover:opacity-95"
+                className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 accent-bg hover:opacity-95 cursor-pointer"
               >
                 <Send className="w-4 h-4" />
                 <span>{tr('Send Text Now')}</span>
               </button>
             </div>
+          }
+        >
+          {smsSendNotice && (
+            <div className="bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              <span>{smsSendNotice}</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between bg-slate-50/90 dark:bg-slate-800/40 p-3 rounded-lg text-xs">
+            <span className="text-slate-600 dark:text-slate-300 font-medium">{tr('Language')}:</span>
+            <div className="inline-flex bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg gap-1">
+              <button
+                type="button"
+                onClick={() => setSmsLanguage('RW')}
+                className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer ${
+                  smsLanguage === 'RW'
+                    ? 'accent-bg'
+                    : 'text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                Kinyarwanda
+              </button>
+              <button
+                type="button"
+                onClick={() => setSmsLanguage('EN')}
+                className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer ${
+                  smsLanguage === 'EN'
+                    ? 'accent-bg'
+                    : 'text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                English
+              </button>
+            </div>
           </div>
-        </div>
+
+          {(() => {
+            const drv = drivers.find((d) => d.id === selectedSMSBooking.driver_id);
+            const veh = vehicles.find((v) => v.id === selectedSMSBooking.vehicle_id);
+            const smsData =
+              drv && veh
+                ? generateDriverSMS({
+                    booking: selectedSMSBooking,
+                    driver: drv,
+                    vehicle: veh,
+                    language: smsLanguage,
+                  })
+                : null;
+
+            return (
+              <div className="space-y-2">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  {tr('Sending to')}:{' '}
+                  <strong className="font-semibold text-slate-900 dark:text-white">
+                    {drv?.name} ({drv?.phone})
+                  </strong>
+                </div>
+                <div className="bg-slate-50/90 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 p-3.5 rounded-lg font-mono text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                  {smsData?.messageText || tr('Making message...')}
+                </div>
+              </div>
+            );
+          })()}
+        </ModalShell>
       )}
 
       {/* Driver Phone View (*134#) */}
-      {isUSSDSimulatorOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-sm w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {tr('Driver Phone (*134#)')}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsUSSDSimulatorOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {tr('Works on any small button phone with no internet. Driver dials *134#.')}
-            </p>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('Pick a Trip')}</label>
-              <select
-                value={ussdActiveBookingId}
-                onChange={(e) => handleOpenUSSDForBooking(e.target.value)}
-                className={inputCls}
-              >
-                {bookings.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    #{b.id} · {b.client_name} ({b.destination})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-300 min-h-[140px] whitespace-pre-wrap leading-relaxed">
-              {ussdScreenText || tr('Dialing *134#...')}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleSendUSSDCode('1')}
-                className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
-              >
-                {tr('1. Accept Trip')}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendUSSDCode('2')}
-                className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
-              >
-                {tr('2. At Airport')}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendUSSDCode('3')}
-                className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
-              >
-                {tr('3. Guest in Car')}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendUSSDCode('4')}
-                className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
-              >
-                {tr('4. Trip Done')}
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsUSSDSimulatorOpen(false)}
-              className="w-full py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              {tr('Close')}
-            </button>
-          </div>
+      <ModalShell
+        isOpen={isUSSDSimulatorOpen}
+        onClose={() => setIsUSSDSimulatorOpen(false)}
+        maxWidthClass="max-w-sm"
+        title={tr('Driver Phone (*134#)')}
+        subtitle={tr('Works on any small button phone with no internet. Driver dials *134#.')}
+        footer={
+          <button
+            type="button"
+            onClick={() => setIsUSSDSimulatorOpen(false)}
+            className="w-full py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+          >
+            {tr('Close')}
+          </button>
+        }
+      >
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('Pick a Trip')}</label>
+          <select
+            value={ussdActiveBookingId}
+            onChange={(e) => handleOpenUSSDForBooking(e.target.value)}
+            className={inputCls}
+          >
+            {bookings.map((b) => (
+              <option key={b.id} value={b.id}>
+                #{b.id} · {b.client_name} ({b.destination})
+              </option>
+            ))}
+          </select>
         </div>
-      )}
+
+        <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-300 min-h-[140px] whitespace-pre-wrap leading-relaxed">
+          {ussdScreenText || tr('Dialing *134#...')}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => handleSendUSSDCode('1')}
+            className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
+          >
+            {tr('1. Accept Trip')}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSendUSSDCode('2')}
+            className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
+          >
+            {tr('2. At Airport')}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSendUSSDCode('3')}
+            className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
+          >
+            {tr('3. Guest in Car')}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSendUSSDCode('4')}
+            className="p-2.5 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
+          >
+            {tr('4. Trip Done')}
+          </button>
+        </div>
+      </ModalShell>
 
       {/* Pick Driver Modal */}
       {assignModalBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <User className="w-5 h-5 accent-text" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {tr('Pick Driver')} #{assignModalBooking.id}
-                </h3>
-              </div>
+        <ModalShell
+          isOpen={!!assignModalBooking}
+          onClose={() => setAssignModalBooking(null)}
+          maxWidthClass="max-w-md"
+          icon={<User className="w-5 h-5 accent-text" />}
+          title={`${tr('Pick Driver')} #${assignModalBooking.id}`}
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setAssignModalBooking(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {assignmentNotice && (
-              <div
-                className={`p-3 rounded-lg text-xs font-medium ${
-                  assignmentNotice.type === 'success'
-                    ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300'
-                }`}
-              >
-                {assignmentNotice.message}
-              </div>
-            )}
-
-            <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1 bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-lg">
-              <div>
-                {tr('Guest')}: <strong className="font-semibold text-slate-900 dark:text-white">{assignModalBooking.client_name}</strong>
-              </div>
-              <div>
-                {tr('Place')}: <strong className="font-semibold text-slate-900 dark:text-white">{assignModalBooking.destination}</strong>
-              </div>
-              <div>
-                {tr('Dates')}:{' '}
-                <strong className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  {formatHumanDateRange(assignModalBooking.start_date, assignModalBooking.end_date)}
-                </strong>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">
-                {tr('Choose a Free Driver')}
-              </label>
-
-              <select
-                value={selectedDriverToAssign}
-                onChange={(e) => setSelectedDriverToAssign(e.target.value)}
-                className={inputCls}
-              >
-                <option value="">-- {tr('Choose Driver')} --</option>
-                {drivers.map((drv) => {
-                  const collision = checkDriverCollision(
-                    drv.id,
-                    assignModalBooking.start_date,
-                    assignModalBooking.end_date,
-                    bookings,
-                    assignModalBooking.id
-                  );
-
-                  return (
-                    <option key={drv.id} value={drv.id} disabled={collision.hasCollision}>
-                      {drv.name} ({drv.phone}) · {drv.language}
-                      {collision.hasCollision
-                        ? ` [${tr('Busy')}: ${collision.conflictingBooking?.client_name || tr('Booked')}]`
-                        : ` [${tr('Free')}]`}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setAssignModalBooking(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
               >
                 {tr('Cancel')}
               </button>
@@ -996,76 +891,126 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 type="button"
                 disabled={!selectedDriverToAssign}
                 onClick={handleConfirmAssignDriver}
-                className="px-5 py-2 disabled:opacity-40 rounded-lg text-sm font-medium accent-bg hover:opacity-95"
+                className="px-5 py-2 disabled:opacity-40 rounded-lg text-sm font-medium accent-bg hover:opacity-95 cursor-pointer"
               >
                 {tr('Save Driver')}
               </button>
             </div>
+          }
+        >
+          {assignmentNotice && (
+            <div
+              className={`p-3 rounded-lg text-xs font-medium ${
+                assignmentNotice.type === 'success'
+                  ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300'
+              }`}
+            >
+              {assignmentNotice.message}
+            </div>
+          )}
+
+          <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1 bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-lg">
+            <div>
+              {tr('Guest')}: <strong className="font-semibold text-slate-900 dark:text-white">{assignModalBooking.client_name}</strong>
+            </div>
+            <div>
+              {tr('Place')}: <strong className="font-semibold text-slate-900 dark:text-white">{assignModalBooking.destination}</strong>
+            </div>
+            <div>
+              {tr('Dates')}:{' '}
+              <strong className="font-semibold text-emerald-600 dark:text-emerald-400">
+                {formatHumanDateRange(assignModalBooking.start_date, assignModalBooking.end_date)}
+              </strong>
+            </div>
           </div>
-        </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">
+              {tr('Choose a Free Driver')}
+            </label>
+
+            <select
+              value={selectedDriverToAssign}
+              onChange={(e) => setSelectedDriverToAssign(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">-- {tr('Choose Driver')} --</option>
+              {drivers.map((drv) => {
+                const collision = checkDriverCollision(
+                  drv.id,
+                  assignModalBooking.start_date,
+                  assignModalBooking.end_date,
+                  bookings,
+                  assignModalBooking.id
+                );
+
+                return (
+                  <option key={drv.id} value={drv.id} disabled={collision.hasCollision}>
+                    {drv.name} ({drv.phone}) · {drv.language}
+                    {collision.hasCollision
+                      ? ` [${tr('Busy')}: ${collision.conflictingBooking?.client_name || tr('Booked')}]`
+                      : ` [${tr('Free')}]`}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </ModalShell>
       )}
 
       {/* Flight Delay Modal */}
       {flightModalBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Plane className="w-5 h-5 accent-text" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{tr('Flight Late?')}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setFlightModalBooking(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {tr('Flight')} <strong className="text-slate-900 dark:text-white">{flightModalBooking.flight_number}</strong> —{' '}
-              {tr('Tell the driver the new wait time at Kigali Airport.')}
-            </p>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('How Many Minutes Late?')}</label>
-              <div className="grid grid-cols-4 gap-2">
-                {[15, 30, 45, 60].map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setDelayMinutes(m)}
-                    className={`py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                      delayMinutes === m
-                        ? 'bg-rose-600 text-white border-rose-600'
-                        : 'bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    +{m}m
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200/80 dark:border-slate-800">
+        <ModalShell
+          isOpen={!!flightModalBooking}
+          onClose={() => setFlightModalBooking(null)}
+          maxWidthClass="max-w-md"
+          icon={<Plane className="w-5 h-5 accent-text" />}
+          title={tr('Flight Late?')}
+          footer={
+            <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={handleClearFlightDelay}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
               >
                 {tr('On Time Again')}
               </button>
               <button
                 type="button"
                 onClick={handleApplyFlightDelay}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium cursor-pointer"
               >
                 {tr('Tell Driver')} (+{delayMinutes}m)
               </button>
             </div>
+          }
+        >
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {tr('Flight')} <strong className="text-slate-900 dark:text-white">{flightModalBooking.flight_number}</strong> —{' '}
+            {tr('Tell the driver the new wait time at Kigali Airport.')}
+          </p>
+
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">{tr('How Many Minutes Late?')}</label>
+            <div className="grid grid-cols-4 gap-2">
+              {[15, 30, 45, 60].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setDelayMinutes(m)}
+                  className={`py-2 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                    delayMinutes === m
+                      ? 'bg-rose-600 text-white border-rose-600'
+                      : 'bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  +{m}m
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

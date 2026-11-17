@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Vehicle, Driver, Booking, MaintenanceRecord } from '../types';
 import { checkBookingCollision, calculateDays, formatRwf, datesOverlap } from '../utils/collision';
 import { formatHumanDate } from '../utils/dates';
-import { X, ShieldAlert, ShieldCheck, AlertCircle, Wrench } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, AlertCircle, Wrench } from 'lucide-react';
 import { ColorTheme } from '../theme';
 import { useI18n } from '../utils/i18n';
+import { ModalShell } from './ModalShell';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -79,8 +80,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     }
   }, [initialVehicleId, initialDate]);
 
-  if (!isOpen) return null;
-
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
   const days = calculateDays(startDate, endDate);
   const dailyRate = selectedVehicle?.daily_rate_rwf || 0;
@@ -151,33 +150,71 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const flightPresets = ['WB 402', 'QR 1387', 'ET 807', 'SN 465'];
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
-      >
-        {/* Pinned Top Bar */}
-        <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-              {tr('New Booking')}
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {tr('Checks automatically so two people never book the same car on the same day.')}
-            </p>
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      asForm
+      onSubmit={handleSubmit}
+      maxWidthClass="max-w-2xl"
+      title={tr('New Booking')}
+      subtitle={tr('Checks automatically so two people never book the same car on the same day.')}
+      bodyClassName="px-5 sm:px-6 py-5 space-y-4 text-sm"
+      footer={
+        <div className="space-y-1.5 text-sm">
+          <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>
+              Car, {days} {days === 1 ? 'day' : 'days'} at {formatMoney(dailyRate)}
+            </span>
+            <span className="font-mono text-slate-800 dark:text-slate-200 tabular-nums">{formatMoney(baseRental)}</span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-white inline-flex items-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+          {isSafariPeak && (
+            <div className="flex justify-between text-xs text-amber-700 dark:text-amber-400">
+              <span>{tr('Busy Season')} (+15%)</span>
+              <span className="font-mono tabular-nums">+{formatMoney(safariSurge)}</span>
+            </div>
+          )}
+          {isUpcountry && (
+            <div className="flex justify-between text-xs text-amber-700 dark:text-amber-400">
+              <span>
+                {tr('Outside Kigali')} ({days} {days === 1 ? 'day' : 'days'})
+              </span>
+              <span className="font-mono tabular-nums">+{formatMoney(upcountrySurge)}</span>
+            </div>
+          )}
+          {includeVat && (
+            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span>VAT 18%</span>
+              <span className="font-mono tabular-nums">+{formatMoney(vatRwf)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-base font-semibold text-slate-900 dark:text-white pt-2 mt-1 border-t border-slate-200/80 dark:border-slate-800">
+            <span>{tr('Total')}</span>
+            <span className="font-mono tabular-nums">{formatMoney(totalRwf)}</span>
+          </div>
 
-        {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-sm">
+          <div className="flex items-center justify-end gap-2.5 pt-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              {tr('Cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={collisionResult.hasCollision}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-opacity ${
+                collisionResult.hasCollision
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                  : 'accent-bg hover:opacity-95'
+              }`}
+            >
+              Create booking
+            </button>
+          </div>
+        </div>
+      }
+    >
           {/* Availability Banner */}
           {collisionResult.hasCollision ? (
             <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-200 flex items-start gap-2.5">
@@ -438,63 +475,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               </label>
             </div>
           </div>
-        </div>
-
-        {/* Pinned Bottom Price Breakdown & Actions */}
-        <div className="px-6 py-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 space-y-1.5 shrink-0 text-sm">
-          <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              Car, {days} {days === 1 ? 'day' : 'days'} at {formatMoney(dailyRate)}
-            </span>
-            <span className="font-mono text-slate-800 dark:text-slate-200 tabular-nums">{formatMoney(baseRental)}</span>
-          </div>
-          {isSafariPeak && (
-            <div className="flex justify-between text-xs text-amber-700 dark:text-amber-400">
-              <span>{tr('Busy Season')} (+15%)</span>
-              <span className="font-mono tabular-nums">+{formatMoney(safariSurge)}</span>
-            </div>
-          )}
-          {isUpcountry && (
-            <div className="flex justify-between text-xs text-amber-700 dark:text-amber-400">
-              <span>
-                {tr('Outside Kigali')} ({days} {days === 1 ? 'day' : 'days'})
-              </span>
-              <span className="font-mono tabular-nums">+{formatMoney(upcountrySurge)}</span>
-            </div>
-          )}
-          {includeVat && (
-            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span>VAT 18%</span>
-              <span className="font-mono tabular-nums">+{formatMoney(vatRwf)}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-base font-semibold text-slate-900 dark:text-white pt-2 mt-1 border-t border-slate-200/80 dark:border-slate-800">
-            <span>{tr('Total')}</span>
-            <span className="font-mono tabular-nums">{formatMoney(totalRwf)}</span>
-          </div>
-
-          <div className="flex items-center justify-end gap-2.5 pt-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              {tr('Cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={collisionResult.hasCollision}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-opacity ${
-                collisionResult.hasCollision
-                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                  : 'accent-bg hover:opacity-95'
-              }`}
-            >
-              Create booking
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+    </ModalShell>
   );
 };

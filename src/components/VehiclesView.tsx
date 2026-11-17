@@ -29,6 +29,7 @@ import {
 } from '../utils/vehicleImages';
 import { VehiclePhotoGallery } from './VehiclePhotoGallery';
 import { VehiclePhotoManager } from './VehiclePhotoManager';
+import { ModalShell } from './ModalShell';
 import { useI18n } from '../utils/i18n';
 
 interface VehiclesViewProps {
@@ -901,53 +902,85 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
       {/* 5. Car Details & History Modal */}
       {selectedVehicleDetails && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
-            <div className="flex items-start justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-4">
-              <div>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    {getCategoryBadge(selectedVehicleDetails.category).label}
+        <ModalShell
+          isOpen={true}
+          onClose={() => setSelectedVehicleDetails(null)}
+          maxWidthClass="max-w-2xl"
+          title={selectedVehicleDetails.model_name}
+          subtitle={
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {getCategoryBadge(selectedVehicleDetails.category).label}
+              </span>
+              {(() => {
+                const st = statusMeta(selectedVehicleDetails.status);
+                return (
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium ${st.bg} ${st.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                    <span>{selectedVehicleDetails.status}</span>
                   </span>
-                  {(() => {
-                    const st = statusMeta(selectedVehicleDetails.status);
-                    return (
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium ${st.bg} ${st.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                        <span>{selectedVehicleDetails.status}</span>
-                      </span>
-                    );
-                  })()}
-                </div>
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mt-2">
-                  {selectedVehicleDetails.model_name}
-                </h3>
-                <div className="flex items-center gap-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  <span className="font-mono font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
-                    {selectedVehicleDetails.plate_number}
-                  </span>
-                  <span>Parked at {selectedVehicleDetails.location}</span>
-                </div>
-              </div>
+                );
+              })()}
+              <span className="font-mono font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                {selectedVehicleDetails.plate_number}
+              </span>
+              <span>Parked at {selectedVehicleDetails.location}</span>
+            </div>
+          }
+          headerActions={
+            <button
+              type="button"
+              onClick={() => startEditingVehicle(selectedVehicleDetails)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>{tr('Edit Car & Photos')}</span>
+            </button>
+          }
+          bodyClassName="p-5 sm:p-6 space-y-5"
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeleteVehicle) {
+                    onDeleteVehicle(selectedVehicleDetails.id);
+                    setSelectedVehicleDetails(null);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Remove car</span>
+              </button>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={() => startEditingVehicle(selectedVehicleDetails)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  onClick={() => setMaintenanceModalVehicle(selectedVehicleDetails)}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span>{tr('Edit Car & Photos')}</span>
+                  {selectedVehicleDetails.status === 'Maintenance' ? 'Mark ready now' : 'Send to garage'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedVehicleDetails(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  onClick={() => {
+                    onOpenBookingForVehicle(selectedVehicleDetails.id);
+                    setSelectedVehicleDetails(null);
+                  }}
+                  disabled={selectedVehicleDetails.status === 'Maintenance'}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                    selectedVehicleDetails.status === 'Maintenance'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                      : 'accent-bg hover:opacity-95'
+                  }`}
                 >
-                  <X className="w-5 h-5" />
+                  + Book this car
                 </button>
               </div>
             </div>
+          }
+        >
 
             <VehiclePhotoGallery
               vehicle={selectedVehicleDetails}
@@ -1178,74 +1211,38 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
               )}
             </div>
 
-            {/* Footer Controls */}
-            <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (onDeleteVehicle) {
-                    onDeleteVehicle(selectedVehicleDetails.id);
-                    setSelectedVehicleDetails(null);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Remove car</span>
-              </button>
-
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setMaintenanceModalVehicle(selectedVehicleDetails)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {selectedVehicleDetails.status === 'Maintenance' ? 'Mark ready now' : 'Send to garage'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenBookingForVehicle(selectedVehicleDetails.id);
-                    setSelectedVehicleDetails(null);
-                  }}
-                  disabled={selectedVehicleDetails.status === 'Maintenance'}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg ${
-                    selectedVehicleDetails.status === 'Maintenance'
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                      : 'accent-bg hover:opacity-95'
-                  }`}
-                >
-                  + Book this car
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* 6. Edit Car Modal */}
       {editingVehicle && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {tr('Edit Car Details & Photos')} ({editingVehicle.plate_number})
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {tr('Updates show immediately on your customer booking website.')}
-                </p>
-              </div>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setEditingVehicle(null)}
+          asForm
+          onSubmit={handleSaveEditVehicle}
+          maxWidthClass="max-w-2xl"
+          title={`${tr('Edit Car Details & Photos')} (${editingVehicle.plate_number})`}
+          subtitle={tr('Updates show immediately on your customer booking website.')}
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setEditingVehicle(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Cancel')}
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-lg font-medium accent-bg hover:opacity-95"
+              >
+                {tr('Save Changes')}
               </button>
             </div>
-
-            <form onSubmit={handleSaveEditVehicle} className="space-y-4 text-sm">
+          }
+        >
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
                   {tr('Car Model & Name')}
@@ -1494,42 +1491,34 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 useCloudStorage={!isDemoMode}
               />
 
-              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-200/80 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setEditingVehicle(null)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {tr('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-lg font-medium accent-bg hover:opacity-95"
-                >
-                  {tr('Save Changes')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* 7. Add Garage Note Modal */}
       {isServiceLogModalOpen && selectedVehicleDetails && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Add garage note</h3>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setIsServiceLogModalOpen(false)}
+          asForm
+          onSubmit={handleLogService}
+          maxWidthClass="max-w-md"
+          title="Add garage note"
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsServiceLogModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                Cancel
+              </button>
+              <button type="submit" className="px-5 py-2 text-sm font-medium rounded-lg accent-bg hover:opacity-95">
+                Save note
               </button>
             </div>
-
-            <form onSubmit={handleLogService} className="space-y-4 text-sm">
+          }
+        >
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Distance now (km)</label>
@@ -1564,46 +1553,41 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                   className={inputCls}
                 />
               </div>
-
-              <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-200/80 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsServiceLogModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="px-5 py-2 text-sm font-medium rounded-lg accent-bg hover:opacity-95">
-                  Save note
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* 8. Garage Confirmation Modal */}
       {maintenanceModalVehicle && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {maintenanceModalVehicle.status === 'Maintenance'
-                    ? 'Bring car back from garage'
-                    : 'Send car to garage'}
-                </h3>
-              </div>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setMaintenanceModalVehicle(null)}
+          maxWidthClass="max-w-md"
+          icon={<Wrench className="w-5 h-5 text-amber-600 dark:text-amber-400" />}
+          title={
+            maintenanceModalVehicle.status === 'Maintenance'
+              ? 'Bring car back from garage'
+              : 'Send car to garage'
+          }
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setMaintenanceModalVehicle(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmMaintenance}
+                className="px-5 py-2 text-sm font-medium rounded-lg accent-bg hover:opacity-95"
+              >
+                Confirm
               </button>
             </div>
-
+          }
+        >
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Car: <strong className="font-semibold text-slate-900 dark:text-white">{maintenanceModalVehicle.model_name}</strong>{' '}
               (<span className="font-mono">{maintenanceModalVehicle.plate_number}</span>)
@@ -1635,50 +1619,38 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 This car will show as Ready so clients can book it again.
               </p>
             )}
-
-            <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-200/80 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setMaintenanceModalVehicle(null)}
-                className="px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmMaintenance}
-                className="px-5 py-2 text-sm font-medium rounded-lg accent-bg hover:opacity-95"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* 9. Add New Car Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {tr('Add New Car')}
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {tr('Add car details & photos for your booking website')}
-                </p>
-              </div>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setIsAddModalOpen(false)}
+          asForm
+          onSubmit={handleCreateVehicle}
+          maxWidthClass="max-w-2xl"
+          title={tr('Add New Car')}
+          subtitle={tr('Add car details & photos for your booking website')}
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Cancel')}
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-lg font-medium accent-bg hover:opacity-95"
+              >
+                {tr('Save Car')}
               </button>
             </div>
-
-            <form onSubmit={handleCreateVehicle} className="space-y-4 text-sm">
+          }
+        >
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
                   {tr('Car Model & Name')}
@@ -1905,24 +1877,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 useCloudStorage={!isDemoMode}
               />
 
-              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-200/80 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {tr('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-lg font-medium accent-bg hover:opacity-95"
-                >
-                  {tr('Save Car')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

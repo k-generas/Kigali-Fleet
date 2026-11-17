@@ -9,7 +9,8 @@ import {
   User,
 } from '../types';
 import { ColorTheme } from '../theme';
-import { Plus, Search, X, TrendingUp, TrendingDown, DollarSign, Clock } from 'lucide-react';
+import { Plus, Search, TrendingUp, TrendingDown, DollarSign, Clock } from 'lucide-react';
+import { ModalShell } from './ModalShell';
 import { useI18n } from '../utils/i18n';
 import { formatHumanDate } from '../utils/dates';
 
@@ -514,160 +515,147 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
       </div>
 
       {/* Modal: Add Cost */}
-      {isNewExpenseOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px] overflow-y-auto">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 my-8 max-h-[90vh] overflow-y-auto kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add a cost</h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Record money spent on a car or office
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsNewExpenseOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <ModalShell
+        isOpen={isNewExpenseOpen}
+        onClose={() => setIsNewExpenseOpen(false)}
+        maxWidthClass="max-w-lg"
+        asForm
+        onSubmit={handleSubmitExpense}
+        title="Add a cost"
+        subtitle="Record money spent on a car or office"
+        bodyClassName="p-5 sm:p-6 space-y-3.5 text-sm"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsNewExpenseOpen(false)}
+              className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs cursor-pointer"
+            >
+              Save cost
+            </button>
+          </div>
+        }
+      >
+        <div>
+          <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+            What was bought *
+          </label>
+          <input
+            type="text"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. 50L Diesel at Kacyiru"
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+          />
+        </div>
 
-            <form onSubmit={handleSubmitExpense} className="space-y-3.5 text-sm">
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                  What was bought *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. 50L Diesel at Kacyiru"
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                />
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Cost type</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              {EXPENSE_CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Cost type</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
-                  >
-                    {EXPENSE_CATEGORIES.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                    {tr('Amount (RWF)')} *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={1000}
-                    value={amountRwf}
-                    onChange={(e) => setAmountRwf(parseInt(e.target.value, 10) || 0)}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
-                  />
-                  {currency === 'USD' && (
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
-                      ≈ {formatMoney(amountRwf)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">For which car</label>
-                  <select
-                    value={vehicleId}
-                    onChange={(e) => setVehicleId(e.target.value)}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
-                  >
-                    <option value="">General office cost</option>
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.plate_number} — {v.model_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Shop or garage</label>
-                  <input
-                    type="text"
-                    value={supplierName}
-                    onChange={(e) => setSupplierName(e.target.value)}
-                    placeholder="e.g. TotalEnergies"
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Receipt number</label>
-                  <input
-                    type="text"
-                    value={receiptRef}
-                    onChange={(e) => setReceiptRef(e.target.value)}
-                    placeholder="e.g. TOT-88412"
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Extra notes</label>
-                <textarea
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Write any helpful note"
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none resize-none focus:border-slate-400"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsNewExpenseOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
-                >
-                  Save cost
-                </button>
-              </div>
-            </form>
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+              {tr('Amount (RWF)')} *
+            </label>
+            <input
+              type="number"
+              required
+              min={1000}
+              value={amountRwf}
+              onChange={(e) => setAmountRwf(parseInt(e.target.value, 10) || 0)}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
+            />
+            {currency === 'USD' && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
+                ≈ {formatMoney(amountRwf)}
+              </span>
+            )}
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">For which car</label>
+            <select
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              <option value="">General office cost</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.plate_number} — {v.model_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Date</label>
+            <input
+              type="date"
+              required
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Shop or garage</label>
+            <input
+              type="text"
+              value={supplierName}
+              onChange={(e) => setSupplierName(e.target.value)}
+              placeholder="e.g. TotalEnergies"
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Receipt number</label>
+            <input
+              type="text"
+              value={receiptRef}
+              onChange={(e) => setReceiptRef(e.target.value)}
+              placeholder="e.g. TOT-88412"
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">Extra notes</label>
+          <textarea
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Write any helpful note"
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none resize-none focus:border-slate-400"
+          />
+        </div>
+      </ModalShell>
     </div>
   );
 };

@@ -15,6 +15,7 @@ import {
 import { ColorTheme } from '../theme';
 import { useI18n } from '../utils/i18n';
 import { formatHumanDate, formatHumanDateRange } from '../utils/dates';
+import { ModalShell } from './ModalShell';
 
 interface BookingsViewProps {
   bookings: Booking[];
@@ -455,179 +456,46 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
       {/* Booking Details Modal */}
       {selectedBookingDetails && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
-            <div className="flex items-start justify-between border-b border-slate-200/80 dark:border-slate-800 pb-4">
-              <div>
-                <div className="flex items-center gap-2.5 text-xs">
-                  <span className="font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 accent-text">
-                    #{selectedBookingDetails.id}
-                  </span>
-                  <span className={`inline-flex items-center gap-1.5 font-medium ${getStatusTextClass(selectedBookingDetails.status)}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${getStatusDotClass(selectedBookingDetails.status)}`} />
-                    <span>{selectedBookingDetails.status}</span>
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-1.5">
-                  {selectedBookingDetails.client_name}
-                </h3>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-2">
-                  <span className="font-mono">{selectedBookingDetails.client_phone}</span>
-                  <span>·</span>
-                  <span>{selectedBookingDetails.client_email}</span>
-                </div>
+        <ModalShell
+          isOpen={!!selectedBookingDetails}
+          onClose={() => {
+            setSelectedBookingDetails(null);
+            setIsReceiptOpen(false);
+            setConfirmCancelId(null);
+          }}
+          maxWidthClass="max-w-2xl"
+          title={selectedBookingDetails.client_name}
+          subtitle={
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5 text-xs">
+                <span className="font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 accent-text">
+                  #{selectedBookingDetails.id}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 font-medium ${getStatusTextClass(selectedBookingDetails.status)}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${getStatusDotClass(selectedBookingDetails.status)}`} />
+                  <span>{selectedBookingDetails.status}</span>
+                </span>
               </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsReceiptOpen(!isReceiptOpen)}
-                  className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
-                  title="Show receipt"
-                >
-                  <Printer className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedBookingDetails(null);
-                    setIsReceiptOpen(false);
-                    setConfirmCancelId(null);
-                  }}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
-                  aria-label="Close"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+              <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2">
+                <span className="font-mono">{selectedBookingDetails.client_phone}</span>
+                <span>·</span>
+                <span>{selectedBookingDetails.client_email}</span>
               </div>
             </div>
-
-            {/* Key Summary Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Total price</span>
-                <p className="text-sm font-semibold font-mono text-slate-900 dark:text-white mt-0.5 tabular-nums">
-                  {formatMoney(selectedBookingDetails.total_rwf)}
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Payment</span>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5 truncate">
-                  {selectedBookingDetails.payment_status}
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Method</span>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-                  {selectedBookingDetails.payment_method}
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block">Trip dates</span>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-                  {formatHumanDate(selectedBookingDetails.start_date)}
-                </p>
-              </div>
-            </div>
-
-            {/* Vehicle & Driver Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(() => {
-                const vehicle = vehicles.find((v) => v.id === selectedBookingDetails.vehicle_id);
-                return (
-                  <div className="p-4 bg-slate-50/90 dark:bg-slate-800/40 rounded-xl space-y-1">
-                    <div className="text-xs text-slate-500 dark:text-slate-400">Car</div>
-                    <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {vehicle?.model_name || 'Car'}
-                    </div>
-                    <div className="flex items-center justify-between text-xs pt-0.5">
-                      <span className="font-mono accent-text font-semibold">
-                        {vehicle?.plate_number}
-                      </span>
-                      <span className="text-slate-500 dark:text-slate-400">{vehicle?.location}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {(() => {
-                const driver = drivers.find((d) => d.id === selectedBookingDetails.driver_id);
-                return (
-                  <div className="p-4 bg-slate-50/90 dark:bg-slate-800/40 rounded-xl space-y-1">
-                    <div className="text-xs text-slate-500 dark:text-slate-400">Driver</div>
-                    <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {driver?.name || 'No driver yet'}
-                    </div>
-                    <div className="flex items-center justify-between text-xs pt-0.5">
-                      <span className="font-mono text-slate-500 dark:text-slate-400">{driver?.phone}</span>
-                      <span className="font-mono text-slate-500 dark:text-slate-400">{driver?.rating || 5.0} / 5</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {selectedBookingDetails.flight_number && (
-              <div className="p-3.5 rounded-lg bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 space-y-1 text-xs">
-                <div className="flex items-center justify-between font-semibold text-blue-700 dark:text-blue-300">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Plane className="w-4 h-4" />
-                    <span>Airport flight</span>
-                  </span>
-                  <span className="font-mono">{selectedBookingDetails.flight_number}</span>
-                </div>
-                <div className="text-slate-700 dark:text-slate-200">
-                  From <strong className="font-semibold">{selectedBookingDetails.flight_origin || 'Entebbe'}</strong> · Status:{' '}
-                  <strong className="font-semibold">{selectedBookingDetails.flight_status || 'On Time'}</strong>
-                </div>
-              </div>
-            )}
-
-            {isReceiptOpen && (
-              <div className="p-5 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-xl space-y-3 font-mono text-sm">
-                <div className="text-center border-b border-slate-200 dark:border-slate-800 pb-3">
-                  <h4 className="font-semibold text-base text-slate-900 dark:text-white">Payment receipt</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">KigaliFleet · TIN 100984512</p>
-                </div>
-
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Customer:</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {selectedBookingDetails.client_name}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Booking:</span>
-                    <span>#{selectedBookingDetails.id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Trip:</span>
-                    <span className="truncate max-w-[260px]">{selectedBookingDetails.destination}</span>
-                  </div>
-                </div>
-
-                <div className="border-t border-b border-dashed border-slate-200 dark:border-slate-700 py-3 space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>{formatMoney(Math.round(selectedBookingDetails.total_rwf / 1.18))}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                    <span>Tax (18%):</span>
-                    <span>
-                      {formatMoney(Math.round(selectedBookingDetails.total_rwf - selectedBookingDetails.total_rwf / 1.18))}
-                    </span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-sm text-slate-900 dark:text-white pt-1">
-                    <span>Total paid:</span>
-                    <span>{formatMoney(selectedBookingDetails.total_rwf)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Footer */}
-            <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          }
+          headerActions={
+            <button
+              type="button"
+              onClick={() => setIsReceiptOpen(!isReceiptOpen)}
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              title="Show receipt"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+          }
+          bodyClassName="p-5 sm:p-6 space-y-5 text-sm"
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-3">
               {confirmCancelId === selectedBookingDetails.id ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Cancel this booking?</span>
@@ -638,14 +506,14 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       setSelectedBookingDetails(null);
                       setConfirmCancelId(null);
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium"
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium cursor-pointer"
                   >
                     Yes, cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmCancelId(null)}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200"
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer"
                   >
                     Keep
                   </button>
@@ -654,7 +522,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setConfirmCancelId(selectedBookingDetails.id)}
-                  className="text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline"
+                  className="text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
                 >
                   Cancel booking
                 </button>
@@ -664,7 +532,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsReceiptOpen(!isReceiptOpen)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   {isReceiptOpen ? 'Hide receipt' : 'Show receipt'}
                 </button>
@@ -674,14 +542,138 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                     onSelectBookingForDispatch(selectedBookingDetails.id);
                     setSelectedBookingDetails(null);
                   }}
-                  className="accent-bg px-4 py-2 text-sm font-medium rounded-lg hover:opacity-95"
+                  className="accent-bg px-4 py-2 text-sm font-medium rounded-lg hover:opacity-95 cursor-pointer"
                 >
                   Send driver SMS
                 </button>
               </div>
             </div>
+          }
+        >
+          {/* Key Summary Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Total price</span>
+              <p className="text-sm font-semibold font-mono text-slate-900 dark:text-white mt-0.5 tabular-nums">
+                {formatMoney(selectedBookingDetails.total_rwf)}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Payment</span>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5 truncate">
+                {selectedBookingDetails.payment_status}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Method</span>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
+                {selectedBookingDetails.payment_method}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block">Trip dates</span>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
+                {formatHumanDate(selectedBookingDetails.start_date)}
+              </p>
+            </div>
           </div>
-        </div>
+
+          {/* Vehicle & Driver Details */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {(() => {
+              const vehicle = vehicles.find((v) => v.id === selectedBookingDetails.vehicle_id);
+              return (
+                <div className="p-4 bg-slate-50/90 dark:bg-slate-800/40 rounded-xl space-y-1">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Car</div>
+                  <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {vehicle?.model_name || 'Car'}
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-0.5">
+                    <span className="font-mono accent-text font-semibold">
+                      {vehicle?.plate_number}
+                    </span>
+                    <span className="text-slate-500 dark:text-slate-400">{vehicle?.location}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {(() => {
+              const driver = drivers.find((d) => d.id === selectedBookingDetails.driver_id);
+              return (
+                <div className="p-4 bg-slate-50/90 dark:bg-slate-800/40 rounded-xl space-y-1">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Driver</div>
+                  <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {driver?.name || 'No driver yet'}
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-0.5">
+                    <span className="font-mono text-slate-500 dark:text-slate-400">{driver?.phone}</span>
+                    <span className="font-mono text-slate-500 dark:text-slate-400">{driver?.rating || 5.0} / 5</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {selectedBookingDetails.flight_number && (
+            <div className="p-3.5 rounded-lg bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 space-y-1 text-xs">
+              <div className="flex items-center justify-between font-semibold text-blue-700 dark:text-blue-300">
+                <span className="inline-flex items-center gap-1.5">
+                  <Plane className="w-4 h-4" />
+                  <span>Airport flight</span>
+                </span>
+                <span className="font-mono">{selectedBookingDetails.flight_number}</span>
+              </div>
+              <div className="text-slate-700 dark:text-slate-200">
+                From <strong className="font-semibold">{selectedBookingDetails.flight_origin || 'Entebbe'}</strong> · Status:{' '}
+                <strong className="font-semibold">{selectedBookingDetails.flight_status || 'On Time'}</strong>
+              </div>
+            </div>
+          )}
+
+          {isReceiptOpen && (
+            <div className="p-5 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-xl space-y-3 font-mono text-sm">
+              <div className="text-center border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h4 className="font-semibold text-base text-slate-900 dark:text-white">Payment receipt</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">KigaliFleet · TIN 100984512</p>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Customer:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {selectedBookingDetails.client_name}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Booking:</span>
+                  <span>#{selectedBookingDetails.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Trip:</span>
+                  <span className="truncate max-w-[260px]">{selectedBookingDetails.destination}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-b border-dashed border-slate-200 dark:border-slate-700 py-3 space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>{formatMoney(Math.round(selectedBookingDetails.total_rwf / 1.18))}</span>
+                </div>
+                <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                  <span>Tax (18%):</span>
+                  <span>
+                    {formatMoney(Math.round(selectedBookingDetails.total_rwf - selectedBookingDetails.total_rwf / 1.18))}
+                  </span>
+                </div>
+                <div className="flex justify-between font-semibold text-sm text-slate-900 dark:text-white pt-1">
+                  <span>Total paid:</span>
+                  <span>{formatMoney(selectedBookingDetails.total_rwf)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </ModalShell>
       )}
     </div>
   );

@@ -21,6 +21,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { ModalShell } from './ModalShell';
 
 interface CalendarTimelineViewProps {
   vehicles: Vehicle[];
@@ -927,31 +928,66 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
 
       {/* Trip Details Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3.5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 accent-text">
-                    #{selectedBooking.id}
-                  </span>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{tr('Trip Details')}</h3>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {tr('Going to')}: {selectedBooking.destination}
-                </p>
-              </div>
+        <ModalShell
+          isOpen={true}
+          onClose={() => {
+            setSelectedBooking(null);
+            setAssignmentNotice(null);
+          }}
+          maxWidthClass="max-w-lg"
+          title={
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 accent-text">
+                #{selectedBooking.id}
+              </span>
+              <span>{tr('Trip Details')}</span>
+            </div>
+          }
+          subtitle={`${tr('Going to')}: ${selectedBooking.destination}`}
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {onSelectBookingForDispatch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectBookingForDispatch(selectedBooking);
+                    setSelectedBooking(null);
+                  }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 accent-bg hover:opacity-95"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>{tr('Send Driver SMS')}</span>
+                </button>
+              )}
+
+              {onUpdateBookingStatus && selectedBooking.status !== 'Completed' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpdateBookingStatus(selectedBooking.id, 'Completed');
+                    setSelectedBooking(null);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium inline-flex items-center gap-1.5"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>{tr('Mark Trip Done')}</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
                   setSelectedBooking(null);
                   setAssignmentNotice(null);
                 }}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium ml-auto hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Close')}
               </button>
             </div>
+          }
+        >
 
             {assignmentNotice && (
               <div
@@ -1035,64 +1071,38 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
               </select>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200/80 dark:border-slate-800">
-              {onSelectBookingForDispatch && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectBookingForDispatch(selectedBooking);
-                    setSelectedBooking(null);
-                  }}
-                  className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 accent-bg hover:opacity-95"
-                >
-                  <Phone className="w-4 h-4" />
-                  <span>{tr('Send Driver SMS')}</span>
-                </button>
-              )}
-
-              {onUpdateBookingStatus && selectedBooking.status !== 'Completed' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onUpdateBookingStatus(selectedBooking.id, 'Completed');
-                    setSelectedBooking(null);
-                  }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium inline-flex items-center gap-1.5"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>{tr('Mark Trip Done')}</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setSelectedBooking(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium ml-auto hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                {tr('Close')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Block Car Modal */}
       {isBlockVehicleModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Ban className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{tr('Block a Car')}</h3>
-              </div>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setIsBlockVehicleModalOpen(false)}
+          maxWidthClass="max-w-md"
+          icon={<Ban className="w-5 h-5 text-rose-600 dark:text-rose-400" />}
+          title={tr('Block a Car')}
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsBlockVehicleModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBlockVehicle}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium inline-flex items-center gap-1.5"
+              >
+                <Ban className="w-4 h-4" />
+                <span>{tr('Block Car Now')}</span>
               </button>
             </div>
+          }
+        >
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {tr('Lock a car so nobody can book it while it is in the garage or being checked.')}
@@ -1140,25 +1150,7 @@ export const CalendarTimelineView: React.FC<CalendarTimelineViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setIsBlockVehicleModalOpen(false)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                {tr('Cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmBlockVehicle}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium inline-flex items-center gap-1.5"
-              >
-                <Ban className="w-4 h-4" />
-                <span>{tr('Block Car Now')}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

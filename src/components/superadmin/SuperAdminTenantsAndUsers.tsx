@@ -9,8 +9,8 @@ import {
   MapPin,
   Plus,
   Search,
-  X,
 } from 'lucide-react';
+import { ModalShell } from '../ModalShell';
 import {
   Booking,
   Company,
@@ -323,22 +323,51 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
         </div>
 
         {/* User Detail Modal */}
-        {selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-            <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4">
-              <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{selectedUser.name}</h3>
-                  <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">{selectedUser.email}</p>
-                </div>
+        <ModalShell
+          isOpen={!!selectedUser}
+          onClose={() => setSelectedUser(null)}
+          maxWidthClass="max-w-lg"
+          title={selectedUser?.name || ''}
+          subtitle={
+            selectedUser ? <span className="font-mono">{selectedUser.email}</span> : undefined
+          }
+          footer={
+            selectedUser ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 <button
-                  onClick={() => setSelectedUser(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                  type="button"
+                  onClick={() => {
+                    onTriggerUserRecovery(selectedUser.id);
+                    setSelectedUser(null);
+                  }}
+                  className="px-3.5 py-2 rounded-lg text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <KeyRound className="w-4 h-4" />
+                  <span>Send reset link</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = selectedUser;
+                    setSelectedUser(null);
+                    setPendingAction({
+                      title: `Log out ${target.name} everywhere`,
+                      description: `Signs out ${target.email} from all phones and computers right now.`,
+                      confirmLabel: 'Log out everywhere',
+                      danger: true,
+                      execute: (reason) => onRevokeUserSessions(target.id, reason),
+                    });
+                  }}
+                  className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer"
+                >
+                  Log out everywhere
                 </button>
               </div>
-
+            ) : undefined
+          }
+        >
+          {selectedUser && (
+            <>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="p-3 rounded-lg bg-slate-50/90 dark:bg-slate-800/40">
                   <div className="text-xs text-slate-500 dark:text-slate-400">Role</div>
@@ -372,38 +401,9 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
                   For safety, nobody can see or change another person&apos;s password. You can only send a reset link or sign them out.
                 </span>
               </div>
-
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  onClick={() => {
-                    onTriggerUserRecovery(selectedUser.id);
-                    setSelectedUser(null);
-                  }}
-                  className="px-3.5 py-2 rounded-lg text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  <span>Send reset link</span>
-                </button>
-                <button
-                  onClick={() => {
-                    const target = selectedUser;
-                    setSelectedUser(null);
-                    setPendingAction({
-                      title: `Log out ${target.name} everywhere`,
-                      description: `Signs out ${target.email} from all phones and computers right now.`,
-                      confirmLabel: 'Log out everywhere',
-                      danger: true,
-                      execute: (reason) => onRevokeUserSessions(target.id, reason),
-                    });
-                  }}
-                  className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors"
-                >
-                  Log out everywhere
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </ModalShell>
 
         <ReasonActionModal
           isOpen={!!pendingAction}
@@ -603,35 +603,38 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
       </div>
 
       {/* Company Full Info Modal */}
-      {dossierCompany && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-4xl w-full p-5 max-h-[90vh] flex flex-col">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
-              <div>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{dossierCompany.name}</h3>
-                  <span
-                    className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles(
-                      dossierCompany.status || 'Active'
-                    )}`}
-                  >
-                    {dossierCompany.status || 'Active'}
-                  </span>
-                </div>
-                <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-1">
-                  ID {dossierCompany.id} · TIN {dossierCompany.tin_number} · {dossierCompany.city}
-                </p>
-              </div>
-              <button
-                onClick={() => setDossierCompany(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+      <ModalShell
+        isOpen={!!dossierCompany}
+        onClose={() => setDossierCompany(null)}
+        maxWidthClass="max-w-4xl"
+        title={
+          dossierCompany ? (
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span>{dossierCompany.name}</span>
+              <span
+                className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getStatusStyles(
+                  dossierCompany.status || 'Active'
+                )}`}
               >
-                <X className="w-4 h-4" />
-              </button>
+                {dossierCompany.status || 'Active'}
+              </span>
             </div>
-
+          ) : (
+            ''
+          )
+        }
+        subtitle={
+          dossierCompany ? (
+            <span className="font-mono">
+              ID {dossierCompany.id} · TIN {dossierCompany.tin_number} · {dossierCompany.city}
+            </span>
+          ) : undefined
+        }
+      >
+        {dossierCompany && (
+          <>
             {/* Segmented Tabs */}
-            <div className="pt-3 overflow-x-auto">
+            <div className="overflow-x-auto pb-1">
               <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg gap-1">
                 {(
                   [
@@ -645,8 +648,9 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
                 ).map((tab) => (
                   <button
                     key={tab.id}
+                    type="button"
                     onClick={() => setDossierTab(tab.id)}
-                    className={`px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors ${
+                    className={`px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors cursor-pointer ${
                       dossierTab === tab.id
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-xs'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
@@ -658,7 +662,7 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-sm">
+            <div className="space-y-4 text-sm">
               {dossierTab === 'profile' && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -885,176 +889,164 @@ export const SuperAdminTenantsAndUsers: React.FC<SuperAdminTenantsAndUsersProps>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </ModalShell>
 
       {/* Modal: Add New Company */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 accent-text" />
-                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Add new company
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <ModalShell
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        maxWidthClass="max-w-lg"
+        asForm
+        onSubmit={handleCreateCompany}
+        icon={<Building2 className="w-4 h-4 accent-text" />}
+        title="Add new company"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(false)}
+              className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg cursor-pointer">
+              Add company
+            </button>
+          </div>
+        }
+      >
+        <div>
+          <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Company name
+          </label>
+          <input
+            type="text"
+            value={newCompName}
+            onChange={(e) => setNewCompName(e.target.value)}
+            placeholder="e.g. Nyungwe Canopy Tours Ltd"
+            className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
+            required
+          />
+        </div>
 
-            <form onSubmit={handleCreateCompany} className="space-y-4 text-sm">
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Company name
-                </label>
-                <input
-                  type="text"
-                  value={newCompName}
-                  onChange={(e) => setNewCompName(e.target.value)}
-                  placeholder="e.g. Nyungwe Canopy Tours Ltd"
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Type of work</label>
-                  <select
-                    value={newCompType}
-                    onChange={(e) => setNewCompType(e.target.value as any)}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
-                  >
-                    <option value="Car Rental">Car rental</option>
-                    <option value="Tour Operator">Tour operator</option>
-                    <option value="Airport Shuttle">Airport shuttle</option>
-                    <option value="Corporate Transport">Company transport</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Tax number (TIN)</label>
-                  <input
-                    type="text"
-                    value={newCompTin}
-                    onChange={(e) => setNewCompTin(e.target.value)}
-                    placeholder="109283746"
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">City</label>
-                  <input
-                    type="text"
-                    value={newCompCity}
-                    onChange={(e) => setNewCompCity(e.target.value)}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Plan</label>
-                  <select
-                    value={newCompTier}
-                    onChange={(e) => setNewCompTier(e.target.value as any)}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
-                  >
-                    <option value="starter">Starter (35k)</option>
-                    <option value="growth">Growth (75k)</option>
-                    <option value="enterprise">Enterprise (150k)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Start status</label>
-                  <select
-                    value={newCompStatus}
-                    onChange={(e) => setNewCompStatus(e.target.value as CompanyStatus)}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Trial">Free trial (14d)</option>
-                    <option value="Pending">Waiting approval</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Company email</label>
-                  <input
-                    type="email"
-                    value={newCompEmail}
-                    onChange={(e) => setNewCompEmail(e.target.value)}
-                    placeholder="ops@company.rw"
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Company phone</label>
-                  <input
-                    type="text"
-                    value={newCompPhone}
-                    onChange={(e) => setNewCompPhone(e.target.value)}
-                    className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 block">Company owner login</span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <input
-                    type="text"
-                    value={newOwnerName}
-                    onChange={(e) => setNewOwnerName(e.target.value)}
-                    placeholder="Owner name"
-                    className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
-                    required
-                  />
-                  <input
-                    type="email"
-                    value={newOwnerEmail}
-                    onChange={(e) => setNewOwnerEmail(e.target.value)}
-                    placeholder="owner@company.rw"
-                    className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={newOwnerPhone}
-                    onChange={(e) => setNewOwnerPhone(e.target.value)}
-                    placeholder="+250 788..."
-                    className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
-                  Add company
-                </button>
-              </div>
-            </form>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Type of work</label>
+            <select
+              value={newCompType}
+              onChange={(e) => setNewCompType(e.target.value as any)}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
+            >
+              <option value="Car Rental">Car rental</option>
+              <option value="Tour Operator">Tour operator</option>
+              <option value="Airport Shuttle">Airport shuttle</option>
+              <option value="Corporate Transport">Company transport</option>
+            </select>
+          </div>
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Tax number (TIN)</label>
+            <input
+              type="text"
+              value={newCompTin}
+              onChange={(e) => setNewCompTin(e.target.value)}
+              placeholder="109283746"
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
+              required
+            />
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">City</label>
+            <input
+              type="text"
+              value={newCompCity}
+              onChange={(e) => setNewCompCity(e.target.value)}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Plan</label>
+            <select
+              value={newCompTier}
+              onChange={(e) => setNewCompTier(e.target.value as any)}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
+            >
+              <option value="starter">Starter (35k)</option>
+              <option value="growth">Growth (75k)</option>
+              <option value="enterprise">Enterprise (150k)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Start status</label>
+            <select
+              value={newCompStatus}
+              onChange={(e) => setNewCompStatus(e.target.value as CompanyStatus)}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
+            >
+              <option value="Active">Active</option>
+              <option value="Trial">Free trial (14d)</option>
+              <option value="Pending">Waiting approval</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Company email</label>
+            <input
+              type="email"
+              value={newCompEmail}
+              onChange={(e) => setNewCompEmail(e.target.value)}
+              placeholder="ops@company.rw"
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Company phone</label>
+            <input
+              type="text"
+              value={newCompPhone}
+              onChange={(e) => setNewCompPhone(e.target.value)}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 block">Company owner login</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <input
+              type="text"
+              value={newOwnerName}
+              onChange={(e) => setNewOwnerName(e.target.value)}
+              placeholder="Owner name"
+              className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
+              required
+            />
+            <input
+              type="email"
+              value={newOwnerEmail}
+              onChange={(e) => setNewOwnerEmail(e.target.value)}
+              placeholder="owner@company.rw"
+              className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 outline-none"
+            />
+            <input
+              type="text"
+              value={newOwnerPhone}
+              onChange={(e) => setNewOwnerPhone(e.target.value)}
+              placeholder="+250 788..."
+              className="bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono text-slate-900 dark:text-slate-100 outline-none"
+            />
+          </div>
+        </div>
+      </ModalShell>
 
       <ReasonActionModal
         isOpen={!!pendingAction}

@@ -14,6 +14,7 @@ import {
 import { ColorTheme } from '../theme';
 import { useI18n } from '../utils/i18n';
 import { formatHumanDate } from '../utils/dates';
+import { ModalShell } from './ModalShell';
 
 interface PaymentsViewProps {
   payments: PaymentRecord[];
@@ -527,97 +528,18 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
       {/* Receipt Modal */}
       {selectedReceipt && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Payment receipt</h3>
-              <button
-                type="button"
-                onClick={() => setSelectedReceipt(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div
-              id="printable-ebm-receipt"
-              className="bg-slate-50 text-slate-900 p-5 rounded-xl border border-slate-200 font-mono text-xs space-y-3"
-            >
-              <div className="text-center border-b border-dashed border-slate-300 pb-2.5">
-                <div className="font-semibold text-sm text-slate-900">
-                  {currentCompany?.name || 'KIGALI EXPEDITION TOURS & FLEET LTD'}
-                </div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  TIN: {currentCompany?.tin_number || '102938475'} · {currentCompany?.phone || '+250 788 123 456'}
-                </div>
-                <div className="font-semibold text-slate-900 mt-1 text-xs">
-                  Official tax receipt (RRA EBM)
-                </div>
-              </div>
-
-              <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-2.5">
-                <div>
-                  Receipt #: <strong className="font-semibold">{selectedReceipt.ebm_receipt_number || 'EBM-2026-00482'}</strong>
-                </div>
-                <div>
-                  Date: <strong className="font-semibold">{formatHumanDate(selectedReceipt.date)}</strong>
-                </div>
-                <div>
-                  Guest: <strong className="font-semibold">{selectedReceipt.customer_name}</strong>
-                </div>
-                {selectedReceipt.organization && (
-                  <div>
-                    Company: <strong className="font-semibold">{selectedReceipt.organization}</strong>
-                  </div>
-                )}
-                <div>
-                  Paid by: <strong className="font-semibold">{selectedReceipt.payment_method}</strong>
-                </div>
-                {selectedReceipt.momo_tx_id && (
-                  <div>
-                    MoMo code: <strong className="font-semibold">{selectedReceipt.momo_tx_id}</strong>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-1 border-b border-dashed border-slate-300 pb-2.5">
-                <div className="flex justify-between font-semibold text-slate-900">
-                  <span>Item</span>
-                  <span>Total</span>
-                </div>
-                <div className="flex justify-between text-slate-900">
-                  <span>Car rental (#{selectedReceipt.booking_id})</span>
-                  <span>{formatMoney(selectedReceipt.amount_rwf)}</span>
-                </div>
-              </div>
-
-              <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-2.5">
-                <div className="flex justify-between text-slate-500">
-                  <span>Before tax:</span>
-                  <span>{formatMoney(Math.round((selectedReceipt.amount_rwf * 100) / 118))}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Tax (18% VAT):</span>
-                  <span>{formatMoney(Math.round((selectedReceipt.amount_rwf * 18) / 118))}</span>
-                </div>
-                <div className="flex justify-between font-semibold text-sm text-slate-900 pt-1">
-                  <span>Total paid:</span>
-                  <span>{formatMoney(selectedReceipt.amount_rwf)}</span>
-                </div>
-              </div>
-
-              <div className="text-center pt-1 text-xs font-semibold text-slate-500">
-                Murakoze cyane / Thank you
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
+        <ModalShell
+          isOpen={!!selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+          maxWidthClass="max-w-md"
+          printFullscreen
+          title="Payment receipt"
+          footer={
+            <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="accent-bg px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 shadow-xs"
+                className="accent-bg px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>Print receipt</span>
@@ -626,242 +548,297 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedReceipt(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
               >
                 Close
               </button>
             </div>
+          }
+        >
+          <div
+            id="printable-ebm-receipt"
+            className="bg-slate-50 text-slate-900 p-5 rounded-xl border border-slate-200 print:border-none font-mono text-xs space-y-3"
+          >
+            <div className="text-center border-b border-dashed border-slate-300 pb-2.5">
+              <div className="font-semibold text-sm text-slate-900">
+                {currentCompany?.name || 'KIGALI EXPEDITION TOURS & FLEET LTD'}
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5">
+                TIN: {currentCompany?.tin_number || '102938475'} · {currentCompany?.phone || '+250 788 123 456'}
+              </div>
+              <div className="font-semibold text-slate-900 mt-1 text-xs">
+                Official tax receipt (RRA EBM)
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-2.5">
+              <div>
+                Receipt #: <strong className="font-semibold">{selectedReceipt.ebm_receipt_number || 'EBM-2026-00482'}</strong>
+              </div>
+              <div>
+                Date: <strong className="font-semibold">{formatHumanDate(selectedReceipt.date)}</strong>
+              </div>
+              <div>
+                Guest: <strong className="font-semibold">{selectedReceipt.customer_name}</strong>
+              </div>
+              {selectedReceipt.organization && (
+                <div>
+                  Company: <strong className="font-semibold">{selectedReceipt.organization}</strong>
+                </div>
+              )}
+              <div>
+                Paid by: <strong className="font-semibold">{selectedReceipt.payment_method}</strong>
+              </div>
+              {selectedReceipt.momo_tx_id && (
+                <div>
+                  MoMo code: <strong className="font-semibold">{selectedReceipt.momo_tx_id}</strong>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1 border-b border-dashed border-slate-300 pb-2.5">
+              <div className="flex justify-between font-semibold text-slate-900">
+                <span>Item</span>
+                <span>Total</span>
+              </div>
+              <div className="flex justify-between text-slate-900">
+                <span>Car rental (#{selectedReceipt.booking_id})</span>
+                <span>{formatMoney(selectedReceipt.amount_rwf)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-2.5">
+              <div className="flex justify-between text-slate-500">
+                <span>Before tax:</span>
+                <span>{formatMoney(Math.round((selectedReceipt.amount_rwf * 100) / 118))}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Tax (18% VAT):</span>
+                <span>{formatMoney(Math.round((selectedReceipt.amount_rwf * 18) / 118))}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-sm text-slate-900 pt-1">
+                <span>Total paid:</span>
+                <span>{formatMoney(selectedReceipt.amount_rwf)}</span>
+              </div>
+            </div>
+
+            <div className="text-center pt-1 text-xs font-semibold text-slate-500">
+              Murakoze cyane / Thank you
+            </div>
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* MTN MoMo Request Modal */}
       {momoModalPayment && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-sm w-full p-6 space-y-4 kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">MTN MoMo payment</h3>
+        <ModalShell
+          isOpen={!!momoModalPayment}
+          onClose={() => setMomoModalPayment(null)}
+          maxWidthClass="max-w-sm"
+          title="MTN MoMo payment"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setMomoModalPayment(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {momoNotice && (
-              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 p-3 rounded-lg text-sm font-medium">
-                {momoNotice}
-              </div>
-            )}
-
-            <div className="bg-slate-50/90 dark:bg-slate-800/40 p-4 rounded-xl text-sm text-slate-600 dark:text-slate-400 space-y-1.5">
-              <div>
-                Pay to: <strong className="font-semibold text-slate-900 dark:text-white">KigaliFleet (Code: 049281)</strong>
-              </div>
-              <div>
-                Guest: <strong className="font-semibold text-slate-900 dark:text-white">{momoModalPayment.customer_name}</strong>
-              </div>
-              <div>
-                Phone:{' '}
-                <strong className="font-semibold text-slate-900 dark:text-white font-mono">
-                  {momoModalPayment.customer_phone || '+250 788 123 456'}
-                </strong>
-              </div>
-              <div>
-                Amount:{' '}
-                <strong className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
-                  {formatMoney(momoModalPayment.expected_amount_rwf)}
-                </strong>
-              </div>
-            </div>
-
-            <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl p-4 text-center space-y-2.5">
-              <span className="text-xs text-slate-500 dark:text-slate-400 block">
-                Message sent to guest phone:
-              </span>
-              <span className="text-sm text-slate-900 dark:text-white font-semibold block">
-                &ldquo;Kwemera kwishyura {formatMoney(momoModalPayment.expected_amount_rwf)} kuri KigaliFleet?&rdquo;
-              </span>
-              <input
-                type="password"
-                maxLength={4}
-                placeholder="PIN (e.g. 1234)"
-                value={momoPinInput}
-                onChange={(e) => setMomoPinInput(e.target.value)}
-                className="w-36 mx-auto text-center bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 font-mono tracking-widest text-sm outline-none focus:border-slate-400"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setMomoModalPayment(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmMoMoPayment}
-                className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
+                className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs cursor-pointer"
               >
                 Mark as paid
               </button>
             </div>
+          }
+        >
+          {momoNotice && (
+            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 p-3 rounded-lg text-sm font-medium">
+              {momoNotice}
+            </div>
+          )}
+
+          <div className="bg-slate-50/90 dark:bg-slate-800/40 p-4 rounded-xl text-sm text-slate-600 dark:text-slate-400 space-y-1.5">
+            <div>
+              Pay to: <strong className="font-semibold text-slate-900 dark:text-white">KigaliFleet (Code: 049281)</strong>
+            </div>
+            <div>
+              Guest: <strong className="font-semibold text-slate-900 dark:text-white">{momoModalPayment.customer_name}</strong>
+            </div>
+            <div>
+              Phone:{' '}
+              <strong className="font-semibold text-slate-900 dark:text-white font-mono">
+                {momoModalPayment.customer_phone || '+250 788 123 456'}
+              </strong>
+            </div>
+            <div>
+              Amount:{' '}
+              <strong className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+                {formatMoney(momoModalPayment.expected_amount_rwf)}
+              </strong>
+            </div>
           </div>
-        </div>
+
+          <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl p-4 text-center space-y-2.5">
+            <span className="text-xs text-slate-500 dark:text-slate-400 block">
+              Message sent to guest phone:
+            </span>
+            <span className="text-sm text-slate-900 dark:text-white font-semibold block">
+              &ldquo;Kwemera kwishyura {formatMoney(momoModalPayment.expected_amount_rwf)} kuri KigaliFleet?&rdquo;
+            </span>
+            <input
+              type="password"
+              maxLength={4}
+              placeholder="PIN (e.g. 1234)"
+              value={momoPinInput}
+              onChange={(e) => setMomoPinInput(e.target.value)}
+              className="w-36 mx-auto text-center bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 font-mono tracking-widest text-sm outline-none focus:border-slate-400"
+            />
+          </div>
+        </ModalShell>
       )}
 
       {/* Add Payment Modal */}
-      {isAddPaymentOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Add payment</h3>
-              <button
-                type="button"
-                onClick={() => setIsAddPaymentOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <ModalShell
+        isOpen={isAddPaymentOpen}
+        onClose={() => setIsAddPaymentOpen(false)}
+        maxWidthClass="max-w-md"
+        asForm
+        onSubmit={handleSubmitNewPayment}
+        title="Add payment"
+        bodyClassName="p-5 sm:p-6 space-y-3.5 text-sm"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsAddPaymentOpen(false)}
+              className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs cursor-pointer"
+            >
+              Save payment
+            </button>
+          </div>
+        }
+      >
+        <div>
+          <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Which booking?</label>
+          <select
+            value={formData.booking_id}
+            onChange={(e) => {
+              const bk = bookings.find((b) => b.id === e.target.value);
+              setFormData({
+                ...formData,
+                booking_id: e.target.value,
+                customer_name: bk?.client_name || formData.customer_name,
+                customer_phone: bk?.client_phone || formData.customer_phone,
+                amount_rwf: bk?.total_rwf || formData.amount_rwf,
+                expected_amount_rwf: bk?.total_rwf || formData.expected_amount_rwf,
+              });
+            }}
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
+          >
+            {bookings.map((b) => (
+              <option key={b.id} value={b.id}>
+                #{b.id} · {b.client_name} ({formatMoney(b.total_rwf)})
+              </option>
+            ))}
+          </select>
+        </div>
 
-            <form onSubmit={handleSubmitNewPayment} className="space-y-3.5 text-sm">
-              <div>
-                <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Which booking?</label>
-                <select
-                  value={formData.booking_id}
-                  onChange={(e) => {
-                    const bk = bookings.find((b) => b.id === e.target.value);
-                    setFormData({
-                      ...formData,
-                      booking_id: e.target.value,
-                      customer_name: bk?.client_name || formData.customer_name,
-                      customer_phone: bk?.client_phone || formData.customer_phone,
-                      amount_rwf: bk?.total_rwf || formData.amount_rwf,
-                      expected_amount_rwf: bk?.total_rwf || formData.expected_amount_rwf,
-                    });
-                  }}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
-                >
-                  {bookings.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      #{b.id} · {b.client_name} ({formatMoney(b.total_rwf)})
-                    </option>
-                  ))}
-                </select>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Guest name *</label>
+            <input
+              type="text"
+              required
+              value={formData.customer_name}
+              onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+            />
+          </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Guest name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.customer_name}
-                    onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Company (optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Bank of Kigali"
-                    value={formData.organization}
-                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Paid by *</label>
-                  <select
-                    value={formData.payment_method}
-                    onChange={(e) => setFormData({ ...formData, payment_method: e.target.value as PaymentMethod })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
-                  >
-                    <option value="MTN Mobile Money">MTN Mobile Money</option>
-                    <option value="Bank Transfer">Bank transfer</option>
-                    <option value="Credit Card">Bank card</option>
-                    <option value="Airtel Money">Airtel Money</option>
-                    <option value="Cash on Delivery">Cash</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">
-                    {tr('Money Paid (RWF)')} *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1000"
-                    value={formData.amount_rwf}
-                    onChange={(e) => setFormData({ ...formData, amount_rwf: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
-                  />
-                  {currency === 'USD' && (
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
-                      ≈ {formatMoney(formData.amount_rwf)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Status *</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as PaymentRecordStatus })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
-                  >
-                    <option value="Paid">Paid in full</option>
-                    <option value="Partially Paid">Partly paid</option>
-                    <option value="Pending">Waiting</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Payment code</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. MOMO-992819"
-                    value={formData.momo_tx_id}
-                    onChange={(e) => setFormData({ ...formData, momo_tx_id: e.target.value })}
-                    className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddPaymentOpen(false)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium shadow-xs"
-                >
-                  Save payment
-                </button>
-              </div>
-            </form>
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Company (optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. Bank of Kigali"
+              value={formData.organization}
+              onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+            />
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Paid by *</label>
+            <select
+              value={formData.payment_method}
+              onChange={(e) => setFormData({ ...formData, payment_method: e.target.value as PaymentMethod })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              <option value="MTN Mobile Money">MTN Mobile Money</option>
+              <option value="Bank Transfer">Bank transfer</option>
+              <option value="Credit Card">Bank card</option>
+              <option value="Airtel Money">Airtel Money</option>
+              <option value="Cash on Delivery">Cash</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">
+              {tr('Money Paid (RWF)')} *
+            </label>
+            <input
+              type="number"
+              required
+              min="1000"
+              value={formData.amount_rwf}
+              onChange={(e) => setFormData({ ...formData, amount_rwf: Number(e.target.value) })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono font-semibold outline-none focus:border-slate-400"
+            />
+            {currency === 'USD' && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
+                ≈ {formatMoney(formData.amount_rwf)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Status *</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as PaymentRecordStatus })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none cursor-pointer"
+            >
+              <option value="Paid">Paid in full</option>
+              <option value="Partially Paid">Partly paid</option>
+              <option value="Pending">Waiting</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-slate-600 dark:text-slate-400 text-xs font-medium block mb-1">Payment code</label>
+            <input
+              type="text"
+              placeholder="e.g. MOMO-992819"
+              value={formData.momo_tx_id}
+              onChange={(e) => setFormData({ ...formData, momo_tx_id: e.target.value })}
+              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
+            />
+          </div>
+        </div>
+      </ModalShell>
     </div>
   );
 };

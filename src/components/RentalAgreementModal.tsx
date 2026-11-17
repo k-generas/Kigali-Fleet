@@ -9,12 +9,12 @@ import {
   Printer,
   Copy,
   Check,
-  X,
   ShieldCheck,
   Building2,
   Car,
   User as UserIcon,
 } from 'lucide-react';
+import { ModalShell } from './ModalShell';
 
 interface RentalAgreementModalProps {
   isOpen: boolean;
@@ -38,23 +38,22 @@ export const RentalAgreementModal: React.FC<RentalAgreementModalProps> = ({
   const { currency, formatMoney, tr } = useI18n();
   const [copied, setCopied] = useState(false);
 
-  if (!isOpen || !booking || !vehicle) return null;
-
   const companyName = currentCompany?.name || 'Kigali Executive Fleet & Safaris Ltd';
   const companyPhone = currentCompany?.phone || '+250 788 312 000';
   const companyEmail = currentCompany?.email || 'dispatch@kigaliexecutive.rw';
   const companyTin = '109823471';
   const companyRdb = '109823471';
 
-  const contractReference = `AGR-${booking.id.toUpperCase()}`;
+  const contractReference = booking ? `AGR-${booking.id.toUpperCase()}` : '';
   const agreementDate = formatHumanDate(new Date().toISOString().slice(0, 10));
-  const durationDays = calculateDays(booking.start_date, booking.end_date);
+  const durationDays = booking ? calculateDays(booking.start_date, booking.end_date) : 1;
 
   const handlePrint = () => {
     window.print();
   };
 
-  const contractTextSummary = `
+  const contractTextSummary = booking && vehicle
+    ? `
 CAR RENTAL PAPER (RWANDA)
 Paper No: ${contractReference}
 Date: ${agreementDate}
@@ -65,65 +64,80 @@ Dates: ${formatHumanDate(booking.start_date)} to ${formatHumanDate(booking.end_d
 Price Per Day: ${formatMoney(vehicle.daily_rate_rwf)} | Total: ${formatMoney(booking.total_rwf)}
 Refundable Deposit: ${formatMoney(150000)}
 Fuel Rule: Return with the same fuel level.
-  `.trim();
+  `.trim()
+    : '';
 
   const handleCopy = () => {
+    if (!contractTextSummary) return;
     navigator.clipboard.writeText(contractTextSummary);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px] overflow-y-auto print:p-0 print:bg-white">
-      <div className="relative w-full max-w-4xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal overflow-hidden print:border-none print:shadow-none print:rounded-none print:w-full print:max-w-none text-slate-900 dark:text-white my-8">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800 print:hidden">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-                {tr('Car Rental Agreement Paper')}
-              </h2>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                {contractReference}
-              </span>
-            </div>
+    <ModalShell
+      isOpen={Boolean(isOpen && booking && vehicle)}
+      onClose={onClose}
+      maxWidthClass="max-w-4xl"
+      printFullscreen
+      icon={
+        <div className="w-9 h-9 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+          <FileText className="w-4 h-4" />
+        </div>
+      }
+      title={tr('Car Rental Agreement Paper')}
+      subtitle={<span className="font-mono">{contractReference}</span>}
+      headerActions={
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+            <span>{copied ? tr('Copied') : tr('Copy')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg accent-bg text-sm font-medium hover:opacity-95 transition-opacity"
+          >
+            <Printer className="w-4 h-4" />
+            <span>{tr('Print Agreement')}</span>
+          </button>
+        </div>
+      }
+      bodyClassName="p-5 sm:p-8 space-y-6 text-sm leading-relaxed"
+      footer={
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Ready to print or save as PDF</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 font-medium text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? tr('Copied') : tr('Copy')}</span>
+              {tr('Close')}
             </button>
-
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg accent-bg text-sm font-medium hover:opacity-95 transition-opacity"
+              className="px-4 py-2 rounded-lg font-medium text-sm accent-bg hover:opacity-95 transition-opacity flex items-center gap-1.5"
             >
               <Printer className="w-4 h-4" />
               <span>{tr('Print Agreement')}</span>
             </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
-              aria-label={tr('Close')}
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
-
-        {/* Document Body */}
-        <div className="p-6 sm:p-10 space-y-6 text-sm leading-relaxed max-h-[78vh] overflow-y-auto print:max-h-none print:overflow-visible">
+      }
+    >
+      {booking && vehicle && (
+        <>
           <div className="border-b border-slate-200 dark:border-slate-800 pb-5 flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
               <div className="flex items-center gap-2 font-semibold text-xl text-slate-900 dark:text-white">
@@ -329,34 +343,8 @@ Fuel Rule: Return with the same fuel level.
               <div className="text-xs text-slate-500 dark:text-slate-400">Date: {agreementDate}</div>
             </div>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50/80 dark:bg-slate-900/60 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 print:hidden">
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Ready to print or save as PDF</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 font-medium text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-            >
-              {tr('Close')}
-            </button>
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="px-4 py-2 rounded-lg font-medium text-sm accent-bg hover:opacity-95 transition-opacity flex items-center gap-1.5"
-            >
-              <Printer className="w-4 h-4" />
-              <span>{tr('Print Agreement')}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </ModalShell>
   );
 };

@@ -9,8 +9,8 @@ import {
   Settings,
   ShieldCheck,
   UserPlus,
-  X,
 } from 'lucide-react';
+import { ModalShell } from '../ModalShell';
 import {
   BackgroundJob,
   PlatformAdmin,
@@ -592,32 +592,40 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
           ))}
         </div>
 
-        {editingContent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!editingContent.title.trim()) return;
-                onSaveContent({
-                  ...editingContent,
-                  slug:
-                    editingContent.slug ||
-                    editingContent.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                });
-                setEditingContent(null);
-              }}
-              className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-5 space-y-4 text-sm"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">Edit notice or rule</h4>
-                <button
-                  type="button"
-                  onClick={() => setEditingContent(null)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        <ModalShell
+          isOpen={!!editingContent}
+          onClose={() => setEditingContent(null)}
+          maxWidthClass="max-w-lg"
+          asForm
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!editingContent || !editingContent.title.trim()) return;
+            onSaveContent({
+              ...editingContent,
+              slug:
+                editingContent.slug ||
+                editingContent.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            });
+            setEditingContent(null);
+          }}
+          title="Edit notice or rule"
+          footer={
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingContent(null)}
+                className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg cursor-pointer">
+                Save notice
+              </button>
+            </div>
+          }
+        >
+          {editingContent && (
+            <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">Type</label>
@@ -688,21 +696,9 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setEditingContent(null)}
-                  className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
-                  Save notice
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+            </>
+          )}
+        </ModalShell>
       </div>
     );
   }
@@ -1016,114 +1012,106 @@ export const SuperAdminPlatformGovernance: React.FC<SuperAdminPlatformGovernance
         </table>
       </div>
 
-      {isAddAdminOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const res = onCreateAdmin(
-                {
-                  name: newAdminName,
-                  email: newAdminEmail,
-                  phone: newAdminPhone,
-                  sub_role: newAdminRole,
-                },
-                newAdminReason || 'Added admin helper'
-              );
-              if (res.success) {
-                setAdminFeedback({ type: 'ok', text: `Added ${newAdminName} as ${SUB_ROLE_LABELS[newAdminRole]}.` });
-                setIsAddAdminOpen(false);
-                setNewAdminName('');
-                setNewAdminEmail('');
-                setNewAdminReason('');
-              } else {
-                setAdminFeedback({ type: 'error', text: res.error || tr('Could not add helper.') });
-              }
-            }}
-            className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-5 space-y-4 text-sm"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-              <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">{tr('Add admin helper')}</h4>
-              <button
-                type="button"
-                onClick={() => setIsAddAdminOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Full name')}</label>
-              <input
-                type="text"
-                value={newAdminName}
-                onChange={(e) => setNewAdminName(e.target.value)}
-                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Email')}</label>
-                <input
-                  type="email"
-                  value={newAdminEmail}
-                  onChange={(e) => setNewAdminEmail(e.target.value)}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Phone')}</label>
-                <input
-                  type="text"
-                  value={newAdminPhone}
-                  onChange={(e) => setNewAdminPhone(e.target.value)}
-                  className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Role')}</label>
-              <select
-                value={newAdminRole}
-                onChange={(e) => setNewAdminRole(e.target.value as SuperAdminSubRole)}
-                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-              >
-                <option value="platform_admin">{tr('General admin')}</option>
-                <option value="finance_admin">{tr('Money admin')}</option>
-                <option value="support_admin">{tr('Help admin')}</option>
-                <option value="technical_admin">{tr('Tools admin')}</option>
-                <option value="security_admin">{tr('Safety admin')}</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Reason')}</label>
-              <input
-                type="text"
-                value={newAdminReason}
-                onChange={(e) => setNewAdminReason(e.target.value)}
-                placeholder={tr('e.g. Helping check payments and support.')}
-                className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                required
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setIsAddAdminOpen(false)}
-                className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium"
-              >
-                {tr('Cancel')}
-              </button>
-              <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg">
-                {tr('Add helper')}
-              </button>
-            </div>
-          </form>
+      <ModalShell
+        isOpen={isAddAdminOpen}
+        onClose={() => setIsAddAdminOpen(false)}
+        maxWidthClass="max-w-md"
+        asForm
+        onSubmit={(e) => {
+          e.preventDefault();
+          const res = onCreateAdmin(
+            {
+              name: newAdminName,
+              email: newAdminEmail,
+              phone: newAdminPhone,
+              sub_role: newAdminRole,
+            },
+            newAdminReason || 'Added admin helper'
+          );
+          if (res.success) {
+            setAdminFeedback({ type: 'ok', text: `Added ${newAdminName} as ${SUB_ROLE_LABELS[newAdminRole]}.` });
+            setIsAddAdminOpen(false);
+            setNewAdminName('');
+            setNewAdminEmail('');
+            setNewAdminReason('');
+          } else {
+            setAdminFeedback({ type: 'error', text: res.error || tr('Could not add helper.') });
+          }
+        }}
+        title={tr('Add admin helper')}
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsAddAdminOpen(false)}
+              className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium cursor-pointer"
+            >
+              {tr('Cancel')}
+            </button>
+            <button type="submit" className="px-4 py-2 rounded-lg font-semibold accent-bg cursor-pointer">
+              {tr('Add helper')}
+            </button>
+          </div>
+        }
+      >
+        <div>
+          <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Full name')}</label>
+          <input
+            type="text"
+            value={newAdminName}
+            onChange={(e) => setNewAdminName(e.target.value)}
+            className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+            required
+          />
         </div>
-      )}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Email')}</label>
+            <input
+              type="email"
+              value={newAdminEmail}
+              onChange={(e) => setNewAdminEmail(e.target.value)}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+              required
+            />
+          </div>
+          <div>
+            <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Phone')}</label>
+            <input
+              type="text"
+              value={newAdminPhone}
+              onChange={(e) => setNewAdminPhone(e.target.value)}
+              className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono"
+              required
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Role')}</label>
+          <select
+            value={newAdminRole}
+            onChange={(e) => setNewAdminRole(e.target.value as SuperAdminSubRole)}
+            className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+          >
+            <option value="platform_admin">{tr('General admin')}</option>
+            <option value="finance_admin">{tr('Money admin')}</option>
+            <option value="support_admin">{tr('Help admin')}</option>
+            <option value="technical_admin">{tr('Tools admin')}</option>
+            <option value="security_admin">{tr('Safety admin')}</option>
+          </select>
+        </div>
+        <div>
+          <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">{tr('Reason')}</label>
+          <input
+            type="text"
+            value={newAdminReason}
+            onChange={(e) => setNewAdminReason(e.target.value)}
+            placeholder={tr('e.g. Helping check payments and support.')}
+            className="w-full bg-slate-50/70 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+            required
+          />
+        </div>
+      </ModalShell>
 
       <ReasonActionModal
         isOpen={!!pendingAction}

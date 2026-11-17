@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Trash2, X, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Trash2, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { ModalShell } from './ModalShell';
 import { Company, CompanySettings, User, UserRole, SubscriptionTier, Vehicle } from '../types';
 import { ColorTheme } from '../theme';
 import { CATEGORY_DEFAULT_IMAGES, getVehicleImageUrl } from '../utils/vehicleImages';
@@ -961,100 +962,88 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Modal: Add Team Member */}
-      {isInviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 kf-modal">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {tr('Add team member')}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsInviteModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleInviteStaffSubmit} className="space-y-4 text-sm">
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                  {tr('Full name')}
-                </label>
-                <input
-                  type="text"
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  placeholder="e.g. Jean-Luc Habineza"
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                  {tr('Email address')}
-                </label>
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="name@company.rw"
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                  {tr('Phone number (MoMo / SMS)')}
-                </label>
-                <input
-                  type="text"
-                  value={invitePhone}
-                  onChange={(e) => setInvitePhone(e.target.value)}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
-                  {tr('Job role')}
-                </label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as UserRole)}
-                  className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none"
-                >
-                  <option value="dispatcher">Trip coordinator (Daily trips & drivers)</option>
-                  <option value="manager">Manager (Cars, drivers & bookings)</option>
-                  <option value="driver">Driver (Phone trip updates)</option>
-                  <option value="owner">Owner (Full access & settings)</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsInviteModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {tr('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs"
-                >
-                  {tr('Send invite')}
-                </button>
-              </div>
-            </form>
+      <ModalShell
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        maxWidthClass="max-w-md"
+        asForm
+        onSubmit={handleInviteStaffSubmit}
+        title={tr('Add team member')}
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsInviteModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              {tr('Cancel')}
+            </button>
+            <button
+              type="submit"
+              className="accent-bg px-4 py-2 rounded-lg font-medium shadow-xs cursor-pointer"
+            >
+              {tr('Send invite')}
+            </button>
           </div>
+        }
+      >
+        <div>
+          <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+            {tr('Full name')}
+          </label>
+          <input
+            type="text"
+            value={inviteName}
+            onChange={(e) => setInviteName(e.target.value)}
+            placeholder="e.g. Jean-Luc Habineza"
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+            required
+          />
         </div>
-      )}
+
+        <div>
+          <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+            {tr('Email address')}
+          </label>
+          <input
+            type="email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            placeholder="name@company.rw"
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-slate-400"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+            {tr('Phone number (MoMo / SMS)')}
+          </label>
+          <input
+            type="text"
+            value={invitePhone}
+            onChange={(e) => setInvitePhone(e.target.value)}
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 font-mono outline-none focus:border-slate-400"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-slate-600 dark:text-slate-400 text-xs font-medium mb-1">
+            {tr('Job role')}
+          </label>
+          <select
+            value={inviteRole}
+            onChange={(e) => setInviteRole(e.target.value as UserRole)}
+            className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none"
+          >
+            <option value="dispatcher">Trip coordinator (Daily trips & drivers)</option>
+            <option value="manager">Manager (Cars, drivers & bookings)</option>
+            <option value="driver">Driver (Phone trip updates)</option>
+            <option value="owner">Owner (Full access & settings)</option>
+          </select>
+        </div>
+      </ModalShell>
     </div>
   );
 };

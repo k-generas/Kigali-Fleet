@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   ShieldCheck,
   ArrowUpRight,
+  Calendar,
+  Plus,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 import { useI18n } from '../utils/i18n';
@@ -49,7 +51,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onAcknowledgeCheckin,
   onNavigateTab,
 }) => {
-  const { formatMoney, tr } = useI18n();
+  const { formatMoney, tr, t } = useI18n();
   const [filterMode, setFilterMode] = useState<'all' | 'today' | 'airport' | 'safari'>('all');
 
   const availableVehicles = vehicles.filter((v) => v.status === 'Available');
@@ -147,7 +149,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           <button
             type="button"
             onClick={onOpenStorefront}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-2 shadow-xs"
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-2 shadow-xs whitespace-nowrap cursor-pointer"
           >
             <span>{tr('Booking Website')}</span>
             <ExternalLink className="w-4 h-4 text-slate-400" />
@@ -157,13 +159,80 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             <button
               type="button"
               onClick={onOpenNewBooking}
-              className="px-4 py-2 text-sm font-medium rounded-lg accent-bg hover:opacity-95 transition-opacity inline-flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-2 text-sm font-medium rounded-lg accent-bg hover:opacity-95 transition-opacity inline-flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
             >
               <span>+ {tr('New Booking')}</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Quick Start Bar for < 5-Second Clarity */}
+      {!isDriverView && (
+        <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl px-4 py-3 kf-card flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300">
+            <strong className="font-semibold text-slate-900 dark:text-white">
+              {t({
+                EN: 'Quick Start:',
+                RW: 'Tangira Vuba:',
+                FR: 'Accès rapide :',
+              })}
+            </strong>{' '}
+            {t({
+              EN: 'Add a trip, update car photos, message drivers via SMS, or open your customer booking link.',
+              RW: 'Andika urugendo, ongeramo amafoto y’imodoka, ohereza SMS ku bashoferi, cyangwa ufungure urubuga rw’abakiriya.',
+              FR: 'Créez un trajet, mettez à jour les photos, envoyez un SMS au chauffeur ou ouvrez votre lien client.',
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-0.5 sm:pb-0">
+            <button
+              type="button"
+              onClick={onOpenNewBooking}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold accent-tint accent-text hover:opacity-90 whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{tr('New Booking')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('vehicles')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700 whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <Car className="w-3.5 h-3.5 accent-text" />
+              <span>
+                {t({
+                  EN: 'Cars & Photos',
+                  RW: 'Imodoka & Amafoto',
+                  FR: 'Voitures & Photos',
+                })}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('dispatch')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700 whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <Send className="w-3.5 h-3.5 accent-text" />
+              <span>
+                {t({
+                  EN: 'Send Driver SMS',
+                  RW: 'Ohereza SMS Umushoferi',
+                  FR: 'SMS Chauffeur',
+                })}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('calendar')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700 whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5 accent-text" />
+              <span>{tr('Trip Calendar')}</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 1. 4-Card Modern KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

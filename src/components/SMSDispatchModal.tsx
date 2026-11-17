@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Booking, Driver, Vehicle } from '../types';
 import { generateDriverSMS } from '../utils/collision';
 import { useI18n } from '../utils/i18n';
-import { X, Send, MessageSquare, Check, ShieldCheck } from 'lucide-react';
+import { Send, MessageSquare, Check, ShieldCheck } from 'lucide-react';
 import { ColorTheme } from '../theme';
+import { ModalShell } from './ModalShell';
 
 interface SMSDispatchModalProps {
   isOpen: boolean;
@@ -22,7 +23,6 @@ export const SMSDispatchModal: React.FC<SMSDispatchModalProps> = ({
   driver,
   vehicle,
   onConfirmDispatch,
-  currentTheme: _currentTheme,
 }) => {
   const { language, tr } = useI18n();
   const [selectedLanguage, setSelectedLanguage] = useState<'RW' | 'EN'>(language === 'EN' ? 'EN' : 'RW');
@@ -34,16 +34,19 @@ export const SMSDispatchModal: React.FC<SMSDispatchModalProps> = ({
     }
   }, [language]);
 
-  if (!isOpen || !booking || !driver || !vehicle) return null;
-
-  const smsData = generateDriverSMS({
-    driver,
-    vehicle,
-    booking,
-    language: selectedLanguage,
-  });
+  const isVisible = Boolean(isOpen && booking && driver && vehicle);
+  const smsData =
+    booking && driver && vehicle
+      ? generateDriverSMS({
+          driver,
+          vehicle,
+          booking,
+          language: selectedLanguage,
+        })
+      : null;
 
   const handleSend = () => {
+    if (!booking) return;
     onConfirmDispatch(booking.id, selectedLanguage);
     setIsSent(true);
     setTimeout(() => {
@@ -53,28 +56,52 @@ export const SMSDispatchModal: React.FC<SMSDispatchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
-              <MessageSquare className="w-4 h-4" />
-            </span>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-              {tr('Send Text to Driver')}
-            </h3>
-          </div>
+    <ModalShell
+      isOpen={isVisible}
+      onClose={onClose}
+      maxWidthClass="max-w-lg"
+      icon={
+        <span className="w-8 h-8 rounded-lg accent-tint accent-text flex items-center justify-center shrink-0">
+          <MessageSquare className="w-4 h-4" />
+        </span>
+      }
+      title={tr('Send Text to Driver')}
+      subtitle={tr('Driver gets this trip by normal SMS — no smartphone data required.')}
+      bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+      footer={
+        <div className="flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            aria-label={tr('Close')}
+            className="px-4 py-2 text-sm rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
           >
-            <X className="w-4 h-4" />
+            {tr('Cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={isSent}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-opacity ${
+              isSent ? 'bg-emerald-600 text-white' : 'accent-bg hover:opacity-95'
+            }`}
+          >
+            {isSent ? (
+              <>
+                <Check className="w-4 h-4" />
+                <span>{tr('Text Sent!')}</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                <span>{tr('Send Text Now')}</span>
+              </>
+            )}
           </button>
         </div>
-
-        <div className="p-6 space-y-4 text-sm">
+      }
+    >
+      {driver && vehicle && smsData && (
+        <>
           <div className="p-3.5 bg-slate-50/90 dark:bg-slate-800/40 rounded-lg flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="text-xs text-slate-500 dark:text-slate-400">{tr('Driver')}</div>
@@ -134,38 +161,8 @@ export const SMSDispatchModal: React.FC<SMSDispatchModalProps> = ({
               {tr('Driver dials free *134# to confirm — no internet bundle needed.')}
             </p>
           </div>
-        </div>
-
-        <div className="px-6 py-4 bg-slate-50/80 dark:bg-slate-900/60 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
-          >
-            {tr('Cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={isSent}
-            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-opacity ${
-              isSent ? 'bg-emerald-600 text-white' : 'accent-bg hover:opacity-95'
-            }`}
-          >
-            {isSent ? (
-              <>
-                <Check className="w-4 h-4" />
-                <span>{tr('Text Sent!')}</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                <span>{tr('Send Text Now')}</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </ModalShell>
   );
 };

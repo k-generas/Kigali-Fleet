@@ -258,7 +258,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 <button
                   type="button"
                   onClick={onEnterApp}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold accent-bg hover:opacity-95 transition-opacity"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold accent-bg hover:opacity-95 transition-opacity whitespace-nowrap cursor-pointer"
                 >
                   <span>{tr('Open Dashboard')}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -267,14 +267,59 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 <button
                   type="button"
                   onClick={onOpenStorefront}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer"
                 >
                   <Globe className="w-4 h-4 accent-text" />
                   <span>{tr('Book a Car')}</span>
                 </button>
               </div>
 
-              <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800">
+              {/* 2-Path < 5-Second Orientation */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={onEnterApp}
+                  className="text-left p-3.5 rounded-xl bg-slate-50/90 dark:bg-[#0f172a] border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer"
+                >
+                  <div className="text-xs font-semibold accent-text">
+                    {t({
+                      EN: '01 · For Rental Owners & Staff',
+                      RW: '01 · Ku Bafite Imodoka & Abakozi',
+                      FR: '01 · Pour Agences & Équipes',
+                    })}
+                  </div>
+                  <div className="text-[13px] text-slate-700 dark:text-slate-200 mt-1 leading-snug">
+                    {t({
+                      EN: 'Manage cars & photos, stop double bookings, and SMS drivers.',
+                      RW: 'Cunga imodoka n’amafoto, irinde gufatirana ingendo, ohereza SMS.',
+                      FR: 'Gérez voitures et photos, évitez les doublons, envoyez les SMS.',
+                    })}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onOpenStorefront}
+                  className="text-left p-3.5 rounded-xl bg-slate-50/90 dark:bg-[#0f172a] border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer"
+                >
+                  <div className="text-xs font-semibold accent-text">
+                    {t({
+                      EN: '02 · For Guests & Travelers',
+                      RW: '02 · Ku Bakiriya & Abagenzi',
+                      FR: '02 · Pour Clients & Voyageurs',
+                    })}
+                  </div>
+                  <div className="text-[13px] text-slate-700 dark:text-slate-200 mt-1 leading-snug">
+                    {t({
+                      EN: 'See open cars, pick dates, and book online with MoMo or Card.',
+                      RW: 'Reba imodoka ziboneka, hitamo amatariki, wishyure na MoMo cyangwa Ikarita.',
+                      FR: 'Voir les voitures libres, choisir vos dates et payer par MoMo.',
+                    })}
+                  </div>
+                </button>
+              </div>
+
+              <div className="pt-3 grid grid-cols-2 gap-2 text-[13px] text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>{tr('No double bookings')}</span>

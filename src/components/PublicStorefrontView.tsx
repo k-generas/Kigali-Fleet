@@ -46,6 +46,7 @@ import { VehiclePhotoGallery } from './VehiclePhotoGallery';
 import { ThemeAppearanceMenu } from './ThemeAppearanceMenu';
 import { useI18n } from '../utils/i18n';
 import { LocaleCurrencySwitcher } from './LocaleCurrencySwitcher';
+import { ModalShell } from './ModalShell';
 
 interface PublicStorefrontViewProps {
   vehicles: Vehicle[];
@@ -128,6 +129,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   const [endDate, setEndDate] = useState('2026-11-18');
   const [pickupLocation, setPickupLocation] = useState('Kigali International Airport (KIA)');
   const [returnLocation, setReturnLocation] = useState('Kigali International Airport (KIA)');
+  const [vehicleSearchQuery, setVehicleSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [filterTransmission, setFilterTransmission] = useState<string>('All');
   const [filterFuel, setFilterFuel] = useState<string>('All');
@@ -283,8 +285,21 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   }, [visibleVehicles]);
 
   const filteredVehicles = useMemo(() => {
+    const q = vehicleSearchQuery.trim().toLowerCase();
     return visibleVehicles
       .filter((v) => {
+        if (q) {
+          const haystack = [
+            v.model_name,
+            v.plate_number,
+            v.category,
+            v.location,
+            ...(v.features || []),
+          ]
+            .join(' ')
+            .toLowerCase();
+          if (!haystack.includes(q)) return false;
+        }
         if (selectedCategory !== 'All' && v.category !== selectedCategory) return false;
         if (filterAutomaticOnly && v.transmission !== 'Automatic') return false;
         if (filterTransmission !== 'All' && v.transmission !== filterTransmission) return false;
@@ -308,6 +323,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
       });
   }, [
     visibleVehicles,
+    vehicleSearchQuery,
     selectedCategory,
     filterAutomaticOnly,
     filterTransmission,
@@ -321,6 +337,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   ]);
 
   const handleResetFilters = () => {
+    setVehicleSearchQuery('');
     setSelectedCategory('All');
     setFilterAutomaticOnly(false);
     setFilterTransmission('All');
@@ -737,9 +754,9 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
       <main className="flex-1">
         {/* VIEW 1: HOMEPAGE */}
         {currentView === 'home' && (
-          <div className="space-y-12 pb-16">
-            <section className="bg-white dark:bg-[#111827] border-b border-slate-200/80 dark:border-slate-800 py-12 sm:py-16 px-4 sm:px-6">
-              <div className="max-w-5xl mx-auto text-center space-y-5">
+          <div className="space-y-10 pb-16">
+            <section className="bg-white dark:bg-[#111827] border-b border-slate-200/80 dark:border-slate-800 py-7 sm:py-10 px-4 sm:px-6">
+              <div className="max-w-5xl mx-auto text-center space-y-4">
                 <div className="inline-flex items-center gap-2 text-sm font-semibold accent-text">
                   <span>
                     {t({
@@ -764,14 +781,14 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                   {heroTagline}
                 </p>
 
-                <div className="pt-1 flex flex-wrap items-center justify-center gap-3">
+                <div className="pt-1 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => {
                       const el = document.getElementById('adaptive-search');
                       if (el) el.scrollIntoView({ behavior: 'smooth' });
                     }}
-                    className="px-5 py-2.5 rounded-lg text-sm font-semibold accent-bg hover:opacity-95 transition-opacity"
+                    className="px-5 py-2.5 rounded-lg text-sm font-semibold accent-bg hover:opacity-95 transition-opacity whitespace-nowrap cursor-pointer"
                   >
                     {t({
                       EN: 'Find an Open Car',
@@ -782,13 +799,58 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setCurrentView('vehicles')}
-                    className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-white dark:bg-[#0f172a] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 transition-colors"
+                    className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-white dark:bg-[#0f172a] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 transition-colors whitespace-nowrap cursor-pointer"
                   >
-                    {tr('Cars & Prices')}
+                    {tr('Cars & Prices')} ({visibleVehicles.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView('track')}
+                    className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    {tr('Check Booking')} →
                   </button>
                 </div>
 
-                <div className="pt-5 flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-sm text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 max-w-4xl mx-auto">
+                {/* 3-step micro-guide for < 5-second clarity */}
+                <div className="pt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left max-w-3xl mx-auto">
+                  {[
+                    {
+                      step: '01',
+                      label: t({
+                        EN: 'Pick trip & dates below',
+                        RW: 'Hitamo urugendo n’amatariki',
+                        FR: 'Choisissez trajet et dates',
+                      }),
+                    },
+                    {
+                      step: '02',
+                      label: t({
+                        EN: 'Compare open cars & photos',
+                        RW: 'Reba imodoka ziboneka n’amafoto',
+                        FR: 'Comparez voitures et photos',
+                      }),
+                    },
+                    {
+                      step: '03',
+                      label: t({
+                        EN: 'Pay safely via MoMo or Card',
+                        RW: 'Ishyura na MoMo cyangwa Ikarita',
+                        FR: 'Payez par MoMo ou Carte',
+                      }),
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.step}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-slate-50/90 dark:bg-[#0f172a] border border-slate-200/70 dark:border-slate-800 text-xs sm:text-[13px] text-slate-700 dark:text-slate-200"
+                    >
+                      <span className="font-mono font-semibold accent-text shrink-0">{item.step}</span>
+                      <span className="font-medium truncate">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-3 flex flex-wrap items-center justify-center gap-5 sm:gap-8 text-[13px] text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 max-w-4xl mx-auto">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{tr('Zero Double Bookings')}</span>
@@ -1764,12 +1826,37 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                     </strong>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2.5 flex-1 sm:flex-initial justify-end">
+                    <div className="relative flex-1 sm:w-52 min-w-[160px]">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={vehicleSearchQuery}
+                        onChange={(e) => setVehicleSearchQuery(e.target.value)}
+                        placeholder={t({
+                          EN: 'Search car, plate, city...',
+                          RW: 'Shaka imodoka cyangwa pulaki...',
+                          FR: 'Rechercher voiture, plaque...',
+                        })}
+                        className="w-full bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-slate-400 dark:focus:border-slate-500"
+                      />
+                      {vehicleSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setVehicleSearchQuery('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                          aria-label="Clear car search"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
                     <div className="hidden sm:inline-flex items-center bg-slate-100 dark:bg-slate-800/70 p-1 rounded-lg">
                       <button
                         type="button"
                         onClick={() => setCatalogViewMode('list')}
-                        className={`px-3 py-1 rounded-md text-sm font-semibold flex items-center gap-1.5 transition-all ${
+                        className={`px-3 py-1 rounded-md text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                           catalogViewMode === 'list' ? 'bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
@@ -1779,7 +1866,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setCatalogViewMode('grid')}
-                        className={`px-3 py-1 rounded-md text-sm font-semibold flex items-center gap-1.5 transition-all ${
+                        className={`px-3 py-1 rounded-md text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                           catalogViewMode === 'grid' ? 'bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
@@ -2040,33 +2127,58 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
             </div>
 
             {/* Quick Vehicle Info & Multi-Photo Explorer Modal */}
-            {quickDetailVehicle && (
-              <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl kf-modal max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-5">
-                  <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[13px] font-semibold accent-text">
-                          {quickDetailVehicle.category} · {quickDetailVehicle.year || 2023}
-                        </span>
-                        <span className="text-[13px] font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
-                          {quickDetailVehicle.plate_number}
-                        </span>
-                      </div>
-                      <h2 className="text-xl font-semibold text-slate-900 dark:text-white mt-1">
-                        {quickDetailVehicle.model_name}
-                      </h2>
-                    </div>
+            <ModalShell
+              isOpen={!!quickDetailVehicle}
+              onClose={() => setQuickDetailVehicle(null)}
+              maxWidthClass="max-w-2xl"
+              title={quickDetailVehicle?.model_name || ''}
+              subtitle={
+                quickDetailVehicle ? (
+                  <span className="font-mono">
+                    {quickDetailVehicle.category} · {quickDetailVehicle.year || 2023} · {quickDetailVehicle.plate_number}
+                  </span>
+                ) : undefined
+              }
+              footer={
+                quickDetailVehicle ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={() => setQuickDetailVehicle(null)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      aria-label={tr('Close')}
+                      onClick={() => {
+                        const target = quickDetailVehicle;
+                        setQuickDetailVehicle(null);
+                        handleViewVehicleDetails(target);
+                      }}
+                      className="text-sm font-semibold accent-text hover:underline cursor-pointer"
                     >
-                      <X className="w-4 h-4" />
+                      {tr('Open Full Car Page')} →
                     </button>
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setQuickDetailVehicle(null)}
+                        className="px-4 py-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                      >
+                        {tr('Close')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = quickDetailVehicle;
+                          setQuickDetailVehicle(null);
+                          handleStartBookingVehicle(target);
+                        }}
+                        className="px-5 py-2 rounded-lg text-sm font-semibold accent-bg cursor-pointer"
+                      >
+                        {tr('Book This Car')} →
+                      </button>
+                    </div>
                   </div>
-
+                ) : undefined
+              }
+            >
+              {quickDetailVehicle && (
+                <>
                   <VehiclePhotoGallery
                     vehicle={quickDetailVehicle}
                     aspectClass="h-56 sm:h-64"
@@ -2150,43 +2262,9 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                       </span>
                     </div>
                   </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const target = quickDetailVehicle;
-                        setQuickDetailVehicle(null);
-                        handleViewVehicleDetails(target);
-                      }}
-                      className="text-sm font-semibold accent-text hover:underline"
-                    >
-                      {tr('Open Full Car Page')} →
-                    </button>
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setQuickDetailVehicle(null)}
-                        className="px-4 py-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800"
-                      >
-                        {tr('Close')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const target = quickDetailVehicle;
-                          setQuickDetailVehicle(null);
-                          handleStartBookingVehicle(target);
-                        }}
-                        className="px-5 py-2 rounded-lg text-sm font-semibold accent-bg"
-                      >
-                        {tr('Book This Car')} →
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+                </>
+              )}
+            </ModalShell>
           </div>
         )}
 

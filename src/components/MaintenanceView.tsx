@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, X, Wrench, CalendarClock, CheckCircle2, DollarSign } from 'lucide-react';
+import { Plus, Search, Wrench, CalendarClock, CheckCircle2, DollarSign } from 'lucide-react';
 import { Vehicle, MaintenanceRecord, MaintenanceStatus, ServiceType } from '../types';
 import { ColorTheme } from '../theme';
 import { useI18n } from '../utils/i18n';
 import { formatHumanDateRange } from '../utils/dates';
+import { ModalShell } from './ModalShell';
 
 interface MaintenanceViewProps {
   maintenance: MaintenanceRecord[];
@@ -541,23 +542,32 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
       {/* Modal: New Repair */}
       {isNewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px] overflow-y-auto">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3.5">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {tr('Send car to garage')}
-              </h3>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setIsNewModalOpen(false)}
+          asForm
+          onSubmit={handleCreateWorkOrder}
+          maxWidthClass="max-w-xl"
+          title={tr('Send car to garage')}
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsNewModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Cancel')}
+              </button>
+              <button
+                type="submit"
+                className="accent-bg px-5 py-2 rounded-lg font-medium hover:opacity-95"
+              >
+                {tr('Save repair')}
               </button>
             </div>
-
-            <form onSubmit={handleCreateWorkOrder} className="space-y-4 text-sm">
+          }
+        >
               <div>
                 <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
                   {tr('Pick a car')}
@@ -758,44 +768,37 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsNewModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {tr('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-5 py-2 rounded-lg font-medium hover:opacity-95"
-                >
-                  {tr('Save repair')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Modal: Release Car */}
       {completingTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {tr('Finish & release car')}
-              </h3>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setCompletingTicket(null)}
+          asForm
+          onSubmit={handleSubmitComplete}
+          maxWidthClass="max-w-md"
+          title={tr('Finish & release car')}
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setCompletingTicket(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Cancel')}
+              </button>
+              <button
+                type="submit"
+                className="accent-bg px-4 py-2 rounded-lg font-medium hover:opacity-95"
+              >
+                {tr('Release car')}
               </button>
             </div>
-
+          }
+        >
             <div className="bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-lg text-sm">
               <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between">
                 <span>{completingTicket.vehicle_model}</span>
@@ -805,8 +808,6 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                 {completingTicket.garage_name} · {getServiceLabel(completingTicket.service_type)}
               </div>
             </div>
-
-            <form onSubmit={handleSubmitComplete} className="space-y-3.5 text-sm">
               <div>
                 <label className="block text-slate-600 dark:text-slate-300 text-xs font-medium mb-1.5">
                   {tr('Car km reading (km)')}
@@ -855,43 +856,46 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                 This car will become <strong className="font-semibold">Ready</strong> again so people can book it.
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200/80 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setCompletingTicket(null)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {tr('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="accent-bg px-4 py-2 rounded-lg font-medium hover:opacity-95"
-                >
-                  {tr('Release car')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Modal: Repair Details */}
       {selectedTicketForDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-[1px]">
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl kf-modal max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {tr('Repair')} <span className="font-mono text-sm text-slate-500 dark:text-slate-400">#{selectedTicketForDetail.id}</span>
-              </h3>
+        <ModalShell
+          isOpen={true}
+          onClose={() => setSelectedTicketForDetail(null)}
+          maxWidthClass="max-w-lg"
+          title={
+            <>
+              {tr('Repair')} <span className="font-mono text-sm text-slate-500 dark:text-slate-400">#{selectedTicketForDetail.id}</span>
+            </>
+          }
+          bodyClassName="p-5 sm:p-6 space-y-4 text-sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5">
+              {selectedTicketForDetail.status === 'In Garage' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ticket = selectedTicketForDetail;
+                    setSelectedTicketForDetail(null);
+                    handleOpenCompleteModal(ticket);
+                  }}
+                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium"
+                >
+                  {tr('Release car')}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setSelectedTicketForDetail(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Close"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                <X className="w-5 h-5" />
+                {tr('Close')}
               </button>
             </div>
+          }
+        >
 
             <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl p-4 grid grid-cols-2 gap-3 text-xs">
               <div>
@@ -967,30 +971,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              {selectedTicketForDetail.status === 'In Garage' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const ticket = selectedTicketForDetail;
-                    setSelectedTicketForDetail(null);
-                    handleOpenCompleteModal(ticket);
-                  }}
-                  className="accent-bg px-4 py-2 rounded-lg text-sm font-medium"
-                >
-                  {tr('Release car')}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedTicketForDetail(null)}
-                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                {tr('Close')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );
