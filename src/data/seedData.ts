@@ -31,7 +31,11 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 68450,
     location: 'Kigali HQ - Remera',
     image_url: '/assets/images/hero_safari_landcruiser_1794311457296.jpg',
-    gallery_urls: ['/assets/images/hero_safari_landcruiser_1794311457296.jpg'],
+    gallery_urls: [
+      '/assets/images/hero_safari_landcruiser_1794311457296.jpg',
+      '/assets/images/landcruiser_interior_cabin_1794914417381.jpg',
+      '/assets/images/landcruiser_rear_safari_1794914418169.jpg',
+    ],
     description:
       'Comfortable 7-seat 4x4 Prado built for Musanze mountain roads, Akagera safaris, and executive Kigali meetings. Dual-zone AC, big luggage space, and full safety kit included.',
     features: [
@@ -65,7 +69,12 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 41200,
     location: 'Kigali Marriott Hub',
     image_url: '/assets/images/hero_safari_landcruiser_1794311457296.jpg',
-    gallery_urls: ['/assets/images/hero_safari_landcruiser_1794311457296.jpg'],
+    gallery_urls: [
+      '/assets/images/hero_safari_landcruiser_1794311457296.jpg',
+      '/assets/images/landcruiser_rear_safari_1794914418169.jpg',
+      '/assets/images/landcruiser_interior_cabin_1794914417381.jpg',
+      '/assets/images/luxury_sedan_cabin_1794914419418.jpg',
+    ],
     description:
       'Flagship VIP Land Cruiser V8 with leather seats, quiet cabin, and strong V8 4x4 power for diplomatic guests, airport pickups, and luxury lodge transfers.',
     features: [
@@ -99,7 +108,11 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 52180,
     location: 'Kigali Airport Station (KIA)',
     image_url: '/assets/images/car_toyota_rav4_1794311458980.jpg',
-    gallery_urls: ['/assets/images/car_toyota_rav4_1794311458980.jpg'],
+    gallery_urls: [
+      '/assets/images/car_toyota_rav4_1794311458980.jpg',
+      '/assets/images/rav4_interior_dashboard_1794914418531.jpg',
+      '/assets/images/landcruiser_rear_safari_1794914418169.jpg',
+    ],
     description:
       'Fuel-saving 5-seat AWD RAV4 with smooth automatic gears, cold AC, and roomy trunk. Ideal for self-drive in Kigali or weekend trips to Lake Kivu.',
     features: [
@@ -133,7 +146,10 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 84320,
     location: 'Kigali HQ - Remera',
     image_url: '/assets/images/car_toyota_rav4_1794311458980.jpg',
-    gallery_urls: ['/assets/images/car_toyota_rav4_1794311458980.jpg'],
+    gallery_urls: [
+      '/assets/images/car_toyota_rav4_1794311458980.jpg',
+      '/assets/images/rav4_interior_dashboard_1794914418531.jpg',
+    ],
     description:
       'Economical diesel 4x4 RAV4 with raised ground clearance and protective bash guard for countryside work trips and upcountry field visits.',
     features: [
@@ -166,7 +182,10 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 112500,
     location: 'Kigali Convention Centre Depot',
     image_url: '/assets/images/car_coaster_bus_1794792526002.jpg',
-    gallery_urls: ['/assets/images/car_coaster_bus_1794792526002.jpg'],
+    gallery_urls: [
+      '/assets/images/car_coaster_bus_1794792526002.jpg',
+      '/assets/images/coaster_bus_interior_1794914419061.jpg',
+    ],
     description:
       'Clean 30-seat conference & group bus with high-roof cabin, overhead luggage racks, PA microphone, and full air conditioning for events and delegations.',
     features: [
@@ -199,7 +218,11 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 95400,
     location: 'Kigali HQ - Remera',
     image_url: '/assets/images/car_safari_van_1794311459444.jpg',
-    gallery_urls: ['/assets/images/car_safari_van_1794311459444.jpg'],
+    gallery_urls: [
+      '/assets/images/car_safari_van_1794311459444.jpg',
+      '/assets/images/safari_van_poptop_cabin_1794914418710.jpg',
+      '/assets/images/landcruiser_rear_safari_1794914418169.jpg',
+    ],
     description:
       'Dedicated 8-seat wildlife safari van featuring a full pop-up game-viewing roof, window seat for every guest, 220V camera charging sockets, and cooler box.',
     features: [
@@ -233,7 +256,10 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_odometer_km: 47900,
     location: 'Toyota Rwanda Authorized Workshop',
     image_url: '/assets/images/car_luxury_sedan_1794792526061.jpg',
-    gallery_urls: ['/assets/images/car_luxury_sedan_1794792526061.jpg'],
+    gallery_urls: [
+      '/assets/images/car_luxury_sedan_1794792526061.jpg',
+      '/assets/images/luxury_sedan_cabin_1794914419418.jpg',
+    ],
     description:
       'Executive Mercedes E-Class with leather interior, smooth ride, and silent cabin tailored for VIP airport arrivals, diplomatic events, and weddings.',
     features: [

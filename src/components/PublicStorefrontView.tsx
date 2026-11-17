@@ -130,6 +130,7 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
   const [pickupLocation, setPickupLocation] = useState('Kigali International Airport (KIA)');
   const [returnLocation, setReturnLocation] = useState('Kigali International Airport (KIA)');
   const [vehicleSearchQuery, setVehicleSearchQuery] = useState<string>('');
+  const [homeCategoryFilter, setHomeCategoryFilter] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [filterTransmission, setFilterTransmission] = useState<string>('All');
   const [filterFuel, setFilterFuel] = useState<string>('All');
@@ -1168,28 +1169,78 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
               </div>
             </section>
 
-            {/* Popular Cars */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-2">
+            {/* Browse Available Cars & Real Photos */}
+            <section id="fleet-showcase" className="max-w-7xl mx-auto px-4 sm:px-6 space-y-5">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
                 <div>
-                  <span className="text-sm font-semibold accent-text">Ready to Drive</span>
+                  <span className="text-sm font-semibold accent-text">
+                    {t({
+                      EN: 'Inspect Real Cars & Photos First',
+                      RW: 'Reba Imodoka n’Amafoto Mbere yo Gufata',
+                      FR: 'Explorez voitures et photos réelles avant de réserver',
+                    })}
+                  </span>
                   <h2 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
-                    Popular Cars for Rent
+                    {t({
+                      EN: 'Browse Available Fleet & Cabin Photos',
+                      RW: 'Imodoka Ziboneka n’Amafoto y’Imbere',
+                      FR: 'Flotte disponible & photos intérieures',
+                    })}
                   </h2>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setCurrentView('vehicles')}
-                  className="text-sm font-semibold accent-text flex items-center gap-1 hover:underline self-start sm:self-auto"
+                  className="text-sm font-semibold accent-text flex items-center gap-1 hover:underline self-start md:self-auto cursor-pointer"
                 >
-                  <span>See all {visibleVehicles.length} cars</span>
+                  <span>
+                    {tr('See all')} {visibleVehicles.length} {tr('cars')}
+                  </span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {visibleVehicles.slice(0, 3).map((vehicle) => {
+              {/* Category Tabs for fast browsing across fleet */}
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { id: 'All', label: tr('All Cars') },
+                  { id: 'LandCruiser', label: 'Land Cruiser 4x4' },
+                  { id: 'RAV4', label: 'Toyota RAV4' },
+                  { id: 'Safari Van', label: 'Safari Van' },
+                  { id: 'Coaster', label: 'Coaster Bus' },
+                  { id: 'Luxury Sedan', label: 'VIP Sedan' },
+                ].map((tab) => {
+                  const active = homeCategoryFilter === tab.id;
+                  const count =
+                    tab.id === 'All'
+                      ? visibleVehicles.length
+                      : visibleVehicles.filter((v) => v.category === tab.id).length;
+                  if (tab.id !== 'All' && count === 0) return null;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setHomeCategoryFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition-colors cursor-pointer ${
+                        active
+                          ? 'accent-bg border-transparent'
+                          : 'bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {tab.label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {(homeCategoryFilter === 'All'
+                  ? visibleVehicles
+                  : visibleVehicles.filter((v) => v.category === homeCategoryFilter)
+                )
+                  .slice(0, 6)
+                  .map((vehicle) => {
                   const collision = checkBookingCollision(vehicle.id, startDate, endDate, bookings);
                   const isAvailable = !collision.hasCollision;
                   const topFeatures = (vehicle.features || []).slice(0, 3);
@@ -1200,38 +1251,42 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                       className={`${cardClass} overflow-hidden flex flex-col justify-between`}
                     >
                       <div>
-                        <VehiclePhotoGallery
-                          vehicle={vehicle}
-                          aspectClass="h-44"
-                          showThumbnails={false}
-                          accentColor={activeThemeColor}
-                          onImageClick={() => handleViewVehicleDetails(vehicle)}
-                          topLeftSlot={
-                            <span className="text-[12px] font-mono font-semibold text-white bg-slate-900/80 px-2 py-0.5 rounded-md">
-                              {vehicle.plate_number}
-                            </span>
-                          }
-                          topRightSlot={
-                            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-md bg-slate-900/80 text-white">
-                              <span
-                                className={`w-2 h-2 rounded-full ${
-                                  isAvailable ? 'bg-emerald-400' : 'bg-rose-400'
-                                }`}
-                              />
-                              <span>{isAvailable ? tr('Open') : tr('Booked')}</span>
-                            </span>
-                          }
-                          bottomLeftSlot={
-                            <span className="text-[12px] text-slate-100 font-normal">
-                              {vehicle.category} · {vehicle.year || 2023}
-                            </span>
-                          }
-                        />
+                        <div className="p-2 pb-0">
+                          <VehiclePhotoGallery
+                            vehicle={vehicle}
+                            aspectClass="h-44"
+                            showThumbnails={false}
+                            compactThumbnails={true}
+                            enableLightbox={true}
+                            accentColor={activeThemeColor}
+                            onImageClick={() => setQuickDetailVehicle(vehicle)}
+                            topLeftSlot={
+                              <span className="text-[12px] font-mono font-semibold text-white bg-slate-900/80 px-2 py-0.5 rounded-md">
+                                {vehicle.plate_number}
+                              </span>
+                            }
+                            topRightSlot={
+                              <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-md bg-slate-900/80 text-white">
+                                <span
+                                  className={`w-2 h-2 rounded-full ${
+                                    isAvailable ? 'bg-emerald-400' : 'bg-rose-400'
+                                  }`}
+                                />
+                                <span>{isAvailable ? tr('Open') : tr('Booked')}</span>
+                              </span>
+                            }
+                            bottomLeftSlot={
+                              <span className="text-[12px] text-slate-100 font-normal bg-slate-950/60 px-2 py-0.5 rounded">
+                                {vehicle.category} · {vehicle.year || 2023}
+                              </span>
+                            }
+                          />
+                        </div>
 
                         <div className="p-4 space-y-3">
                           <div>
                             <h3
-                              onClick={() => handleViewVehicleDetails(vehicle)}
+                              onClick={() => setQuickDetailVehicle(vehicle)}
                               className="text-base font-semibold text-slate-900 dark:text-white cursor-pointer hover:underline"
                             >
                               {vehicle.model_name}
@@ -1278,16 +1333,16 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleViewVehicleDetails(vehicle)}
-                            className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            onClick={() => setQuickDetailVehicle(vehicle)}
+                            className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                           >
-                            {tr('Details')}
+                            {tr('Photos & Info')}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleStartBookingVehicle(vehicle)}
                             disabled={!isAvailable}
-                            className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold ${
+                            className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold cursor-pointer ${
                               isAvailable
                                 ? 'accent-bg hover:opacity-95'
                                 : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
@@ -1902,11 +1957,13 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                             key={vehicle.id}
                             className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors"
                           >
-                            <div className="w-full md:w-44 shrink-0">
+                            <div className="w-full md:w-56 shrink-0">
                               <VehiclePhotoGallery
                                 vehicle={vehicle}
-                                aspectClass="h-40 md:h-28"
+                                aspectClass="h-40 md:h-32"
                                 showThumbnails={false}
+                                compactThumbnails={true}
+                                enableLightbox={true}
                                 accentColor={activeThemeColor}
                                 onImageClick={() => setQuickDetailVehicle(vehicle)}
                               />
@@ -1999,28 +2056,32 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                             className="border border-slate-200/80 dark:border-slate-800 rounded-xl bg-white dark:bg-[#0f172a] overflow-hidden flex flex-col justify-between kf-card"
                           >
                             <div>
-                              <VehiclePhotoGallery
-                                vehicle={vehicle}
-                                aspectClass="h-44"
-                                showThumbnails={false}
-                                accentColor={activeThemeColor}
-                                onImageClick={() => setQuickDetailVehicle(vehicle)}
-                                topLeftSlot={
-                                  <span className="text-[12px] font-mono font-semibold bg-slate-900/80 px-2 py-0.5 rounded-md text-white">
-                                    {vehicle.plate_number}
-                                  </span>
-                                }
-                                topRightSlot={
-                                  <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-md bg-slate-900/80 text-white">
-                                    <span
-                                      className={`w-2 h-2 rounded-full ${
-                                        isAvailable ? 'bg-emerald-400' : 'bg-rose-400'
-                                      }`}
-                                    />
-                                    <span>{isAvailable ? tr('Open') : tr('Booked')}</span>
-                                  </span>
-                                }
-                              />
+                              <div className="p-2 pb-0">
+                                <VehiclePhotoGallery
+                                  vehicle={vehicle}
+                                  aspectClass="h-44"
+                                  showThumbnails={false}
+                                  compactThumbnails={true}
+                                  enableLightbox={true}
+                                  accentColor={activeThemeColor}
+                                  onImageClick={() => setQuickDetailVehicle(vehicle)}
+                                  topLeftSlot={
+                                    <span className="text-[12px] font-mono font-semibold bg-slate-900/80 px-2 py-0.5 rounded-md text-white">
+                                      {vehicle.plate_number}
+                                    </span>
+                                  }
+                                  topRightSlot={
+                                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-md bg-slate-900/80 text-white">
+                                      <span
+                                        className={`w-2 h-2 rounded-full ${
+                                          isAvailable ? 'bg-emerald-400' : 'bg-rose-400'
+                                        }`}
+                                      />
+                                      <span>{isAvailable ? tr('Open') : tr('Booked')}</span>
+                                    </span>
+                                  }
+                                />
+                              </div>
 
                               <div className="p-4 space-y-2.5">
                                 <h3
@@ -2125,148 +2186,158 @@ export const PublicStorefrontView: React.FC<PublicStorefrontViewProps> = ({
                 )}
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Quick Vehicle Info & Multi-Photo Explorer Modal */}
-            <ModalShell
-              isOpen={!!quickDetailVehicle}
-              onClose={() => setQuickDetailVehicle(null)}
-              maxWidthClass="max-w-2xl"
-              title={quickDetailVehicle?.model_name || ''}
-              subtitle={
-                quickDetailVehicle ? (
-                  <span className="font-mono">
-                    {quickDetailVehicle.category} · {quickDetailVehicle.year || 2023} · {quickDetailVehicle.plate_number}
-                  </span>
-                ) : undefined
-              }
-              footer={
-                quickDetailVehicle ? (
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Quick Vehicle Info & Multi-Photo Explorer Modal (Accessible from Home & Catalog) */}
+        <ModalShell
+          isOpen={!!quickDetailVehicle}
+          onClose={() => setQuickDetailVehicle(null)}
+          maxWidthClass="max-w-2xl"
+          title={quickDetailVehicle?.model_name || ''}
+          subtitle={
+            quickDetailVehicle ? (
+              <span className="font-mono">
+                {quickDetailVehicle.category} · {quickDetailVehicle.year || 2023} · {quickDetailVehicle.plate_number}
+              </span>
+            ) : undefined
+          }
+          footer={
+            quickDetailVehicle ? (() => {
+              const modalCollision = checkBookingCollision(quickDetailVehicle.id, startDate, endDate, bookings);
+              const modalAvailable = !modalCollision.hasCollision;
+              return (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = quickDetailVehicle;
+                      setQuickDetailVehicle(null);
+                      handleViewVehicleDetails(target);
+                    }}
+                    className="text-sm font-semibold accent-text hover:underline cursor-pointer"
+                  >
+                    {tr('Open Full Car Page')} →
+                  </button>
+                  <div className="flex items-center gap-2.5">
                     <button
                       type="button"
+                      onClick={() => setQuickDetailVehicle(null)}
+                      className="px-4 py-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      {tr('Close')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!modalAvailable}
                       onClick={() => {
                         const target = quickDetailVehicle;
                         setQuickDetailVehicle(null);
-                        handleViewVehicleDetails(target);
+                        handleStartBookingVehicle(target);
                       }}
-                      className="text-sm font-semibold accent-text hover:underline cursor-pointer"
+                      className={`px-5 py-2 rounded-lg text-sm font-semibold ${
+                        modalAvailable
+                          ? 'accent-bg cursor-pointer hover:opacity-95'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                      }`}
                     >
-                      {tr('Open Full Car Page')} →
+                      {modalAvailable ? `${tr('Book This Car')} →` : tr('Booked for These Dates')}
                     </button>
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setQuickDetailVehicle(null)}
-                        className="px-4 py-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                      >
-                        {tr('Close')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const target = quickDetailVehicle;
-                          setQuickDetailVehicle(null);
-                          handleStartBookingVehicle(target);
-                        }}
-                        className="px-5 py-2 rounded-lg text-sm font-semibold accent-bg cursor-pointer"
-                      >
-                        {tr('Book This Car')} →
-                      </button>
-                    </div>
                   </div>
-                ) : undefined
-              }
-            >
-              {quickDetailVehicle && (
-                <>
-                  <VehiclePhotoGallery
-                    vehicle={quickDetailVehicle}
-                    aspectClass="h-56 sm:h-64"
-                    showThumbnails={true}
-                    accentColor={activeThemeColor}
-                  />
+                </div>
+              );
+            })() : undefined
+          }
+        >
+          {quickDetailVehicle && (
+            <>
+              <VehiclePhotoGallery
+                vehicle={quickDetailVehicle}
+                aspectClass="h-56 sm:h-64"
+                showThumbnails={true}
+                enableLightbox={true}
+                accentColor={activeThemeColor}
+              />
 
-                  <div className={`${subBoxClass} p-4 space-y-1.5`}>
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {tr('About This Car')}
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                      {getVehicleCustomerSummary(quickDetailVehicle)}
-                    </p>
-                  </div>
+              <div className={`${subBoxClass} p-4 space-y-1.5`}>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {tr('About This Car')}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {getVehicleCustomerSummary(quickDetailVehicle)}
+                </p>
+              </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                    <div className={`${subBoxClass} p-3`}>
-                      <span className="text-[13px] text-slate-500 dark:text-slate-400 block">{tr('Seats')}</span>
-                      <strong className="font-semibold text-slate-900 dark:text-white">
-                        {quickDetailVehicle.seating_capacity} {tr('Seats')}
-                      </strong>
-                    </div>
-                    <div className={`${subBoxClass} p-3`}>
-                      <span className="text-[13px] text-slate-500 dark:text-slate-400 block">{tr('Gears')}</span>
-                      <strong className="font-semibold text-slate-900 dark:text-white">
-                        {tr(quickDetailVehicle.transmission || 'Automatic')}
-                      </strong>
-                    </div>
-                    <div className={`${subBoxClass} p-3`}>
-                      <span className="text-[13px] text-slate-500 dark:text-slate-400 block">{tr('Fuel')}</span>
-                      <strong className="font-semibold text-slate-900 dark:text-white">
-                        {tr(quickDetailVehicle.fuel_type || 'Diesel')}
-                      </strong>
-                    </div>
-                    <div className={`${subBoxClass} p-3`}>
-                      <span className="text-[13px] text-slate-500 dark:text-slate-400 block">{tr('Pickup Hub')}</span>
-                      <strong className="font-semibold text-slate-900 dark:text-white truncate block">
-                        {quickDetailVehicle.location}
-                      </strong>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div className={`${subBoxClass} p-3`}>
+                  <span className="text-[13px] text-slate-500 dark:text-slate-400 block">{tr('Seats')}</span>
+                  <strong className="font-semibold text-slate-900 dark:text-white">
+                    {quickDetailVehicle.seating_capacity} {tr('Seats')}
+                  </strong>
+                </div>
+                <div className={`${subBoxClass} p-3`}>
+                  <span className="text-[13px] text-slate-500 dark:text-slate-400 block">{tr('Gears')}</span>
+                  <strong className="font-semibold text-slate-900 dark:text-white">
+                    {tr(quickDetailVehicle.transmission || 'Automatic')}
+                  </strong>
+                </div>
+                <div className={`${subBoxClass} p-3`}>
+                  <span className="text-[13px] text-slate-500 dark:text-slate-400 block">{tr('Fuel')}</span>
+                  <strong className="font-semibold text-slate-900 dark:text-white">
+                    {tr(quickDetailVehicle.fuel_type || 'Diesel')}
+                  </strong>
+                </div>
+                <div className={`${subBoxClass} p-3`}>
+                  <span className="text-[13px] text-slate-500 dark:text-slate-400 block">{tr('Pickup Hub')}</span>
+                  <strong className="font-semibold text-slate-900 dark:text-white truncate block">
+                    {quickDetailVehicle.location}
+                  </strong>
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {tr('Included Features & Comfort')}
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[13px]">
-                      {(quickDetailVehicle.features && quickDetailVehicle.features.length > 0
-                        ? quickDetailVehicle.features
-                        : ['Air Conditioning', 'Unlimited Rwanda km', 'Safety Checked & Insured']
-                      ).map((feat) => (
-                        <div
-                          key={feat}
-                          className={`flex items-center gap-2 p-2.5 ${subBoxClass} text-slate-800 dark:text-slate-200`}
-                        >
-                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span className="truncate">{tr(feat)}</span>
-                        </div>
-                      ))}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {tr('Included Features & Comfort')}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[13px]">
+                  {(quickDetailVehicle.features && quickDetailVehicle.features.length > 0
+                    ? quickDetailVehicle.features
+                    : ['Air Conditioning', 'Unlimited Rwanda km', 'Safety Checked & Insured']
+                  ).map((feat) => (
+                    <div
+                      key={feat}
+                      className={`flex items-center gap-2 p-2.5 ${subBoxClass} text-slate-800 dark:text-slate-200`}
+                    >
+                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="truncate">{tr(feat)}</span>
                     </div>
-                  </div>
+                  ))}
+                </div>
+              </div>
 
-                  <div className={`${subBoxClass} p-4 space-y-2 text-sm`}>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500 dark:text-slate-400">{tr('Price per day:')}</span>
-                      <span className="font-mono font-semibold text-slate-900 dark:text-white tabular-nums">
-                        {formatMoney(quickDetailVehicle.daily_rate_rwf)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500 dark:text-slate-400">{tr('Trip length:')}</span>
-                      <span className="font-mono text-slate-900 dark:text-white">
-                        {days} {tr('Days')}
-                      </span>
-                    </div>
-                    <div className="flex justify-between font-semibold pt-2 border-t border-slate-200/70 dark:border-slate-700 text-base">
-                      <span>{tr('Estimated Total:')}</span>
-                      <span className="font-mono accent-text tabular-nums">
-                        {formatMoney(quickDetailVehicle.daily_rate_rwf * days)}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              )}
-            </ModalShell>
-          </div>
-        )}
+              <div className={`${subBoxClass} p-4 space-y-2 text-sm`}>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">{tr('Price per day:')}</span>
+                  <span className="font-mono font-semibold text-slate-900 dark:text-white tabular-nums">
+                    {formatMoney(quickDetailVehicle.daily_rate_rwf)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">{tr('Trip length:')}</span>
+                  <span className="font-mono text-slate-900 dark:text-white">
+                    {days} {tr('Days')}
+                  </span>
+                </div>
+                <div className="flex justify-between font-semibold pt-2 border-t border-slate-200/70 dark:border-slate-700 text-base">
+                  <span>{tr('Estimated Total:')}</span>
+                  <span className="font-mono accent-text tabular-nums">
+                    {formatMoney(quickDetailVehicle.daily_rate_rwf * days)}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </ModalShell>
 
         {/* VIEW 3: CAR DETAILS PAGE */}
         {currentView === 'vehicle-detail' && selectedVehicle && (

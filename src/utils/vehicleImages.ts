@@ -6,12 +6,26 @@ export const MAX_VEHICLE_PHOTOS = 6;
 export const MAX_SINGLE_PHOTO_CHARS = 115000;
 export const MAX_GALLERY_TOTAL_CHARS = 820000;
 
+export const VEHICLE_PHOTO_ASSETS = {
+  landcruiserExterior: '/assets/images/hero_safari_landcruiser_1794311457296.jpg',
+  landcruiserInterior: '/assets/images/landcruiser_interior_cabin_1794914417381.jpg',
+  landcruiserRear: '/assets/images/landcruiser_rear_safari_1794914418169.jpg',
+  rav4Exterior: '/assets/images/car_toyota_rav4_1794311458980.jpg',
+  rav4Interior: '/assets/images/rav4_interior_dashboard_1794914418531.jpg',
+  safariVanExterior: '/assets/images/car_safari_van_1794311459444.jpg',
+  safariVanInterior: '/assets/images/safari_van_poptop_cabin_1794914418710.jpg',
+  coasterExterior: '/assets/images/car_coaster_bus_1794792526002.jpg',
+  coasterInterior: '/assets/images/coaster_bus_interior_1794914419061.jpg',
+  luxurySedanExterior: '/assets/images/car_luxury_sedan_1794792526061.jpg',
+  luxurySedanInterior: '/assets/images/luxury_sedan_cabin_1794914419418.jpg',
+} as const;
+
 export const CATEGORY_DEFAULT_IMAGES: Record<VehicleCategory, string> = {
-  LandCruiser: '/assets/images/hero_safari_landcruiser_1794311457296.jpg',
-  RAV4: '/assets/images/car_toyota_rav4_1794311458980.jpg',
-  'Safari Van': '/assets/images/car_safari_van_1794311459444.jpg',
-  Coaster: '/assets/images/car_coaster_bus_1794792526002.jpg',
-  'Luxury Sedan': '/assets/images/car_luxury_sedan_1794792526061.jpg',
+  LandCruiser: VEHICLE_PHOTO_ASSETS.landcruiserExterior,
+  RAV4: VEHICLE_PHOTO_ASSETS.rav4Exterior,
+  'Safari Van': VEHICLE_PHOTO_ASSETS.safariVanExterior,
+  Coaster: VEHICLE_PHOTO_ASSETS.coasterExterior,
+  'Luxury Sedan': VEHICLE_PHOTO_ASSETS.luxurySedanExterior,
 };
 
 export const PRESET_CAR_GALLERY: Array<{
@@ -21,28 +35,58 @@ export const PRESET_CAR_GALLERY: Array<{
 }> = [
   {
     category: 'LandCruiser',
-    label: '4x4 Prado / V8',
-    url: CATEGORY_DEFAULT_IMAGES.LandCruiser,
+    label: '4x4 Exterior',
+    url: VEHICLE_PHOTO_ASSETS.landcruiserExterior,
+  },
+  {
+    category: 'LandCruiser',
+    label: '4x4 Leather Cabin',
+    url: VEHICLE_PHOTO_ASSETS.landcruiserInterior,
+  },
+  {
+    category: 'LandCruiser',
+    label: '4x4 Open Trunk',
+    url: VEHICLE_PHOTO_ASSETS.landcruiserRear,
   },
   {
     category: 'RAV4',
-    label: 'RAV4 SUV',
-    url: CATEGORY_DEFAULT_IMAGES.RAV4,
+    label: 'RAV4 Exterior',
+    url: VEHICLE_PHOTO_ASSETS.rav4Exterior,
+  },
+  {
+    category: 'RAV4',
+    label: 'RAV4 Dashboard',
+    url: VEHICLE_PHOTO_ASSETS.rav4Interior,
   },
   {
     category: 'Safari Van',
     label: 'Safari Van',
-    url: CATEGORY_DEFAULT_IMAGES['Safari Van'],
+    url: VEHICLE_PHOTO_ASSETS.safariVanExterior,
+  },
+  {
+    category: 'Safari Van',
+    label: 'Pop-Top Interior',
+    url: VEHICLE_PHOTO_ASSETS.safariVanInterior,
   },
   {
     category: 'Coaster',
     label: 'Coaster Bus',
-    url: CATEGORY_DEFAULT_IMAGES.Coaster,
+    url: VEHICLE_PHOTO_ASSETS.coasterExterior,
+  },
+  {
+    category: 'Coaster',
+    label: 'Bus Seats & Aisle',
+    url: VEHICLE_PHOTO_ASSETS.coasterInterior,
   },
   {
     category: 'Luxury Sedan',
-    label: 'VIP Sedan',
-    url: CATEGORY_DEFAULT_IMAGES['Luxury Sedan'],
+    label: 'VIP Sedan Exterior',
+    url: VEHICLE_PHOTO_ASSETS.luxurySedanExterior,
+  },
+  {
+    category: 'Luxury Sedan',
+    label: 'VIP Leather Seats',
+    url: VEHICLE_PHOTO_ASSETS.luxurySedanInterior,
   },
 ];
 

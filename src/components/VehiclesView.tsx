@@ -18,6 +18,7 @@ import {
   List,
   CheckCircle2,
   CalendarClock,
+  Camera,
 } from 'lucide-react';
 import { ColorTheme } from '../theme';
 import {
@@ -634,14 +635,29 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 className="bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 rounded-xl flex flex-col justify-between overflow-hidden kf-card hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
               >
                 <div>
-                  {/* Photo Banner */}
-                  <div className="relative bg-slate-100 dark:bg-slate-800">
+                  {/* Photo Banner + Compact Multi-Photo Strip */}
+                  <div className="p-2 pb-0 bg-slate-50/70 dark:bg-slate-900/40">
                     <VehiclePhotoGallery
                       vehicle={vehicle}
-                      aspectClass="h-48 rounded-none border-0"
+                      aspectClass="h-48"
                       showThumbnails={false}
+                      compactThumbnails={true}
                       accentColor={activeColor}
                       onImageClick={() => setSelectedVehicleDetails(vehicle)}
+                      topRightSlot={
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditingVehicle(vehicle);
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-950/75 hover:bg-slate-950 text-white text-xs font-medium border border-white/15 backdrop-blur-[2px] transition-colors cursor-pointer"
+                          title={tr('Add or edit car photos')}
+                        >
+                          <Camera className="w-3 h-3" />
+                          <span>{tr('Edit Photos')}</span>
+                        </button>
+                      }
                     />
                   </div>
 
@@ -872,8 +888,17 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
+                            onClick={() => startEditingVehicle(vehicle)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                            title={tr('Add or edit car photos')}
+                          >
+                            <Camera className="w-3.5 h-3.5 accent-text" />
+                            <span>{getVehicleGalleryImages(vehicle).length}</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setSelectedVehicleDetails(vehicle)}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                           >
                             Details
                           </button>
