@@ -23,12 +23,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isVerifiedUser() {
+    function isVerifiedEmail() {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
+    function isVerifiedUser() {
+      return isSignedIn();
+    }
+
     function isMasterOwner() {
-      return isVerifiedUser() && (
+      return isVerifiedEmail() && (
         request.auth.token.email == 'generaskagiraneza@gmail.com' ||
         request.auth.token.email == 'generaskagiraneza9@gmail.com'
       );
@@ -36,7 +40,7 @@ service cloud.firestore {
 
     function isSuperAdmin() {
       return isMasterOwner() || (
-        isVerifiedUser() &&
+        isVerifiedEmail() &&
         exists(/databases/$(database)/documents/platform_admins/$(request.auth.uid))
       );
     }

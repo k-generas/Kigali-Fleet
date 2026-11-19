@@ -96,6 +96,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   sendPasswordResetEmail,
   updateProfile,
   signOut as fbSignOut,
@@ -110,6 +111,9 @@ import {
   handleFirestoreError,
   OperationType,
   ensureFirestoreStreaming,
+  testFirestoreConnection,
+  probeFirestoreRestReachable,
+  onFirebaseReconnect,
   smartGetDoc,
   smartSetDoc as setDoc,
   smartUpdateDoc as updateDoc,
@@ -374,21 +378,27 @@ export function useFleetStore() {
         };
       });
 
-    // Non-streaming REST pricing plans fetch on boot (never opens a Watch stream before auth)
-    liteGetDocs(liteQuery(liteCollection(liteDb, 'platform_plans'), liteWhere('is_active', '==', true), liteLimit(10)))
-      .then((snapshot) => {
-        if (!snapshot.empty) {
-          setState((prev) => ({
-            ...prev,
-            platformPlans: snapshot.docs.map((d) => d.data() as PlatformPlan),
-            isFirebaseConnected: true,
-          }));
-        }
-      })
-      .catch((err) => console.warn('platform_plans initial fetch notice:', err?.message || err));
+    // Non-streaming REST pricing plans fetch on boot (only after preflight confirms network reachability)
+    void testFirestoreConnection().then((bootMode) => {
+      if (bootMode === 'offline') return;
+      liteGetDocs(liteQuery(liteCollection(liteDb, 'platform_plans'), liteWhere('is_active', '==', true), liteLimit(10)))
+        .then((snapshot) => {
+          if (!snapshot.empty) {
+            setState((prev) => ({
+              ...prev,
+              platformPlans: snapshot.docs.map((d) => d.data() as PlatformPlan),
+              isFirebaseConnected: true,
+            }));
+          }
+        })
+        .catch((err) => console.warn('platform_plans initial fetch notice:', err?.message || err));
+    });
 
     const attachSharedPublicStorefront = async (companyParam: string) => {
       try {
+        const mode = await ensureFirestoreStreaming();
+        if (mode === 'offline') return;
+
         let targetCompany: Company | null = null;
         const byId = await liteGetDoc(liteDoc(liteDb, 'companies', companyParam));
         if (byId.exists()) {
@@ -427,7 +437,6 @@ export function useFleetStore() {
           }));
         }
 
-        const mode = await ensureFirestoreStreaming();
         if (mode !== 'streaming') return;
 
         activeListeners.push(
@@ -823,7 +832,7 @@ export function useFleetStore() {
       }));
     };
 
-    unsubscribeAuth = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+    const syncSessionForUser = async (fbUser: FirebaseUser | null) => {
       clearActiveListeners();
 
       if (!fbUser) {
@@ -1003,10 +1012,33 @@ export function useFleetStore() {
       } catch (err) {
         console.warn('Auth profile hydration notice:', err);
       }
+    };
+
+    unsubscribeAuth = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
+      void syncSessionForUser(fbUser);
+    });
+
+    const unsubscribeReconnect = onFirebaseReconnect(() => {
+      if (auth.currentUser) {
+        void syncSessionForUser(auth.currentUser);
+      } else {
+        liteGetDocs(liteQuery(liteCollection(liteDb, 'platform_plans'), liteWhere('is_active', '==', true), liteLimit(10)))
+          .then((snapshot) => {
+            if (!snapshot.empty) {
+              setState((prev) => ({
+                ...prev,
+                platformPlans: snapshot.docs.map((d) => d.data() as PlatformPlan),
+                isFirebaseConnected: true,
+              }));
+            }
+          })
+          .catch(() => {});
+      }
     });
 
     return () => {
       unsubscribeAuth();
+      unsubscribeReconnect();
       clearActiveListeners();
     };
   }, []);
@@ -2524,6 +2556,7 @@ export function useFleetStore() {
       const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, data.password);
       const fbUser = cred.user;
       await updateProfile(fbUser, { displayName: data.name.trim() }).catch(() => {});
+      void sendEmailVerification(fbUser).catch(() => {});
 
       const companyId = isSuper ? 'platform-root' : data.companyId || `comp-${fbUser.uid.slice(0, 8)}`;
       const assignedRole: UserRole = isSuper ? 'superadmin' : data.role;
@@ -2649,6 +2682,7 @@ export function useFleetStore() {
         const cred = await createUserWithEmailAndPassword(auth, ownerEmail, passwordAttempt);
         fbUser = cred.user;
         await updateProfile(fbUser, { displayName: ownerName }).catch(() => {});
+        void sendEmailVerification(fbUser).catch(() => {});
       }
 
       const companyId = `comp-${fbUser.uid.slice(0, 8)}`;
@@ -3484,17 +3518,9 @@ export function useFleetStore() {
     let status: PlatformIntegration['status'] = 'Connected';
     let latencyMs = 110;
     if (integrationId === 'int-firebase') {
-      try {
-        await Promise.race([
-          liteGetDoc(liteDoc(liteDb, 'test', 'connection')),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500)),
-        ]);
-        latencyMs = Math.max(25, Date.now() - start);
-        status = 'Connected';
-      } catch {
-        latencyMs = Date.now() - start;
-        status = 'Degraded';
-      }
+      const reachable = await probeFirestoreRestReachable(3500);
+      latencyMs = Math.max(25, Date.now() - start);
+      status = reachable ? 'Connected' : 'Degraded';
     } else {
       latencyMs = 85 + Math.floor(Math.random() * 90);
     }

@@ -10,6 +10,7 @@ import {
   deleteDoc,
   disableNetwork,
   enableNetwork,
+  setLogLevel,
   type DocumentReference,
   type DocumentData,
   type SetOptions,
@@ -21,9 +22,15 @@ import {
   setDoc as liteSetDoc,
   updateDoc as liteUpdateDoc,
   deleteDoc as liteDeleteDoc,
+  setLogLevel as setLiteLogLevel,
 } from 'firebase/firestore/lite';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
+
+// Suppress internal SDK transient retry/offline/token-refresh console chatter;
+// genuine permission and config errors still surface via handleFirestoreError & preflight checks.
+setLogLevel('silent');
+setLiteLogLevel('silent');
 
 // Initialize Firebase App
 export const app = initializeApp(firebaseConfig);
@@ -93,19 +100,61 @@ let transportMode: FirestoreTransportMode = 'streaming';
 let networkDisabled = false;
 let lastCheckedAt = 0;
 let connectionCheckPromise: Promise<FirestoreTransportMode> | null = null;
+const reconnectCallbacks = new Set<(mode: FirestoreTransportMode) => void>();
 
 export function getFirestoreTransportMode(): FirestoreTransportMode {
   return transportMode;
 }
 
-// Test connection to Firestore (Non-blocking, shuts down hanging Watch streams before 10s)
+export function onFirebaseReconnect(cb: (mode: FirestoreTransportMode) => void): () => void {
+  reconnectCallbacks.add(cb);
+  return () => {
+    reconnectCallbacks.delete(cb);
+  };
+}
+
+// Lightweight HTTPS preflight so we never trigger Firestore SDK network errors when offline/sleeping
+export async function probeFirestoreRestReachable(timeoutMs = 3500): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return false;
+  }
+  try {
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${firebaseConfig.firestoreDatabaseId}/documents/test/connection`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'x-goog-api-key': firebaseConfig.apiKey },
+        signal: controller.signal,
+      });
+      if (res.status === 404) {
+        const bodyText = await res.text().catch(() => '');
+        if (bodyText.includes('does not exist') && bodyText.includes(firebaseConfig.firestoreDatabaseId)) {
+          console.error(
+            `Firestore database '${firebaseConfig.firestoreDatabaseId}' not found. Please check your Firebase configuration.`
+          );
+          return false;
+        }
+      }
+      return res.status > 0;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return false;
+  }
+}
+
+// Test connection to Firestore (Non-blocking, preflight-guarded, shuts down hanging Watch streams before 10s)
 export async function testFirestoreConnection(): Promise<FirestoreTransportMode> {
   if (connectionCheckPromise) return connectionCheckPromise;
 
   connectionCheckPromise = (async (): Promise<FirestoreTransportMode> => {
     lastCheckedAt = Date.now();
     try {
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const reachable = await probeFirestoreRestReachable(3500);
+      if (!reachable) {
         networkDisabled = true;
         await disableNetwork(db).catch(() => {});
         transportMode = 'offline';
@@ -142,17 +191,13 @@ export async function testFirestoreConnection(): Promise<FirestoreTransportMode>
       networkDisabled = true;
       await disableNetwork(db).catch(() => {});
 
-      try {
-        await Promise.race([
-          liteGetDoc(liteDoc(liteDb, 'test', 'connection')),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('rest timeout')), 3500)),
-        ]);
+      const restReachable = await probeFirestoreRestReachable(3000);
+      if (restReachable) {
         transportMode = 'rest-only';
         return 'rest-only';
-      } catch {
-        transportMode = 'offline';
-        return 'offline';
       }
+      transportMode = 'offline';
+      return 'offline';
     }
   })();
 
@@ -205,6 +250,29 @@ export async function smartDeleteDoc(docRef: DocumentReference<DocumentData, Doc
     return deleteDoc(docRef);
   }
   return liteDeleteDoc(liteDoc(liteDb, docRef.path));
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('offline', () => {
+    networkDisabled = true;
+    transportMode = 'offline';
+    connectionCheckPromise = Promise.resolve('offline');
+    void disableNetwork(db).catch(() => {});
+  });
+
+  window.addEventListener('online', () => {
+    void ensureFirestoreStreaming(true).then((mode) => {
+      if (mode !== 'offline') {
+        reconnectCallbacks.forEach((cb) => {
+          try {
+            cb(mode);
+          } catch {
+            // ignore listener error
+          }
+        });
+      }
+    });
+  });
 }
 
 void testFirestoreConnection();
