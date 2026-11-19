@@ -288,8 +288,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
 
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200/80 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-sm">
-              {errorMessage}
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200/80 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-sm space-y-2.5">
+              <p>{errorMessage}</p>
+              {errorMessage.toLowerCase().includes('demo sandbox') && publicDemoUsers[0] && (
+                <button
+                  type="button"
+                  onClick={() => handleQuickRoleSelect(publicDemoUsers[0])}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <span>{tr('Open Free Demo Sandbox')}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           )}
 

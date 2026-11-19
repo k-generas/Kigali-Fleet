@@ -118,6 +118,9 @@ import {
   smartSetDoc as setDoc,
   smartUpdateDoc as updateDoc,
   smartDeleteDoc as deleteDoc,
+  diagnoseAuthNetworkError,
+  withAuthRetry,
+  getFirestoreTransportMode,
 } from '../firebase';
 import {
   canModifyPlatformAdmin,
@@ -157,10 +160,29 @@ function formatFirebaseAuthError(err: any): string {
   if (code === 'auth/weak-password') {
     return 'Password must be at least 6 characters.';
   }
+  if (code === 'auth/invalid-email') {
+    return 'Please enter a valid email address.';
+  }
+  if (code === 'auth/too-many-requests') {
+    return 'Too many attempts. Please wait a minute and try again.';
+  }
   if (code === 'auth/popup-closed-by-user') {
     return 'Google sign-in popup was closed before completing.';
   }
+  if (code === 'auth/popup-blocked') {
+    return 'Pop-up was blocked by your browser. Allow pop-ups for this site or sign in with email.';
+  }
+  if (code === 'auth/network-request-failed') {
+    return 'Could not reach Firebase Authentication from this browser. Check your internet connection, VPN, or browser ad/tracking blocker and try again — or use the Free Demo Sandbox.';
+  }
   return err?.message || 'Sign-in could not be completed. Please try again.';
+}
+
+async function resolveFirebaseAuthError(err: any): Promise<string> {
+  if (err?.code === 'auth/network-request-failed') {
+    return diagnoseAuthNetworkError();
+  }
+  return formatFirebaseAuthError(err);
 }
 
 // Remove undefined fields to prevent Firestore serialization errors
@@ -308,6 +330,18 @@ export function useFleetStore() {
     return initial;
   });
   const pendingRegistrationRef = useRef<{ company: Company; owner: User } | null>(null);
+  const pendingSignupIntentRef = useRef<{
+    email: string;
+    name: string;
+    phone: string;
+    role: UserRole;
+    companyId?: string;
+    companyName?: string;
+    businessType?: Company['business_type'];
+    tinNumber?: string;
+    city?: string;
+    tierId?: Company['tier_id'];
+  } | null>(null);
 
   // Sync currency and language globally + update <html lang>
   useEffect(() => {
@@ -900,20 +934,26 @@ export function useFleetStore() {
               await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(userDocData)).catch(() => {});
             }
           } else {
-            const isolatedCompanyId = `comp-${fbUser.uid.slice(0, 8)}`;
-            const baseName = fbUser.displayName || email.split('@')[0] || 'My Fleet';
+            const intent =
+              pendingSignupIntentRef.current && pendingSignupIntentRef.current.email === email
+                ? pendingSignupIntentRef.current
+                : null;
+            const isolatedCompanyId = intent?.companyId || `comp-${fbUser.uid.slice(0, 8)}`;
+            const baseName = intent?.name || fbUser.displayName || email.split('@')[0] || 'My Fleet';
+            const companyLabel = intent?.companyName || `${baseName} Fleet`;
+            const slugBase = companyLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'fleet';
             companyDocData = {
               id: isolatedCompanyId,
-              name: `${baseName} Fleet`,
-              slug: `fleet-${fbUser.uid.slice(0, 6).toLowerCase()}`,
-              business_type: 'Car Rental',
-              tin_number: '100000000',
-              phone: fbUser.phoneNumber || '+250 788 000 000',
+              name: companyLabel,
+              slug: intent?.companyName ? `${slugBase}-${fbUser.uid.slice(0, 4).toLowerCase()}` : `fleet-${fbUser.uid.slice(0, 6).toLowerCase()}`,
+              business_type: intent?.businessType || 'Car Rental',
+              tin_number: intent?.tinNumber || '100000000',
+              phone: intent?.phone || fbUser.phoneNumber || '+250 788 000 000',
               email: fbUser.email || email,
-              city: 'Kigali',
+              city: intent?.city || 'Kigali',
               country: 'Rwanda',
               currency: 'RWF',
-              tier_id: 'starter',
+              tier_id: intent?.tierId || 'starter',
               status: 'Trial',
               owner_name: baseName,
               created_at: new Date().toISOString(),
@@ -922,8 +962,8 @@ export function useFleetStore() {
               id: fbUser.uid,
               name: baseName,
               email: fbUser.email || email,
-              phone: fbUser.phoneNumber || '+250 788 000 000',
-              role: 'owner',
+              phone: intent?.phone || fbUser.phoneNumber || '+250 788 000 000',
+              role: intent?.role || 'owner',
               company_id: isolatedCompanyId,
               avatar_url: fbUser.photoURL || undefined,
               status: 'Active',
@@ -2463,7 +2503,7 @@ export function useFleetStore() {
       return { success: false, error: 'Google sign-in did not return an account.' };
     } catch (err) {
       console.error('Google Sign-in error:', err);
-      throw new Error(formatFirebaseAuthError(err));
+      throw new Error(await resolveFirebaseAuthError(err));
     }
   };
 
@@ -2504,7 +2544,9 @@ export function useFleetStore() {
   const loginWithCredentials = async (email: string, passwordAttempt: string) => {
     const normalizedEmail = email.trim().toLowerCase();
     try {
-      const cred = await signInWithEmailAndPassword(auth, normalizedEmail, passwordAttempt);
+      const cred = await withAuthRetry(() =>
+        signInWithEmailAndPassword(auth, normalizedEmail, passwordAttempt)
+      );
       const fbUser = cred.user;
       const isSuper = isSuperAdminEmail(fbUser.email || normalizedEmail);
       const userObj: User = {
@@ -2522,7 +2564,7 @@ export function useFleetStore() {
     } catch (err: any) {
       return {
         success: false,
-        error: formatFirebaseAuthError(err),
+        error: await resolveFirebaseAuthError(err),
       };
     }
   };
@@ -2552,8 +2594,22 @@ export function useFleetStore() {
       };
     }
 
+    pendingSignupIntentRef.current = {
+      email: normalizedEmail,
+      name: data.name.trim(),
+      phone: data.phone.trim(),
+      role: isSuper ? 'superadmin' : data.role,
+      companyId: isSuper ? 'platform-root' : data.companyId,
+    };
+
     try {
-      const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, data.password);
+      const cred = await withAuthRetry(
+        () => createUserWithEmailAndPassword(auth, normalizedEmail, data.password!),
+        {
+          onDuplicateAfterRetry: () =>
+            signInWithEmailAndPassword(auth, normalizedEmail, data.password!),
+        }
+      );
       const fbUser = cred.user;
       await updateProfile(fbUser, { displayName: data.name.trim() }).catch(() => {});
       void sendEmailVerification(fbUser).catch(() => {});
@@ -2589,29 +2645,66 @@ export function useFleetStore() {
         created_at: new Date().toISOString().slice(0, 10),
       };
 
+      const activeMode =
+        getFirestoreTransportMode() === 'offline'
+          ? await ensureFirestoreStreaming(true)
+          : getFirestoreTransportMode();
+
       if (!isSuper) {
         pendingRegistrationRef.current = { company: newCompany, owner: newUser };
-        await setDoc(doc(db, 'companies', companyId), cleanForFirestore(newCompany)).catch(() => {});
+        if (activeMode !== 'offline') {
+          await setDoc(doc(db, 'companies', companyId), cleanForFirestore(newCompany)).catch(() => {});
+        }
       }
-      await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(newUser)).catch(() => {});
+      if (activeMode !== 'offline') {
+        await setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(newUser)).catch(() => {});
+      }
+
+      if (!isSuper) {
+        setState((prev) => ({
+          ...prev,
+          isDemoMode: false,
+          isAuthenticated: true,
+          isFirebaseConnected: activeMode !== 'offline',
+          currentCompany: newCompany,
+          currentUser: newUser,
+          companies: [newCompany],
+          users: [newUser],
+          vehicles: [],
+          drivers: [],
+          bookings: [],
+          logs: [],
+          customers: [],
+          payments: [],
+          maintenance: [],
+          handovers: [],
+          expenses: [],
+          tasks: [],
+          supportTickets: [],
+          companySubscriptions: [],
+          activeTierId: newCompany.tier_id,
+        }));
+      }
 
       return { success: true, user: newUser };
     } catch (err: any) {
       return {
         success: false,
-        error: formatFirebaseAuthError(err),
+        error: await resolveFirebaseAuthError(err),
       };
+    } finally {
+      pendingSignupIntentRef.current = null;
     }
   };
 
   const sendPasswordReset = async (email: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await withAuthRetry(() => sendPasswordResetEmail(auth, email.trim()));
       return { success: true };
     } catch (err: any) {
       return {
         success: false,
-        error: formatFirebaseAuthError(err),
+        error: await resolveFirebaseAuthError(err),
       };
     }
   };
@@ -2670,6 +2763,18 @@ export function useFleetStore() {
     const ownerPhone = (isParams ? companyDataOrParams.phone : ownerData?.phone || companyDataOrParams.phone).trim();
     const passwordAttempt = isParams ? companyDataOrParams.password : ownerData?.password;
 
+    pendingSignupIntentRef.current = {
+      email: ownerEmail,
+      name: ownerName,
+      phone: ownerPhone,
+      role: 'owner',
+      companyName: isParams ? companyDataOrParams.companyName.trim() : companyDataOrParams.name.trim(),
+      businessType: isParams ? companyDataOrParams.businessType : companyDataOrParams.business_type,
+      tinNumber: isParams ? companyDataOrParams.tinNumber.trim() : companyDataOrParams.tin_number,
+      city: isParams ? companyDataOrParams.city.trim() || 'Kigali' : companyDataOrParams.city,
+      tierId: isParams ? companyDataOrParams.tierId : companyDataOrParams.tier_id,
+    };
+
     try {
       let fbUser = auth.currentUser;
       if (!fbUser) {
@@ -2679,7 +2784,13 @@ export function useFleetStore() {
             error: 'Please enter a password of at least 6 characters to create your company account.',
           };
         }
-        const cred = await createUserWithEmailAndPassword(auth, ownerEmail, passwordAttempt);
+        const cred = await withAuthRetry(
+          () => createUserWithEmailAndPassword(auth, ownerEmail, passwordAttempt),
+          {
+            onDuplicateAfterRetry: () =>
+              signInWithEmailAndPassword(auth, ownerEmail, passwordAttempt),
+          }
+        );
         fbUser = cred.user;
         await updateProfile(fbUser, { displayName: ownerName }).catch(() => {});
         void sendEmailVerification(fbUser).catch(() => {});
@@ -2728,16 +2839,23 @@ export function useFleetStore() {
         created_at: new Date().toISOString().slice(0, 10),
       };
 
+      const activeMode =
+        getFirestoreTransportMode() === 'offline'
+          ? await ensureFirestoreStreaming(true)
+          : getFirestoreTransportMode();
+
       pendingRegistrationRef.current = { company: newCompany, owner: newOwner };
 
-      await setDoc(doc(db, 'companies', newCompany.id), cleanForFirestore(newCompany));
-      await setDoc(doc(db, 'users', newOwner.id), cleanForFirestore(newOwner));
+      if (activeMode !== 'offline') {
+        await setDoc(doc(db, 'companies', newCompany.id), cleanForFirestore(newCompany)).catch(() => {});
+        await setDoc(doc(db, 'users', newOwner.id), cleanForFirestore(newOwner)).catch(() => {});
+      }
 
       setState((prev) => ({
         ...prev,
         isDemoMode: false,
         isAuthenticated: true,
-        isFirebaseConnected: true,
+        isFirebaseConnected: activeMode !== 'offline',
         currentCompany: newCompany,
         currentUser: newOwner,
         companies: [newCompany],
@@ -2761,8 +2879,10 @@ export function useFleetStore() {
     } catch (err: any) {
       return {
         success: false,
-        error: formatFirebaseAuthError(err),
+        error: await resolveFirebaseAuthError(err),
       };
+    } finally {
+      pendingSignupIntentRef.current = null;
     }
   };
 

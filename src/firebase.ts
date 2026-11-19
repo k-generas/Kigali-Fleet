@@ -252,6 +252,64 @@ export async function smartDeleteDoc(docRef: DocumentReference<DocumentData, Doc
   return liteDeleteDoc(liteDoc(liteDb, docRef.path));
 }
 
+export async function probeAuthRestReachable(timeoutMs = 3000): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return false;
+  }
+  try {
+    const url = `https://identitytoolkit.googleapis.com/v1/projects?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      return res.status > 0;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return false;
+  }
+}
+
+export async function diagnoseAuthNetworkError(): Promise<string> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return 'Your device appears to be offline. Reconnect to the internet and try again, or use the Free Demo Sandbox below.';
+  }
+  const reachable = await probeAuthRestReachable(2800);
+  if (!reachable) {
+    return 'Could not reach Firebase Authentication (identitytoolkit.googleapis.com) from your browser. Check your internet connection, VPN, firewall, or disable ad/tracking blockers for this site, then try again — or explore the Free Demo Sandbox.';
+  }
+  return 'Connection to Firebase Authentication was interrupted. Please try again.';
+}
+
+export async function withAuthRetry<T>(
+  operation: () => Promise<T>,
+  options?: { onDuplicateAfterRetry?: () => Promise<T>; delayMs?: number }
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (err: any) {
+    if (err?.code !== 'auth/network-request-failed') {
+      throw err;
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, options?.delayMs ?? 600));
+    try {
+      return await operation();
+    } catch (retryErr: any) {
+      if (retryErr?.code === 'auth/email-already-in-use' && options?.onDuplicateAfterRetry) {
+        return await options.onDuplicateAfterRetry();
+      }
+      throw retryErr;
+    }
+  }
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('offline', () => {
     networkDisabled = true;
